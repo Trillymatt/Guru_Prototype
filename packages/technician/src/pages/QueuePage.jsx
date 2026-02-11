@@ -113,12 +113,12 @@ export default function QueuePage() {
 
                     <div className="queue-list stagger-children">
                         {loading ? (
-                            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-secondary)' }}>
+                            <div style={{ textAlign: 'center', padding: '4rem 0', color: '#737373' }}>
                                 <div style={{ fontSize: '2rem', marginBottom: 12 }}>⏳</div>
                                 Loading repairs...
                             </div>
                         ) : filteredRepairs.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-secondary)' }}>
+                            <div style={{ textAlign: 'center', padding: '4rem 0', color: '#737373' }}>
                                 <div style={{ fontSize: '2rem', marginBottom: 12 }}>📋</div>
                                 No repairs in this category
                             </div>

@@ -151,11 +151,14 @@ export default function ProfilePage() {
 
                     {/* Sign Out */}
                     <button
-                        className="guru-btn guru-btn--full guru-btn--danger"
+                        className="guru-btn guru-btn--full"
                         onClick={handleSignOut}
                         style={{
+                            background: '#FEE2E2',
+                            color: '#991B1B',
                             fontWeight: 700,
                             padding: '14px 24px',
+                            borderRadius: 16,
                         }}
                     >
                         Sign Out

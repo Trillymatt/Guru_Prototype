@@ -5,7 +5,6 @@ import { supabase } from '@shared/supabase';
 export default function TechNav() {
     const location = useLocation();
     const [techName, setTechName] = useState('Technician');
-    const [theme, setTheme] = useState(localStorage.getItem('guru-theme') || 'light');
 
     useEffect(() => {
         const fetchTechName = async () => {
@@ -23,20 +22,6 @@ export default function TechNav() {
         fetchTechName();
     }, []);
 
-    // Theme Effect
-    useEffect(() => {
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        localStorage.setItem('guru-theme', theme);
-    }, [theme]);
-
-    const toggleTheme = () => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light');
-    };
-
     const isActive = (path) => location.pathname.startsWith(path);
 
     return (
@@ -45,7 +30,7 @@ export default function TechNav() {
                 <Link to="/queue" className="tech-nav__logo" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div style={{
                         width: 32, height: 32,
-                        background: 'linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700))',
+                        background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
                         borderRadius: 8,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: 'white', fontWeight: 800, fontSize: 14,
@@ -67,21 +52,12 @@ export default function TechNav() {
                         History
                     </Link>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <button
-                        onClick={toggleTheme}
-                        className="theme-toggle"
-                        title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-                    >
-                        {theme === 'light' ? '🌙' : '☀️'}
-                    </button>
-                    <Link to="/profile" className="tech-nav__user" style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <span>{techName}</span>
-                        <div className="tech-nav__avatar">
-                            {techName.charAt(0).toUpperCase()}
-                        </div>
-                    </Link>
-                </div>
+                <Link to="/profile" className="tech-nav__user" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <span>{techName}</span>
+                    <div className="tech-nav__avatar">
+                        {techName.charAt(0).toUpperCase()}
+                    </div>
+                </Link>
             </div>
         </nav>
     );
