@@ -1,0 +1,20 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Install dependencies at root (includes workspaces)
+        - npm ci
+    build:
+      commands:
+        # Build from root using workspace command
+        - npm run build:customer
+  artifacts:
+    # Output directory for customer build
+    baseDirectory: packages/customer/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - packages/*/node_modules/**/*
