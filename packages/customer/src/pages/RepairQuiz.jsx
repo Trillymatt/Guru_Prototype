@@ -1,0 +1,671 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import { supabase } from '@shared/supabase';
+import { formatPhoneE164 } from '@shared/validation';
+import {
+    DEVICES,
+    DEVICE_GENERATIONS,
+    getDevicesByGeneration,
+    REPAIR_TYPES,
+    PARTS_TIERS,
+    SAMPLE_PRICING,
+    SERVICE_FEE,
+} from '@shared/constants';
+import '../styles/repair-quiz.css';
+
+import { useRef } from 'react';
+
+const STEPS = ['Device', 'Issues', 'Quality', 'Quote', 'Schedule', 'Contact'];
+
+// Mock Address Search Component
+const AddressSearch = ({ value, onChange }) => {
+    const [query, setQuery] = useState(value);
+    const [results, setResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    React.useEffect(() => {
+        if (query === value) return; // Don't search if matches selected
+        const timer = setTimeout(() => {
+            if (query.length > 2) {
+                setIsSearching(true);
+                // Simulate API delay
+                setTimeout(() => {
+                    setResults([
+                        `${query}, Dallas, TX`,
+                        `${query} Ave, Plano, TX`,
+                        `${query} Blvd, Frisco, TX`,
+                        `100 ${query} St, Fort Worth, TX`
+                    ]);
+                    setIsSearching(false);
+                }, 800);
+            } else {
+                setResults([]);
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [query, value]);
+
+    const handleSelect = (addr) => {
+        setQuery(addr);
+        onChange(addr);
+        setResults([]);
+    };
+
+    return (
+        <div className="address-search-container">
+            <input
+                type="text"
+                className="guru-input"
+                placeholder="Start typing your address..."
+                value={query}
+                onChange={(e) => {
+                    setQuery(e.target.value);
+                    if (e.target.value === '') onChange('');
+                }}
+            />
+            {isSearching && <div className="address-searching">Searching addresses...</div>}
+            {results.length > 0 && (
+                <div className="address-results">
+                    {results.map((r, i) => (
+                        <button key={i} className="address-result-item" onClick={() => handleSelect(r)}>
+                            📍 {r}
+                        </button>
+                    ))}
+                    <div className="address-api-note">Powered by AddressAPI (Simulated)</div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default function RepairQuiz() {
+    const [step, setStep] = useState(0);
+    const [selectedDevice, setSelectedDevice] = useState(null);
+    const [selectedIssues, setSelectedIssues] = useState([]);
+    const [issueTiers, setIssueTiers] = useState({}); // { issueId: 'economy' | 'premium' | 'genuine' }
+    const [activeGen, setActiveGen] = useState('17');
+    const [scheduleDate, setScheduleDate] = useState('');
+    const [scheduleTime, setScheduleTime] = useState('');
+    const [scheduleAddress, setScheduleAddress] = useState('');
+
+    // Auth / Contact State
+    const [contact, setContact] = useState({ name: '', email: '', phone: '' });
+    // OTP is email-only for now
+    const [otpSent, setOtpSent] = useState(false);
+    const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [authError, setAuthError] = useState('');
+    const otpRefs = useRef([]);
+
+    const [confirmed, setConfirmed] = useState(false);
+    const navigate = useNavigate();
+
+    const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    const goBack = () => setStep((s) => Math.max(s - 1, 0));
+
+    const toggleIssue = (id) => {
+        setSelectedIssues((prev) => {
+            const next = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
+            // Auto-set default tier when adding
+            if (!prev.includes(id)) {
+                setIssueTiers((t) => ({ ...t, [id]: 'premium' }));
+            }
+            return next;
+        });
+    };
+
+    const setTierForIssue = (issueId, tier) => {
+        setIssueTiers((prev) => ({ ...prev, [issueId]: tier }));
+    };
+
+    const getIssuePrice = (issueId) => {
+        const tier = issueTiers[issueId] || 'premium';
+        return SAMPLE_PRICING[issueId]?.[tier] || 0;
+    };
+
+    const calculateTotal = () => {
+        const partsTotal = selectedIssues.reduce((sum, id) => sum + getIssuePrice(id), 0);
+        return partsTotal + SERVICE_FEE;
+    };
+
+    const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
+
+    // Min date: 3 days from now
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + 3);
+    const minDateStr = minDate.toISOString().split('T')[0];
+
+    const timeSlots = [
+        { id: 'morning', label: 'Morning', range: '8:00 AM – 12:00 PM', icon: '🌅' },
+        { id: 'afternoon', label: 'Afternoon', range: '12:00 PM – 4:00 PM', icon: '☀️' },
+        { id: 'evening', label: 'Evening', range: '4:00 PM – 7:00 PM', icon: '🌆' },
+    ];
+
+    // ─── Auth Handlers ───
+    const handleContactChange = (field, value) => {
+        setContact(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSendOtp = async (e) => {
+        e.preventDefault();
+        setIsVerifying(true);
+        setAuthError('');
+
+        try {
+            const signInPayload = { email: contact.email };
+
+            const { error } = await supabase.auth.signInWithOtp(signInPayload);
+
+            if (error) {
+                setAuthError(error.message);
+                setIsVerifying(false);
+                return;
+            }
+            setIsVerifying(false);
+            setOtpSent(true);
+        } catch (err) {
+            setAuthError('Something went wrong. Please try again.');
+            setIsVerifying(false);
+        }
+    };
+
+    const handleOtpChange = (index, value) => {
+        if (value.length > 1) value = value.slice(-1);
+        const next = [...otpCode];
+        next[index] = value;
+        setOtpCode(next);
+        if (value && index < 5) otpRefs.current[index + 1]?.focus();
+    };
+
+    const handleOtpKeyDown = (index, e) => {
+        if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+            otpRefs.current[index - 1]?.focus();
+        }
+    };
+
+    const handleOtpPaste = (e) => {
+        e.preventDefault();
+        const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+        const next = [...otpCode];
+        pasted.split('').forEach((char, i) => { next[i] = char; });
+        setOtpCode(next);
+        otpRefs.current[Math.min(pasted.length, 5)]?.focus();
+    };
+
+    const handleVerifyAndBook = async (e) => {
+        e.preventDefault();
+        const fullCode = otpCode.join('');
+        if (fullCode.length < 6) return;
+
+        setIsVerifying(true);
+        setAuthError('');
+
+        try {
+            const verifyPayload = { email: contact.email, token: fullCode, type: 'email' };
+
+            const { data: authData, error: verifyError } = await supabase.auth.verifyOtp(verifyPayload);
+
+            if (verifyError) {
+                setAuthError(verifyError.message);
+                setIsVerifying(false);
+                return;
+            }
+
+            // Create/update customer profile
+            const userId = authData.user?.id;
+            if (userId) {
+                await supabase.from('customers').upsert({
+                    id: userId,
+                    full_name: contact.name,
+                    phone: contact.phone,
+                    email: contact.email,
+                }, { onConflict: 'id' });
+
+                // Save the repair booking
+                const device = DEVICES.find(d => d.id === selectedDevice);
+                await supabase.from('repairs').insert({
+                    customer_id: userId,
+                    device: device?.name || selectedDevice,
+                    issues: selectedIssues,
+                    parts_tier: issueTiers,
+                    service_fee: SERVICE_FEE,
+                    total_estimate: calculateTotal(),
+                    schedule_date: scheduleDate,
+                    schedule_time: scheduleTime,
+                    address: scheduleAddress,
+                    status: 'pending',
+                });
+            }
+
+            setIsVerifying(false);
+            setConfirmed(true);
+        } catch (err) {
+            setAuthError('Verification failed. Please check your code and try again.');
+            setIsVerifying(false);
+        }
+    };
+
+    // Get reversed generations for display (newest first)
+    const sortedGens = [...DEVICE_GENERATIONS].reverse();
+
+    return (
+        <>
+            <Navbar />
+            <div className="quiz">
+                <div className="guru-container guru-container--narrow">
+                    {/* ─── Progress Bar ─────────── */}
+                    <div className="quiz__progress">
+                        {STEPS.map((name, i) => (
+                            <div key={name} className={`quiz__step ${i <= step ? 'quiz__step--active' : ''} ${i < step ? 'quiz__step--done' : ''}`}>
+                                <div className="quiz__step-indicator">
+                                    {i < step ? '✓' : i + 1}
+                                </div>
+                                <span className="quiz__step-label">{name}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* ─── Step 0: Device Selection ─────── */}
+                    {step === 0 && (
+                        <div className="quiz__panel animate-fade-in-up">
+                            <h2 className="quiz__title">What iPhone do you have?</h2>
+                            <p className="quiz__subtitle">Select your device model.</p>
+
+                            {/* Generation Tabs */}
+                            <div className="quiz__gen-tabs">
+                                {sortedGens.map((gen) => (
+                                    <button
+                                        key={gen}
+                                        className={`quiz__gen-tab ${activeGen === gen ? 'quiz__gen-tab--active' : ''}`}
+                                        onClick={() => setActiveGen(gen)}
+                                    >
+                                        {gen === 'SE' ? 'SE' : gen}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Devices Grid */}
+                            <div className="quiz__devices">
+                                {getDevicesByGeneration(activeGen).map((device) => (
+                                    <button
+                                        key={device.id}
+                                        className={`quiz__device-card ${selectedDevice?.id === device.id ? 'quiz__device-card--selected' : ''}`}
+                                        onClick={() => setSelectedDevice(device)}
+                                    >
+                                        <div className="quiz__device-icon">📱</div>
+                                        <div className="quiz__device-name">{device.name}</div>
+                                        <div className="quiz__device-year">{device.year}</div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="quiz__actions">
+                                <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
+                                <button
+                                    className="guru-btn guru-btn--primary"
+                                    disabled={!selectedDevice}
+                                    onClick={goNext}
+                                >
+                                    Continue →
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── Step 1: Issue Selection ─────── */}
+                    {step === 1 && (
+                        <div className="quiz__panel animate-fade-in-up">
+                            <h2 className="quiz__title">What's wrong with your {selectedDevice?.name}?</h2>
+                            <p className="quiz__subtitle">Select all that apply.</p>
+                            <div className="quiz__issues stagger-children">
+                                {REPAIR_TYPES.map((type) => (
+                                    <button
+                                        key={type.id}
+                                        className={`quiz__issue-card ${selectedIssues.includes(type.id) ? 'quiz__issue-card--selected' : ''}`}
+                                        onClick={() => toggleIssue(type.id)}
+                                    >
+                                        <div className="quiz__issue-icon">{type.icon}</div>
+                                        <div className="quiz__issue-info">
+                                            <div className="quiz__issue-name">{type.name}</div>
+                                            <div className="quiz__issue-desc">{type.description}</div>
+                                        </div>
+                                        <div className="quiz__issue-check">
+                                            {selectedIssues.includes(type.id) ? '✓' : ''}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            {isSoftwareOnly && (
+                                <div className="quiz__alert-box">
+                                    ⚠️ We do not offer on-site appointments for software-only issues. Please visit us in-store.
+                                </div>
+                            )}
+
+                            <div className="quiz__actions">
+                                <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                <button
+                                    className="guru-btn guru-btn--primary"
+                                    disabled={selectedIssues.length === 0 || isSoftwareOnly}
+                                    onClick={goNext}
+                                >
+                                    Continue →
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── Step 2: Per-Issue Tier Selection ─────── */}
+                    {step === 2 && (
+                        <div className="quiz__panel animate-fade-in-up">
+                            <h2 className="quiz__title">Choose parts quality</h2>
+                            <p className="quiz__subtitle">
+                                Pick a quality tier for each repair. All include professional installation.
+                            </p>
+                            <div className="quiz__per-issue-tiers">
+                                {selectedIssues.map((issueId) => {
+                                    const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                    const currentTier = issueTiers[issueId] || 'premium';
+                                    return (
+                                        <div key={issueId} className="pit-row">
+                                            <div className="pit-row__info">
+                                                <span className="pit-row__icon">{type?.icon}</span>
+                                                <span className="pit-row__name">{type?.name}</span>
+                                            </div>
+                                            <div className="pit-row__tiers">
+                                                {PARTS_TIERS.map((tier) => {
+                                                    const price = SAMPLE_PRICING[issueId]?.[tier.id] || 0;
+                                                    return (
+                                                        <button
+                                                            key={tier.id}
+                                                            className={`pit-tier ${currentTier === tier.id ? 'pit-tier--selected' : ''}`}
+                                                            onClick={() => setTierForIssue(issueId, tier.id)}
+                                                            style={currentTier === tier.id ? { borderColor: tier.color, background: `${tier.color}10` } : undefined}
+                                                        >
+                                                            <span className="pit-tier__label">{tier.name}</span>
+                                                            <span className="pit-tier__price">${price}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="quiz__running-total">
+                                <span>Running total</span>
+                                <span className="quiz__running-total-price">${calculateTotal()}</span>
+                            </div>
+                            <div className="quiz__actions">
+                                <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                <button
+                                    className="guru-btn guru-btn--primary"
+                                    onClick={goNext}
+                                >
+                                    See Your Quote →
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── Step 3: Quote Summary ─────── */}
+                    {step === 3 && (
+                        <div className="quiz__panel animate-fade-in-up">
+                            <h2 className="quiz__title">Your Repair Quote</h2>
+                            <p className="quiz__subtitle">Review your selections below.</p>
+                            <div className="quiz__quote">
+                                <div className="quiz__quote-section">
+                                    <div className="quiz__quote-label">Device</div>
+                                    <div className="quiz__quote-value">{selectedDevice?.name}</div>
+                                </div>
+                                <div className="quiz__quote-section">
+                                    <div className="quiz__quote-label">Repairs</div>
+                                    {selectedIssues.map((issueId) => {
+                                        const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                        const tier = PARTS_TIERS.find((t) => t.id === issueTiers[issueId]);
+                                        const price = getIssuePrice(issueId);
+                                        return (
+                                            <div key={issueId} className="quiz__quote-line">
+                                                <span>{type?.icon} {type?.name}</span>
+                                                <span className="quiz__quote-line-right">
+                                                    <span className="quiz__quote-tier-tag">{tier?.name}</span>
+                                                    <span>${price}</span>
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="quiz__quote-line">
+                                        <span>🚗 On-site Service Fee</span>
+                                        <span className="quiz__quote-value">${SERVICE_FEE}</span>
+                                    </div>
+                                </div>
+                                <div className="quiz__quote-total">
+                                    <span>Estimated Total</span>
+                                    <span className="quiz__quote-total-price">${calculateTotal()}</span>
+                                </div>
+                            </div>
+                            <div className="quiz__warranty-notice">
+                                <strong>Note:</strong> Repairs do not include a warranty on parts or service.
+                            </div>
+                            <div className="quiz__actions">
+                                <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                <button className="guru-btn guru-btn--primary guru-btn--lg" onClick={goNext}>
+                                    Schedule Appointment →
+                                </button>
+                            </div>
+                            <p className="quiz__disclaimer">
+                                * Prices are estimates. Final pricing confirmed after technician diagnosis.
+                                Parts are ordered after confirmation and typically arrive within 3 days.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* ─── Step 4: Schedule ─────── */}
+                    {step === 4 && !confirmed && (
+                        <div className="quiz__panel animate-fade-in-up">
+                            <h2 className="quiz__title">Schedule your repair</h2>
+                            <p className="quiz__subtitle">
+                                Pick a date and time. We need at least 3 days to order parts.
+                            </p>
+
+                            <div className="sched-section">
+                                <label className="sched-label">Date</label>
+                                <input
+                                    type="date"
+                                    className="guru-input"
+                                    min={minDateStr}
+                                    value={scheduleDate}
+                                    onChange={(e) => setScheduleDate(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="sched-section">
+                                <label className="sched-label">Time Slot</label>
+                                <div className="sched-slots">
+                                    {timeSlots.map((slot) => (
+                                        <button
+                                            key={slot.id}
+                                            className={`sched-slot ${scheduleTime === slot.id ? 'sched-slot--selected' : ''}`}
+                                            onClick={() => setScheduleTime(slot.id)}
+                                        >
+                                            <span className="sched-slot__icon">{slot.icon}</span>
+                                            <span className="sched-slot__label">{slot.label}</span>
+                                            <span className="sched-slot__range">{slot.range}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="sched-section">
+                                <label className="sched-label">Your Location</label>
+                                <AddressSearch
+                                    value={scheduleAddress}
+                                    onChange={setScheduleAddress}
+                                />
+                                <p className="sched-hint">We come to your home, office, or wherever you are.</p>
+                            </div>
+
+                            <div className="quiz__actions">
+                                <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                <button
+                                    className="guru-btn guru-btn--primary guru-btn--lg"
+                                    disabled={!scheduleDate || !scheduleTime || !scheduleAddress}
+                                    onClick={goNext}
+                                >
+                                    Continue to Details →
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── Step 5: Contact & Auth ─────── */}
+                    {step === 5 && !confirmed && (
+                        <div className="quiz__panel animate-fade-in-up">
+                            {!otpSent ? (
+                                <>
+                                    <h2 className="quiz__title">Your Details</h2>
+                                    <p className="quiz__subtitle">
+                                        We need your contact info to confirm the appointment.
+                                    </p>
+                                    <form onSubmit={handleSendOtp}>
+                                        <div className="guru-input-group" style={{ marginBottom: 16 }}>
+                                            <label className="sched-label">Full Name</label>
+                                            <input
+                                                className="guru-input"
+                                                type="text"
+                                                placeholder="Jane Doe"
+                                                value={contact.name}
+                                                onChange={(e) => handleContactChange('name', e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="guru-input-group" style={{ marginBottom: 16 }}>
+                                            <label className="sched-label">Email Address</label>
+                                            <input
+                                                className="guru-input"
+                                                type="email"
+                                                placeholder="jane@example.com"
+                                                value={contact.email}
+                                                onChange={(e) => handleContactChange('email', e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="guru-input-group" style={{ marginBottom: 24 }}>
+                                            <label className="sched-label">Phone Number <span style={{ color: 'var(--guru-gray-400)', fontWeight: 400 }}>(optional)</span></label>
+                                            <input
+                                                className="guru-input"
+                                                type="tel"
+                                                placeholder="(555) 123-4567"
+                                                value={contact.phone}
+                                                onChange={(e) => handleContactChange('phone', e.target.value)}
+                                            />
+                                        </div>
+                                        {authError && (
+                                            <p style={{ color: '#ef4444', fontSize: '0.875rem', textAlign: 'center', marginBottom: 12 }}>{authError}</p>
+                                        )}
+                                        <div className="quiz__actions">
+                                            <button type="button" className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                            <button
+                                                type="submit"
+                                                className="guru-btn guru-btn--primary guru-btn--lg"
+                                                disabled={!contact.name || !contact.email || isVerifying}
+                                            >
+                                                {isVerifying ? 'Sending...' : 'Verify & Book →'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </>
+                            ) : (
+                                <>
+                                    <h2 className="quiz__title">Enter verification code</h2>
+                                    <p className="quiz__subtitle">
+                                        We sent a 6-digit code to{' '}
+                                        <strong>{contact.email}</strong>.
+                                    </p>
+
+                                    <form onSubmit={handleVerifyAndBook}>
+                                        <div className="otp-inputs" onPaste={handleOtpPaste}>
+                                            {otpCode.map((digit, i) => (
+                                                <input
+                                                    key={i}
+                                                    ref={(el) => otpRefs.current[i] = el}
+                                                    className="otp-input"
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    maxLength={1}
+                                                    value={digit}
+                                                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                                                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                                                    autoFocus={i === 0}
+                                                />
+                                            ))}
+                                        </div>
+                                        {authError && (
+                                            <p style={{ color: '#ef4444', fontSize: '0.875rem', textAlign: 'center', marginBottom: 12 }}>{authError}</p>
+                                        )}
+                                        <div className="quiz__actions">
+                                            <button
+                                                type="button"
+                                                className="guru-btn guru-btn--ghost"
+                                                onClick={() => { setOtpSent(false); setOtpCode(['', '', '', '', '', '']); }}
+                                            >
+                                                ← Edit Info
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                className="guru-btn guru-btn--primary guru-btn--lg"
+                                                disabled={otpCode.some(d => !d) || isVerifying}
+                                            >
+                                                {isVerifying ? 'Booking...' : 'Confirm Appointment'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ─── Confirmation ─────── */}
+                    {confirmed && (
+                        <div className="quiz__panel quiz__confirmation animate-scale-in">
+                            <div className="confirm__check">✓</div>
+                            <h2 className="quiz__title">You're all set!</h2>
+                            <p className="quiz__subtitle" style={{ marginBottom: 24 }}>
+                                Your repair for <strong>{selectedDevice?.name}</strong> is booked.
+                            </p>
+                            <div className="confirm__details">
+                                <div className="confirm__row">
+                                    <span>📅</span>
+                                    <span>{scheduleDate}</span>
+                                </div>
+                                <div className="confirm__row">
+                                    <span>🕐</span>
+                                    <span>{timeSlots.find(s => s.id === scheduleTime)?.range}</span>
+                                </div>
+                                <div className="confirm__row">
+                                    <span>📍</span>
+                                    <span>{scheduleAddress}</span>
+                                </div>
+                                <div className="confirm__row">
+                                    <span>👤</span>
+                                    <span>{contact.name}</span>
+                                </div>
+                                <div className="confirm__row">
+                                    <span>💰</span>
+                                    <span>Estimated {' '}${calculateTotal()}</span>
+                                </div>
+                            </div>
+                            <p className="quiz__disclaimer">
+                                We'll confirm your appointment and begin ordering parts.
+                                You'll receive updates via email or text.
+                            </p>
+                            <Link to="/" className="guru-btn guru-btn--primary guru-btn--lg" style={{ marginTop: 16 }}>
+                                Back to Home
+                            </Link>
+                        </div>
+                    )}
+                </div>
+            </div >
+        </>
+    );
+}

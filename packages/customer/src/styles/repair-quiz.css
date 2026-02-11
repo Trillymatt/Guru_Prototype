@@ -1,0 +1,643 @@
+/* ─── Repair Quiz Styles ──────────────────────────────────────── */
+
+.quiz {
+    min-height: 100vh;
+    padding-top: 120px;
+    padding-bottom: var(--space-16);
+    padding-bottom: var(--space-16);
+    /* background removed to use global */
+}
+
+/* Progress Bar */
+.quiz__progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-12);
+}
+
+.quiz__step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.quiz__step:not(:last-child)::after {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--guru-gray-200);
+    margin: 0 var(--space-2);
+    transition: background var(--transition-base);
+}
+
+.quiz__step--done:not(:last-child)::after {
+    background: var(--guru-purple-500);
+}
+
+.quiz__step-indicator {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    background: var(--guru-gray-100);
+    color: var(--guru-gray-400);
+    transition: all var(--transition-base);
+}
+
+.quiz__step--active .quiz__step-indicator {
+    background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700));
+    color: white;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.quiz__step--done .quiz__step-indicator {
+    background: var(--guru-purple-500);
+    color: white;
+}
+
+.quiz__step-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--guru-gray-400);
+    transition: color var(--transition-fast);
+}
+
+.quiz__step--active .quiz__step-label {
+    color: var(--guru-gray-900);
+}
+
+@media (max-width: 900px) {
+    .quiz__step-label {
+        display: none;
+    }
+
+    .quiz__step:not(:last-child)::after {
+        width: 16px;
+    }
+}
+
+/* Panel */
+.quiz__panel {
+    background: var(--guru-white);
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--guru-gray-200);
+    padding: var(--space-10);
+    box-shadow: var(--shadow-lg);
+}
+
+.quiz__title {
+    font-size: var(--font-size-3xl);
+    font-weight: 800;
+    color: var(--guru-black);
+    margin-bottom: var(--space-2);
+    letter-spacing: -0.02em;
+}
+
+.quiz__subtitle {
+    font-size: var(--font-size-lg);
+    color: var(--guru-gray-500);
+    margin-bottom: var(--space-8);
+}
+
+.quiz__subtitle strong {
+    color: var(--guru-gray-800);
+}
+
+/* ─── Generation Tabs (replaces accordion) ───────────────────── */
+
+.quiz__gen-tabs {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-6);
+}
+
+.quiz__gen-tab {
+    padding: var(--space-2) var(--space-5);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--guru-gray-500);
+    background: var(--guru-gray-100);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.quiz__gen-tab:hover {
+    background: var(--guru-purple-50);
+    color: var(--guru-purple-600);
+}
+
+.quiz__gen-tab--active {
+    background: var(--guru-purple-600);
+    color: white;
+    border-color: var(--guru-purple-600);
+}
+
+/* Device Grid */
+.quiz__devices {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-8);
+}
+
+.quiz__device-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-5);
+    border: 2px solid var(--guru-gray-200);
+    border-radius: var(--radius-xl);
+    background: var(--guru-white);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.quiz__device-card:hover {
+    border-color: var(--guru-purple-300);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.quiz__device-card--selected {
+    border-color: var(--guru-purple-500);
+    background: var(--guru-purple-50);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.quiz__device-icon {
+    font-size: 2rem;
+}
+
+.quiz__device-name {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--guru-gray-800);
+    text-align: center;
+}
+
+.quiz__device-year {
+    font-size: var(--font-size-xs);
+    color: var(--guru-gray-400);
+}
+
+/* Issue Selection */
+.quiz__issues {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-8);
+}
+
+.quiz__issue-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border: 2px solid var(--guru-gray-200);
+    border-radius: var(--radius-xl);
+    background: var(--guru-white);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    text-align: left;
+}
+
+.quiz__issue-card:hover {
+    border-color: var(--guru-purple-300);
+    box-shadow: var(--shadow-sm);
+}
+
+.quiz__issue-card--selected {
+    border-color: var(--guru-purple-500);
+    background: var(--guru-purple-50);
+}
+
+.quiz__issue-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.quiz__issue-info {
+    flex: 1;
+}
+
+.quiz__issue-name {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--guru-gray-800);
+}
+
+.quiz__issue-desc {
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-500);
+    margin-top: 2px;
+}
+
+.quiz__issue-check {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--guru-gray-300);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+}
+
+.quiz__issue-card--selected .quiz__issue-check {
+    background: var(--guru-purple-600);
+    border-color: var(--guru-purple-600);
+}
+
+/* ─── Per-Issue Tier Selection ────────────────────────────────── */
+
+.quiz__per-issue-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.pit-row {
+    background: var(--guru-gray-50);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    border: 1px solid var(--guru-gray-200);
+}
+
+.pit-row__info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.pit-row__icon {
+    font-size: 1.25rem;
+}
+
+.pit-row__name {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    color: var(--guru-gray-800);
+}
+
+.pit-row__tiers {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+}
+
+.pit-tier {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: var(--space-3) var(--space-2);
+    border: 2px solid var(--guru-gray-200);
+    border-radius: var(--radius-lg);
+    background: var(--guru-white);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.pit-tier:hover {
+    border-color: var(--guru-gray-400);
+}
+
+.pit-tier--selected {
+    border-width: 2px;
+}
+
+.pit-tier__label {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--guru-gray-600);
+}
+
+.pit-tier__price {
+    font-size: var(--font-size-lg);
+    font-weight: 800;
+    color: var(--guru-gray-900);
+}
+
+/* Running total */
+.quiz__running-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-4) var(--space-5);
+    background: var(--guru-purple-50);
+    border: 1px solid var(--guru-purple-200);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-6);
+    font-weight: 600;
+    color: var(--guru-gray-700);
+}
+
+.quiz__running-total-price {
+    font-size: var(--font-size-2xl);
+    font-weight: 800;
+    color: var(--guru-purple-600);
+}
+
+/* Quote Summary */
+.quiz__quote {
+    background: var(--guru-gray-50);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-8);
+}
+
+.quiz__quote-section {
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--guru-gray-200);
+}
+
+.quiz__quote-section:last-of-type {
+    border-bottom: none;
+}
+
+.quiz__quote-label {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: var(--guru-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: var(--space-2);
+}
+
+.quiz__quote-value {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--guru-gray-900);
+}
+
+.quiz__quote-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+    font-size: var(--font-size-base);
+    color: var(--guru-gray-700);
+}
+
+.quiz__quote-line-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.quiz__quote-tier-tag {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    background: var(--guru-purple-100);
+    color: var(--guru-purple-700);
+}
+
+.quiz__quote-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-5) 0 0;
+    margin-top: var(--space-4);
+    border-top: 2px solid var(--guru-purple-200);
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--guru-gray-900);
+}
+
+.quiz__quote-total-price {
+    font-size: var(--font-size-3xl);
+    font-weight: 800;
+    color: var(--guru-purple-600);
+}
+
+/* ─── Schedule Step ──────────────────────────────────────────── */
+
+.sched-section {
+    margin-bottom: var(--space-6);
+}
+
+.sched-label {
+    display: block;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--guru-gray-700);
+    margin-bottom: var(--space-3);
+}
+
+.sched-hint {
+    font-size: var(--font-size-xs);
+    color: var(--guru-gray-400);
+    margin-top: var(--space-2);
+}
+
+.sched-slots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+}
+
+.sched-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-5) var(--space-3);
+    border: 2px solid var(--guru-gray-200);
+    border-radius: var(--radius-xl);
+    background: var(--guru-white);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.sched-slot:hover {
+    border-color: var(--guru-purple-300);
+    box-shadow: var(--shadow-sm);
+}
+
+.sched-slot--selected {
+    border-color: var(--guru-purple-500);
+    background: var(--guru-purple-50);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.sched-slot__icon {
+    font-size: 1.75rem;
+}
+
+.sched-slot__label {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    color: var(--guru-gray-800);
+}
+
+.sched-slot__range {
+    font-size: var(--font-size-xs);
+    color: var(--guru-gray-500);
+}
+
+@media (max-width: 600px) {
+    .sched-slots {
+        grid-template-columns: 1fr;
+    }
+
+    .pit-row__tiers {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ─── Confirmation ───────────────────────────────────────────── */
+
+.quiz__confirmation {
+    text-align: center;
+}
+
+.confirm__check {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700));
+    color: white;
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-6);
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.25);
+}
+
+.confirm__details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    background: var(--guru-gray-50);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+    text-align: left;
+}
+
+.confirm__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--font-size-base);
+    color: var(--guru-gray-700);
+}
+
+/* Actions */
+.quiz__actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--guru-gray-100);
+}
+
+.quiz__disclaimer {
+    margin-top: var(--space-6);
+    font-size: var(--font-size-xs);
+    color: var(--guru-gray-400);
+    text-align: center;
+    line-height: 1.6;
+}
+
+/* ─── OTP Method Toggle ──────────────────────────────────────── */
+
+.otp-toggle {
+    display: flex;
+    gap: var(--space-2);
+    justify-content: center;
+}
+
+.otp-toggle__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-5);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--guru-gray-500);
+    background: var(--guru-gray-100);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.otp-toggle__btn:hover {
+    background: var(--guru-purple-50);
+    color: var(--guru-purple-600);
+}
+
+.otp-toggle__btn--active {
+    background: var(--guru-purple-100);
+    color: var(--guru-purple-700);
+    border-color: var(--guru-purple-400);
+}
+
+/* ─── OTP Styles (Shared) ────────────────────────────────────── */
+
+.otp-inputs {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    margin-bottom: var(--space-6);
+}
+
+.otp-input {
+    width: 48px;
+    height: 56px;
+    border: 2px solid var(--guru-gray-200);
+    border-radius: var(--radius-xl);
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    text-align: center;
+    color: var(--guru-gray-900);
+    background: var(--guru-gray-50);
+    transition: all var(--transition-fast);
+    caret-color: var(--guru-purple-600);
+}
+
+.otp-input:focus {
+    outline: none;
+    border-color: var(--guru-purple-500);
+    background: var(--guru-white);
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+}
+
+.otp-input:not(:placeholder-shown) {
+    border-color: var(--guru-purple-400);
+    background: var(--guru-purple-50);
+}
+
+@media (max-width: 480px) {
+    .otp-input {
+        width: 40px;
+        height: 48px;
+        font-size: var(--font-size-lg);
+    }
+
+    .otp-inputs {
+        gap: var(--space-2);
+    }
+}

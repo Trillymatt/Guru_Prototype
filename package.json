@@ -1,0 +1,22 @@
+{
+  "name": "guru-prototype",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Guru Mobile Repair Solutions — Customer & Technician Portals",
+  "workspaces": [
+    "packages/shared",
+    "packages/customer",
+    "packages/technician"
+  ],
+  "scripts": {
+    "dev:customer": "npm run dev --workspace=packages/customer",
+    "dev:tech": "npm run dev --workspace=packages/technician",
+    "dev": "npm run dev:customer & npm run dev:tech",
+    "build:customer": "npm run build --workspace=packages/customer",
+    "build:tech": "npm run build --workspace=packages/technician",
+    "build": "npm run build:customer && npm run build:tech"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.95.3"
+  }
+}
