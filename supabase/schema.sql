@@ -7,183 +7,100 @@
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ─── Profiles ───────────────────────────────────────────────────────────────
--- Extends Supabase auth.users with additional fields
+-- ─── Customers ──────────────────────────────────────────────────────────────
+-- Customer profiles created when a user books a repair via the customer portal.
 
-CREATE TABLE profiles (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
-  role TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'technician', 'admin')),
+CREATE TABLE IF NOT EXISTS customers (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT,
   phone TEXT,
-  notification_preference TEXT DEFAULT 'email' CHECK (notification_preference IN ('email', 'sms', 'both')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ─── Devices ────────────────────────────────────────────────────────────────
--- iPhone model catalog
-
-CREATE TABLE devices (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  year INTEGER NOT NULL,
-  generation TEXT NOT NULL,
-  image_url TEXT,
+  email TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ─── Repair Types ───────────────────────────────────────────────────────────
+-- ─── Technicians ────────────────────────────────────────────────────────────
+-- Technician profiles. Rows are created manually in Supabase for each tech.
 
-CREATE TABLE repair_types (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  icon TEXT,
+CREATE TABLE IF NOT EXISTS technicians (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  phone TEXT,
+  email TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ─── Parts Pricing ──────────────────────────────────────────────────────────
--- Pricing per device + repair type + tier combination
+-- ─── Repairs ────────────────────────────────────────────────────────────────
+-- Every booked repair. Customers create, technicians read & update.
 
-CREATE TABLE parts_pricing (
+CREATE TABLE IF NOT EXISTS repairs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  device_id TEXT REFERENCES devices(id) ON DELETE CASCADE NOT NULL,
-  repair_type_id TEXT REFERENCES repair_types(id) ON DELETE CASCADE NOT NULL,
-  tier TEXT NOT NULL CHECK (tier IN ('economy', 'premium', 'genuine')),
-  price DECIMAL(10, 2) NOT NULL,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(device_id, repair_type_id, tier)
-);
-
--- ─── Repair Requests ────────────────────────────────────────────────────────
-
-CREATE TABLE repair_requests (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  customer_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
   technician_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  device_id TEXT REFERENCES devices(id) NOT NULL,
+  device TEXT NOT NULL,
+  issues JSONB DEFAULT '[]'::jsonb,
+  parts_tier JSONB DEFAULT '{}'::jsonb,
+  service_fee DECIMAL(10, 2) DEFAULT 29,
+  total_estimate DECIMAL(10, 2),
+  schedule_date DATE,
+  schedule_time TEXT,
+  address TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
     'pending', 'confirmed', 'parts_ordered', 'parts_received',
     'scheduled', 'en_route', 'arrived', 'in_progress', 'complete', 'cancelled'
   )),
-  tier_selected TEXT NOT NULL CHECK (tier_selected IN ('economy', 'premium', 'genuine')),
-  location_address TEXT,
-  location_lat DECIMAL(10, 7),
-  location_lng DECIMAL(10, 7),
-  scheduled_date DATE,
-  scheduled_time TIME,
-  estimated_price DECIMAL(10, 2),
-  customer_name TEXT,
-  customer_email TEXT,
-  customer_phone TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ─── Repair Request Issues (many-to-many) ────────────────────────────────────
-
-CREATE TABLE repair_request_issues (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  repair_request_id UUID REFERENCES repair_requests(id) ON DELETE CASCADE NOT NULL,
-  repair_type_id TEXT REFERENCES repair_types(id) ON DELETE CASCADE NOT NULL,
-  UNIQUE(repair_request_id, repair_type_id)
-);
-
--- ─── Repair Status History ──────────────────────────────────────────────────
-
-CREATE TABLE repair_status_history (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  repair_request_id UUID REFERENCES repair_requests(id) ON DELETE CASCADE NOT NULL,
-  status TEXT NOT NULL,
-  changed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  note TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ─── Messages (Live Chat) ───────────────────────────────────────────────────
-
-CREATE TABLE messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  repair_request_id UUID REFERENCES repair_requests(id) ON DELETE CASCADE NOT NULL,
-  sender_id UUID REFERENCES auth.users(id) ON DELETE SET NULL NOT NULL,
-  content TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ─── Digital Signatures ─────────────────────────────────────────────────────
-
-CREATE TABLE signatures (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  repair_request_id UUID REFERENCES repair_requests(id) ON DELETE CASCADE NOT NULL,
-  customer_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  signature_data TEXT NOT NULL,
-  agreement_text TEXT NOT NULL,
-  signed_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ─── Technician Live Location ───────────────────────────────────────────────
-
-CREATE TABLE technician_locations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  technician_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  repair_request_id UUID REFERENCES repair_requests(id) ON DELETE CASCADE NOT NULL,
-  latitude DECIMAL(10, 7) NOT NULL,
-  longitude DECIMAL(10, 7) NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(technician_id, repair_request_id)
-);
-
 -- ─── Row Level Security ─────────────────────────────────────────────────────
 
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE repair_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE repair_request_issues ENABLE ROW LEVEL SECURITY;
-ALTER TABLE repair_status_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE signatures ENABLE ROW LEVEL SECURITY;
-ALTER TABLE technician_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE technicians ENABLE ROW LEVEL SECURITY;
+ALTER TABLE repairs ENABLE ROW LEVEL SECURITY;
 
--- Profiles: users can read/update their own profile
-CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = user_id);
+-- Customers: users can read / insert / update their own row
+CREATE POLICY "Users can view own customer profile"
+  ON customers FOR SELECT USING (auth.uid() = id);
 
--- Devices & Repair Types: public read
-ALTER TABLE devices ENABLE ROW LEVEL SECURITY;
-ALTER TABLE repair_types ENABLE ROW LEVEL SECURITY;
-ALTER TABLE parts_pricing ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can insert own customer profile"
+  ON customers FOR INSERT WITH CHECK (auth.uid() = id);
 
-CREATE POLICY "Public read devices" ON devices FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Public read repair_types" ON repair_types FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Public read parts_pricing" ON parts_pricing FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Users can update own customer profile"
+  ON customers FOR UPDATE USING (auth.uid() = id);
 
--- Repair requests: customers see their own, technicians see all
-CREATE POLICY "Customers see own requests" ON repair_requests
-  FOR SELECT USING (auth.uid() = customer_id);
-CREATE POLICY "Technicians see all requests" ON repair_requests
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'technician')
-  );
-CREATE POLICY "Customers can create requests" ON repair_requests
-  FOR INSERT WITH CHECK (auth.uid() = customer_id);
-CREATE POLICY "Technicians can update requests" ON repair_requests
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'technician')
+-- Technicians can also read customer profiles (needed for the join in queue/detail)
+CREATE POLICY "Technicians can view customers"
+  ON customers FOR SELECT USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
   );
 
--- Messages: participants of the repair can read/write
-CREATE POLICY "Repair participants can read messages" ON messages
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM repair_requests
-      WHERE id = repair_request_id
-      AND (customer_id = auth.uid() OR technician_id = auth.uid())
-    )
+-- Technicians: can read / update their own row
+CREATE POLICY "Technicians can view own profile"
+  ON technicians FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Technicians can update own profile"
+  ON technicians FOR UPDATE USING (auth.uid() = id);
+
+-- Repairs: customers see their own
+CREATE POLICY "Customers see own repairs"
+  ON repairs FOR SELECT USING (auth.uid() = customer_id);
+
+-- Repairs: customers can create their own
+CREATE POLICY "Customers can create repairs"
+  ON repairs FOR INSERT WITH CHECK (auth.uid() = customer_id);
+
+-- Repairs: technicians can see all repairs
+CREATE POLICY "Technicians see all repairs"
+  ON repairs FOR SELECT USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
   );
-CREATE POLICY "Repair participants can send messages" ON messages
-  FOR INSERT WITH CHECK (auth.uid() = sender_id);
+
+-- Repairs: technicians can update any repair (claim, advance status, etc.)
+CREATE POLICY "Technicians can update repairs"
+  ON repairs FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
 
 -- ─── Auto-update timestamps trigger ─────────────────────────────────────────
 
@@ -195,17 +112,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_profiles_updated_at
-  BEFORE UPDATE ON profiles
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-CREATE TRIGGER update_repair_requests_updated_at
-  BEFORE UPDATE ON repair_requests
+CREATE TRIGGER update_repairs_updated_at
+  BEFORE UPDATE ON repairs
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ─── Enable Realtime ─────────────────────────────────────────────────────────
 
-ALTER PUBLICATION supabase_realtime ADD TABLE repair_requests;
-ALTER PUBLICATION supabase_realtime ADD TABLE messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE repair_status_history;
-ALTER PUBLICATION supabase_realtime ADD TABLE technician_locations;
+ALTER PUBLICATION supabase_realtime ADD TABLE repairs;
+
+-- ─── IMPORTANT: After running this schema ────────────────────────────────────
+-- 1. Create a Supabase auth user for your technician (email + password).
+-- 2. Insert a row into the 'technicians' table with that user's UUID:
+--
+--    INSERT INTO technicians (id, full_name, email)
+--    VALUES ('<tech-user-uuid>', 'Your Name', 'tech@example.com');
+--
+-- This lets RLS identify the user as a technician so they can see all repairs.
+-- ============================================================================

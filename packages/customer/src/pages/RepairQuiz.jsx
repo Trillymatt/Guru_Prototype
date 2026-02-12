@@ -216,18 +216,24 @@ export default function RepairQuiz() {
             // Create/update customer profile
             const userId = authData.user?.id;
             if (userId) {
-                await supabase.from('customers').upsert({
+                const { error: profileError } = await supabase.from('customers').upsert({
                     id: userId,
                     full_name: contact.name,
                     phone: contact.phone,
                     email: contact.email,
                 }, { onConflict: 'id' });
 
+                if (profileError) {
+                    console.error('Customer profile error:', profileError);
+                    setAuthError('Failed to save your profile. Please try again.');
+                    setIsVerifying(false);
+                    return;
+                }
+
                 // Save the repair booking
-                const device = DEVICES.find(d => d.id === selectedDevice);
-                await supabase.from('repairs').insert({
+                const { error: repairError } = await supabase.from('repairs').insert({
                     customer_id: userId,
-                    device: device?.name || selectedDevice,
+                    device: selectedDevice?.name || 'Unknown Device',
                     issues: selectedIssues,
                     parts_tier: issueTiers,
                     service_fee: SERVICE_FEE,
@@ -237,6 +243,13 @@ export default function RepairQuiz() {
                     address: scheduleAddress,
                     status: 'pending',
                 });
+
+                if (repairError) {
+                    console.error('Repair booking error:', repairError);
+                    setAuthError('Failed to book your repair. Please try again.');
+                    setIsVerifying(false);
+                    return;
+                }
             }
 
             setIsVerifying(false);
