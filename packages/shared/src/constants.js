@@ -48,15 +48,23 @@ export const getDevicesByGeneration = (gen) => DEVICES.filter(d => d.generation 
 export const REPAIR_TYPES = [
     { id: 'screen', name: 'Screen Replacement', icon: '📱', description: 'Cracked, shattered, or unresponsive display' },
     { id: 'battery', name: 'Battery Replacement', icon: '🔋', description: 'Poor battery life or swollen battery' },
-    { id: 'charging', name: 'Charging Port', icon: '🔌', description: 'Won\'t charge or loose connection' },
-    { id: 'back-glass', name: 'Back Glass', icon: '🪟', description: 'Cracked or shattered back panel' },
     { id: 'camera-rear', name: 'Rear Camera', icon: '📸', description: 'Blurry, cracked, or non-functional rear camera' },
     { id: 'camera-front', name: 'Front Camera', icon: '🤳', description: 'Blurry or non-functional front camera / Face ID' },
-    { id: 'speaker', name: 'Speaker / Microphone', icon: '🔊', description: 'Low volume, distorted, or no sound' },
-    { id: 'water-damage', name: 'Water Damage', icon: '💧', description: 'Liquid exposure diagnosis and repair' },
-    { id: 'buttons', name: 'Button Repair', icon: '⏏️', description: 'Power, volume, or mute switch issues' },
-    { id: 'software', name: 'Software Issues', icon: '⚙️', description: 'Restore, update, or performance problems' },
+    { id: 'back-glass', name: 'Back Glass', icon: '🪟', description: 'Cracked or shattered back panel' },
 ];
+
+// Back glass is only available for iPhone 14/14 Plus and all 15, 16, 17 models
+export const BACK_GLASS_DEVICE_IDS = ['iphone-14', 'iphone-14-plus'];
+export const BACK_GLASS_GENERATIONS = ['15', '16', '17'];
+
+export function getAvailableRepairs(device) {
+    if (!device) return REPAIR_TYPES;
+    const hasBackGlass = BACK_GLASS_DEVICE_IDS.includes(device.id)
+        || BACK_GLASS_GENERATIONS.includes(device.generation);
+    return hasBackGlass
+        ? REPAIR_TYPES
+        : REPAIR_TYPES.filter(t => t.id !== 'back-glass');
+}
 
 // ─── Parts Tiers ─────────────────────────────────────────────────────────────
 
@@ -151,12 +159,7 @@ export const TAX_RATE = 0.0825; // 8.25% Texas sales tax
 export const SAMPLE_PRICING = {
     screen: { economy: 49, premium: 89, genuine: 179 },
     battery: { economy: 29, premium: 49, genuine: 89 },
-    charging: { economy: 39, premium: 59, genuine: 99 },
-    'back-glass': { economy: 39, premium: 69, genuine: 149 },
     'camera-rear': { economy: 49, premium: 79, genuine: 159 },
     'camera-front': { economy: 39, premium: 69, genuine: 129 },
-    speaker: { economy: 29, premium: 49, genuine: 79 },
-    'water-damage': { economy: 59, premium: 99, genuine: 149 },
-    buttons: { economy: 29, premium: 49, genuine: 79 },
-    software: { economy: 0, premium: 0, genuine: 0 },
+    'back-glass': { economy: 39, premium: 69, genuine: 149 },
 };

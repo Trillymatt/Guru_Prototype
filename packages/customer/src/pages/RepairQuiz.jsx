@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
 import { formatPhoneE164 } from '@shared/validation';
 import {
@@ -11,27 +12,18 @@ import {
     PARTS_TIERS,
     SAMPLE_PRICING,
     SERVICE_FEE,
+    getAvailableRepairs,
 } from '@shared/constants';
 import '../styles/repair-quiz.css';
 
-import { useRef } from 'react';
-
 const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
 
-// Supported cities in the Dallas-Fort Worth metroplex
+// Supported cities — initial launch area
 const SUPPORTED_CITIES = [
-    'dallas', 'fort worth', 'plano', 'frisco', 'mckinney',
-    'arlington', 'irving', 'garland', 'grand prairie', 'mesquite',
-    'carrollton', 'denton', 'richardson', 'lewisville', 'allen',
-    'flower mound', 'north richland hills', 'mansfield', 'rowlett',
-    'euless', 'desoto', 'grapevine', 'bedford', 'cedar hill',
-    'wylie', 'keller', 'coppell', 'haltom city', 'the colony',
-    'southlake', 'colleyville', 'farmers branch', 'addison',
-    'trophy club', 'prosper', 'celina', 'little elm', 'sachse',
-    'murphy', 'highland park', 'university park', 'duncanville',
-    'lancaster', 'watauga', 'hurst', 'benbrook', 'saginaw',
-    'burleson', 'crowley', 'weatherford', 'cleburne', 'rockwall',
-    'forney', 'heath', 'midlothian', 'waxahachie', 'ennis',
+    'denton', 'lewisville', 'corinth', 'lake dallas',
+    'plano', 'frisco', 'grapevine', 'southlake',
+    'trophy club', 'justin', 'northlake', 'argyle',
+    'lantana', 'the colony',
 ];
 
 function isCitySupported(addressDisplay) {
@@ -127,6 +119,7 @@ const AddressSearch = ({ value, onChange, onServiceError }) => {
 };
 
 export default function RepairQuiz() {
+    const { user } = useAuth();
     const [step, setStep] = useState(0);
     const [selectedDevice, setSelectedDevice] = useState(null);
     const [selectedIssues, setSelectedIssues] = useState([]);
@@ -136,19 +129,39 @@ export default function RepairQuiz() {
     const [scheduleTime, setScheduleTime] = useState('');
     const [scheduleAddress, setScheduleAddress] = useState('');
     const [serviceAreaError, setServiceAreaError] = useState(null);
-    // Quality must be explicitly chosen by customer
 
     // Auth / Contact State
     const [contact, setContact] = useState({ name: '', email: '', phone: '' });
-    // OTP is email-only for now
     const [otpSent, setOtpSent] = useState(false);
     const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
     const [isVerifying, setIsVerifying] = useState(false);
     const [authError, setAuthError] = useState('');
     const otpRefs = useRef([]);
+    const [customerLoaded, setCustomerLoaded] = useState(false);
 
     const [confirmed, setConfirmed] = useState(false);
     const navigate = useNavigate();
+
+    // If user is already logged in, fetch their customer profile to pre-fill contact
+    useEffect(() => {
+        if (!user) { setCustomerLoaded(true); return; }
+        supabase.from('customers').select('*').eq('id', user.id).single()
+            .then(({ data }) => {
+                if (data) {
+                    setContact({
+                        name: data.full_name || '',
+                        email: data.email || user.email || '',
+                        phone: data.phone || '',
+                    });
+                } else {
+                    setContact(prev => ({ ...prev, email: user.email || '' }));
+                }
+                setCustomerLoaded(true);
+            });
+    }, [user]);
+
+    // Available repair types based on the selected device
+    const availableRepairs = getAvailableRepairs(selectedDevice);
 
     const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
     const goBack = () => setStep((s) => Math.max(s - 1, 0));
@@ -182,7 +195,17 @@ export default function RepairQuiz() {
         return partsTotal + SERVICE_FEE;
     };
 
-    const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
+    // When device changes, remove any selected issues that aren't available for the new device
+    useEffect(() => {
+        if (!selectedDevice) return;
+        const availableIds = getAvailableRepairs(selectedDevice).map(t => t.id);
+        setSelectedIssues(prev => prev.filter(id => availableIds.includes(id)));
+        setIssueTiers(prev => {
+            const copy = { ...prev };
+            Object.keys(copy).forEach(id => { if (!availableIds.includes(id)) delete copy[id]; });
+            return copy;
+        });
+    }, [selectedDevice]);
 
     // Min date: 3 days from now
     const minDate = new Date();
@@ -244,6 +267,58 @@ export default function RepairQuiz() {
         pasted.split('').forEach((char, i) => { next[i] = char; });
         setOtpCode(next);
         otpRefs.current[Math.min(pasted.length, 5)]?.focus();
+    };
+
+    // Book directly for already-authenticated users (no OTP needed)
+    const handleBookDirectly = async () => {
+        setIsVerifying(true);
+        setAuthError('');
+
+        try {
+            const userId = user.id;
+
+            // Upsert customer profile with latest info
+            const { error: profileError } = await supabase.from('customers').upsert({
+                id: userId,
+                full_name: contact.name || user.email,
+                phone: contact.phone,
+                email: contact.email || user.email,
+            }, { onConflict: 'id' });
+
+            if (profileError) {
+                console.error('Customer profile error:', profileError);
+                setAuthError('Failed to save your profile. Please try again.');
+                setIsVerifying(false);
+                return;
+            }
+
+            // Save the repair booking
+            const { error: repairError } = await supabase.from('repairs').insert({
+                customer_id: userId,
+                device: selectedDevice?.name || 'Unknown Device',
+                issues: selectedIssues,
+                parts_tier: issueTiers,
+                service_fee: SERVICE_FEE,
+                total_estimate: calculateTotal(),
+                schedule_date: scheduleDate,
+                schedule_time: scheduleTime,
+                address: scheduleAddress,
+                status: 'pending',
+            });
+
+            if (repairError) {
+                console.error('Repair booking error:', repairError);
+                setAuthError('Failed to book your repair. Please try again.');
+                setIsVerifying(false);
+                return;
+            }
+
+            setIsVerifying(false);
+            setConfirmed(true);
+        } catch (err) {
+            setAuthError('Something went wrong. Please try again.');
+            setIsVerifying(false);
+        }
     };
 
     const handleVerifyAndBook = async (e) => {
@@ -372,7 +447,7 @@ export default function RepairQuiz() {
                                 <div className="quiz__section">
                                     <h3 className="quiz__section-title">What's wrong with your {selectedDevice.name}?</h3>
                                     <div className="quiz__issues">
-                                        {REPAIR_TYPES.map((type) => (
+                                        {availableRepairs.map((type) => (
                                             <button
                                                 key={type.id}
                                                 className={`quiz__issue-card ${selectedIssues.includes(type.id) ? 'quiz__issue-card--selected' : ''}`}
@@ -389,16 +464,11 @@ export default function RepairQuiz() {
                                             </button>
                                         ))}
                                     </div>
-                                    {isSoftwareOnly && (
-                                        <div className="quiz__alert-box">
-                                            ⚠️ We do not offer on-site appointments for software-only issues. Please visit us in-store.
-                                        </div>
-                                    )}
                                 </div>
                             )}
 
                             {/* Quality Tier Selection (Required) */}
-                            {selectedIssues.length > 0 && !isSoftwareOnly && (
+                            {selectedIssues.length > 0 && (
                                 <div className="quiz__section">
                                     <h3 className="quiz__section-title">Choose Parts Quality</h3>
                                     <p className="quiz__quality-subtitle">Select a quality tier for each repair. This affects pricing and part longevity.</p>
@@ -448,7 +518,7 @@ export default function RepairQuiz() {
                                 <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
                                 <button
                                     className="guru-btn guru-btn--primary"
-                                    disabled={selectedIssues.length === 0 || isSoftwareOnly || selectedIssues.some(id => !issueTiers[id])}
+                                    disabled={selectedIssues.length === 0 || selectedIssues.some(id => !issueTiers[id])}
                                     onClick={goNext}
                                 >
                                     Continue →
@@ -504,12 +574,12 @@ export default function RepairQuiz() {
                                     <div className="sched-service-error">
                                         <span className="sched-service-error__icon">⚠️</span>
                                         <div>
-                                            <strong>Not available in {serviceAreaError}</strong>
-                                            <p>We currently only serve the Dallas–Fort Worth metroplex. We're expanding soon!</p>
+                                            <strong>Not available in {serviceAreaError} yet</strong>
+                                            <p>We currently serve Denton, Lewisville, Corinth, Lake Dallas, Plano, Frisco, Grapevine, Southlake, Trophy Club, Justin, Northlake, Argyle, Lantana, and The Colony. More cities coming soon!</p>
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="sched-hint">We come to your home, office, or wherever you are. Currently serving the DFW metroplex.</p>
+                                    <p className="sched-hint">We come to your home, office, or wherever you are in our service area.</p>
                                 )}
                             </div>
 
@@ -529,7 +599,75 @@ export default function RepairQuiz() {
                     {/* ─── Step 2: Confirm & book (Quote Review + Contact + Auth) ─────── */}
                     {step === 2 && !confirmed && (
                         <div className="quiz__panel animate-fade-in-up">
-                            {!otpSent ? (
+                            {/* ── Logged-in user: show quote + Book button (no OTP needed) ── */}
+                            {user ? (
+                                <>
+                                    <h2 className="quiz__title">Confirm & book</h2>
+                                    <p className="quiz__subtitle">Review your repair details and confirm your booking.</p>
+
+                                    {/* Quote Review */}
+                                    <div className="quiz__quote">
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Device</div>
+                                            <div className="quiz__quote-value">{selectedDevice?.name}</div>
+                                        </div>
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Repairs</div>
+                                            {selectedIssues.map((issueId) => {
+                                                const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                                const tier = PARTS_TIERS.find((t) => t.id === issueTiers[issueId]);
+                                                const price = getIssuePrice(issueId);
+                                                return (
+                                                    <div key={issueId} className="quiz__quote-line">
+                                                        <span>{type?.icon} {type?.name}</span>
+                                                        <span className="quiz__quote-line-right">
+                                                            <span className="quiz__quote-tier-tag">{tier?.name}</span>
+                                                            <span>${price}</span>
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                            <div className="quiz__quote-line">
+                                                <span>🚗 On-site Service Fee</span>
+                                                <span className="quiz__quote-value">${SERVICE_FEE}</span>
+                                            </div>
+                                        </div>
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Appointment</div>
+                                            <div className="quiz__quote-line"><span>📅 {scheduleDate}</span></div>
+                                            <div className="quiz__quote-line"><span>🕐 {timeSlots.find(s => s.id === scheduleTime)?.range}</span></div>
+                                            <div className="quiz__quote-line"><span>📍 {scheduleAddress}</span></div>
+                                        </div>
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Contact</div>
+                                            <div className="quiz__quote-line"><span>👤 {contact.name || user.email}</span></div>
+                                            <div className="quiz__quote-line"><span>✉️ {contact.email || user.email}</span></div>
+                                            {contact.phone && <div className="quiz__quote-line"><span>📞 {contact.phone}</span></div>}
+                                        </div>
+                                        <div className="quiz__quote-total">
+                                            <span>Estimated Total</span>
+                                            <span className="quiz__quote-total-price">${calculateTotal()}</span>
+                                        </div>
+                                    </div>
+
+                                    {authError && <p className="login-card__error">{authError}</p>}
+                                    <div className="quiz__warranty-notice" style={{ marginBottom: 16 }}>
+                                        <strong>Note:</strong> Repairs do not include a warranty on parts or service.
+                                        Prices are estimates. Final pricing confirmed after technician diagnosis.
+                                    </div>
+                                    <div className="quiz__actions">
+                                        <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                        <button
+                                            className="guru-btn guru-btn--primary guru-btn--lg"
+                                            disabled={isVerifying}
+                                            onClick={handleBookDirectly}
+                                        >
+                                            {isVerifying ? 'Booking...' : 'Confirm Appointment'}
+                                        </button>
+                                    </div>
+                                </>
+                            ) : !otpSent ? (
+                                /* ── Guest user: show quote + contact form + OTP ── */
                                 <>
                                     <h2 className="quiz__title">Confirm & book</h2>
                                     <p className="quiz__subtitle">Review your repair and enter your details to book.</p>
@@ -563,15 +701,9 @@ export default function RepairQuiz() {
                                         </div>
                                         <div className="quiz__quote-section">
                                             <div className="quiz__quote-label">Appointment</div>
-                                            <div className="quiz__quote-line">
-                                                <span>📅 {scheduleDate}</span>
-                                            </div>
-                                            <div className="quiz__quote-line">
-                                                <span>🕐 {timeSlots.find(s => s.id === scheduleTime)?.range}</span>
-                                            </div>
-                                            <div className="quiz__quote-line">
-                                                <span>📍 {scheduleAddress}</span>
-                                            </div>
+                                            <div className="quiz__quote-line"><span>📅 {scheduleDate}</span></div>
+                                            <div className="quiz__quote-line"><span>🕐 {timeSlots.find(s => s.id === scheduleTime)?.range}</span></div>
+                                            <div className="quiz__quote-line"><span>📍 {scheduleAddress}</span></div>
                                         </div>
                                         <div className="quiz__quote-total">
                                             <span>Estimated Total</span>
@@ -636,6 +768,7 @@ export default function RepairQuiz() {
                                     </div>
                                 </>
                             ) : (
+                                /* ── OTP verification step ── */
                                 <>
                                     <h2 className="quiz__title">Enter verification code</h2>
                                     <p className="quiz__subtitle">
