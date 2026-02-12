@@ -8,10 +8,10 @@ frontend:
     build:
       commands:
         # Build from root using workspace command
-        - npm run build:customer
+        - npm run build:tech
   artifacts:
-    # Output directory for customer build
-    baseDirectory: packages/customer/dist
+    # Output directory for tech build
+    baseDirectory: packages/technician/dist
     files:
       - '**/*'
   cache:
