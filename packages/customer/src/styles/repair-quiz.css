@@ -4,7 +4,6 @@
     min-height: 100vh;
     padding-top: 120px;
     padding-bottom: var(--space-16);
-    padding-bottom: var(--space-16);
     /* background removed to use global */
 }
 
@@ -90,6 +89,7 @@
     border: 1px solid var(--guru-gray-200);
     padding: var(--space-10);
     box-shadow: var(--shadow-lg);
+    margin-bottom: 120px; /* Extra space for sticky pricing footer */
 }
 
 .quiz__title {
@@ -640,4 +640,194 @@
     .otp-inputs {
         gap: var(--space-2);
     }
+}
+
+/* ─── Quiz Sections ──────────────────────────────────────────── */
+
+.quiz__section {
+    margin-top: var(--space-10);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--guru-gray-200);
+}
+
+.quiz__section:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.quiz__section-title {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--guru-gray-900);
+    margin-bottom: var(--space-4);
+}
+
+/* ─── Quality Tier Selector (Collapsible) ───────────────────── */
+
+.quiz__quality-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-4);
+}
+
+.quiz__quality-default {
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-500);
+    margin-top: var(--space-1);
+}
+
+.quiz__quality-toggle {
+    background: transparent;
+    border: 2px solid var(--guru-purple-500);
+    color: var(--guru-purple-600);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.quiz__quality-toggle:hover {
+    background: var(--guru-purple-50);
+    border-color: var(--guru-purple-600);
+}
+
+/* ─── Live Pricing Footer ────────────────────────────────────── */
+
+.quiz__price-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700));
+    padding: var(--space-5) var(--space-6);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    z-index: var(--z-sticky);
+    animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.quiz__price-footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quiz__price-footer-label {
+    color: white;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.quiz__price-footer-items {
+    font-size: var(--font-size-xs);
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+.quiz__price-footer-amount {
+    color: white;
+    font-size: var(--font-size-3xl);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+@media (max-width: 768px) {
+    .quiz__price-footer {
+        padding: var(--space-4);
+    }
+
+    .quiz__price-footer-amount {
+        font-size: var(--font-size-2xl);
+    }
+
+    .quiz__quality-header {
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .quiz__quality-toggle {
+        width: 100%;
+    }
+}
+
+/* ─── Address Search Component ───────────────────────────────── */
+
+.address-search-container {
+    position: relative;
+    width: 100%;
+}
+
+.address-searching {
+    padding: var(--space-3);
+    text-align: center;
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-500);
+}
+
+.address-results {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    left: 0;
+    right: 0;
+    background: var(--guru-white);
+    border: 2px solid var(--guru-gray-200);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: var(--z-dropdown);
+}
+
+.address-result-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    text-align: left;
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-700);
+    background: var(--guru-white);
+    border: none;
+    border-bottom: 1px solid var(--guru-gray-100);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.address-result-item:last-of-type {
+    border-bottom: none;
+}
+
+.address-result-item:hover {
+    background: var(--guru-purple-50);
+    color: var(--guru-purple-700);
+}
+
+.address-api-note {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-xs);
+    color: var(--guru-gray-400);
+    text-align: center;
+    border-top: 1px solid var(--guru-gray-200);
+    background: var(--guru-gray-50);
 }

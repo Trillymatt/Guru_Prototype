@@ -16,7 +16,7 @@ import '../styles/repair-quiz.css';
 
 import { useRef } from 'react';
 
-const STEPS = ['Device', 'Issues', 'Quality', 'Quote', 'Schedule', 'Contact'];
+const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
 
 // Mock Address Search Component
 const AddressSearch = ({ value, onChange }) => {
@@ -88,6 +88,7 @@ export default function RepairQuiz() {
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
     const [scheduleAddress, setScheduleAddress] = useState('');
+    const [showQualitySelector, setShowQualitySelector] = useState(false);
 
     // Auth / Contact State
     const [contact, setContact] = useState({ name: '', email: '', phone: '' });
@@ -266,84 +267,124 @@ export default function RepairQuiz() {
                         ))}
                     </div>
 
-                    {/* ─── Step 0: Device Selection ─────── */}
+                    {/* ─── Step 0: What needs fixing? (Device + Issues + Quality) ─────── */}
                     {step === 0 && (
                         <div className="quiz__panel animate-fade-in-up">
-                            <h2 className="quiz__title">What iPhone do you have?</h2>
-                            <p className="quiz__subtitle">Select your device model.</p>
+                            <h2 className="quiz__title">What needs fixing?</h2>
+                            <p className="quiz__subtitle">Select your device and what's broken.</p>
 
-                            {/* Generation Tabs */}
-                            <div className="quiz__gen-tabs">
-                                {sortedGens.map((gen) => (
-                                    <button
-                                        key={gen}
-                                        className={`quiz__gen-tab ${activeGen === gen ? 'quiz__gen-tab--active' : ''}`}
-                                        onClick={() => setActiveGen(gen)}
-                                    >
-                                        {gen === 'SE' ? 'SE' : gen}
-                                    </button>
-                                ))}
+                            {/* Device Selection */}
+                            <div className="quiz__section">
+                                <h3 className="quiz__section-title">Your iPhone</h3>
+                                <div className="quiz__gen-tabs">
+                                    {sortedGens.map((gen) => (
+                                        <button
+                                            key={gen}
+                                            className={`quiz__gen-tab ${activeGen === gen ? 'quiz__gen-tab--active' : ''}`}
+                                            onClick={() => setActiveGen(gen)}
+                                        >
+                                            {gen === 'SE' ? 'SE' : gen}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="quiz__devices">
+                                    {getDevicesByGeneration(activeGen).map((device) => (
+                                        <button
+                                            key={device.id}
+                                            className={`quiz__device-card ${selectedDevice?.id === device.id ? 'quiz__device-card--selected' : ''}`}
+                                            onClick={() => setSelectedDevice(device)}
+                                        >
+                                            <div className="quiz__device-icon">📱</div>
+                                            <div className="quiz__device-name">{device.name}</div>
+                                            <div className="quiz__device-year">{device.year}</div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Devices Grid */}
-                            <div className="quiz__devices">
-                                {getDevicesByGeneration(activeGen).map((device) => (
-                                    <button
-                                        key={device.id}
-                                        className={`quiz__device-card ${selectedDevice?.id === device.id ? 'quiz__device-card--selected' : ''}`}
-                                        onClick={() => setSelectedDevice(device)}
-                                    >
-                                        <div className="quiz__device-icon">📱</div>
-                                        <div className="quiz__device-name">{device.name}</div>
-                                        <div className="quiz__device-year">{device.year}</div>
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="quiz__actions">
-                                <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
-                                <button
-                                    className="guru-btn guru-btn--primary"
-                                    disabled={!selectedDevice}
-                                    onClick={goNext}
-                                >
-                                    Continue →
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ─── Step 1: Issue Selection ─────── */}
-                    {step === 1 && (
-                        <div className="quiz__panel animate-fade-in-up">
-                            <h2 className="quiz__title">What's wrong with your {selectedDevice?.name}?</h2>
-                            <p className="quiz__subtitle">Select all that apply.</p>
-                            <div className="quiz__issues stagger-children">
-                                {REPAIR_TYPES.map((type) => (
-                                    <button
-                                        key={type.id}
-                                        className={`quiz__issue-card ${selectedIssues.includes(type.id) ? 'quiz__issue-card--selected' : ''}`}
-                                        onClick={() => toggleIssue(type.id)}
-                                    >
-                                        <div className="quiz__issue-icon">{type.icon}</div>
-                                        <div className="quiz__issue-info">
-                                            <div className="quiz__issue-name">{type.name}</div>
-                                            <div className="quiz__issue-desc">{type.description}</div>
+                            {/* Issue Selection */}
+                            {selectedDevice && (
+                                <div className="quiz__section">
+                                    <h3 className="quiz__section-title">What's wrong with your {selectedDevice.name}?</h3>
+                                    <div className="quiz__issues">
+                                        {REPAIR_TYPES.map((type) => (
+                                            <button
+                                                key={type.id}
+                                                className={`quiz__issue-card ${selectedIssues.includes(type.id) ? 'quiz__issue-card--selected' : ''}`}
+                                                onClick={() => toggleIssue(type.id)}
+                                            >
+                                                <div className="quiz__issue-icon">{type.icon}</div>
+                                                <div className="quiz__issue-info">
+                                                    <div className="quiz__issue-name">{type.name}</div>
+                                                    <div className="quiz__issue-desc">{type.description}</div>
+                                                </div>
+                                                <div className="quiz__issue-check">
+                                                    {selectedIssues.includes(type.id) ? '✓' : ''}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {isSoftwareOnly && (
+                                        <div className="quiz__alert-box">
+                                            ⚠️ We do not offer on-site appointments for software-only issues. Please visit us in-store.
                                         </div>
-                                        <div className="quiz__issue-check">
-                                            {selectedIssues.includes(type.id) ? '✓' : ''}
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Quality Tier Selection (Collapsible) */}
+                            {selectedIssues.length > 0 && !isSoftwareOnly && (
+                                <div className="quiz__section">
+                                    <div className="quiz__quality-header">
+                                        <div>
+                                            <h3 className="quiz__section-title">Parts Quality</h3>
+                                            <p className="quiz__quality-default">Premium parts selected by default</p>
                                         </div>
-                                    </button>
-                                ))}
-                            </div>
-                            {isSoftwareOnly && (
-                                <div className="quiz__alert-box">
-                                    ⚠️ We do not offer on-site appointments for software-only issues. Please visit us in-store.
+                                        <button
+                                            className="quiz__quality-toggle"
+                                            onClick={() => setShowQualitySelector(!showQualitySelector)}
+                                        >
+                                            {showQualitySelector ? 'Hide options' : 'Change quality'}
+                                        </button>
+                                    </div>
+
+                                    {showQualitySelector && (
+                                        <div className="quiz__per-issue-tiers">
+                                            {selectedIssues.map((issueId) => {
+                                                const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                                const currentTier = issueTiers[issueId] || 'premium';
+                                                return (
+                                                    <div key={issueId} className="pit-row">
+                                                        <div className="pit-row__info">
+                                                            <span className="pit-row__icon">{type?.icon}</span>
+                                                            <span className="pit-row__name">{type?.name}</span>
+                                                        </div>
+                                                        <div className="pit-row__tiers">
+                                                            {PARTS_TIERS.map((tier) => {
+                                                                const price = SAMPLE_PRICING[issueId]?.[tier.id] || 0;
+                                                                return (
+                                                                    <button
+                                                                        key={tier.id}
+                                                                        className={`pit-tier ${currentTier === tier.id ? 'pit-tier--selected' : ''}`}
+                                                                        onClick={() => setTierForIssue(issueId, tier.id)}
+                                                                        style={currentTier === tier.id ? { borderColor: tier.color, background: `${tier.color}10` } : undefined}
+                                                                    >
+                                                                        <span className="pit-tier__label">{tier.name}</span>
+                                                                        <span className="pit-tier__price">${price}</span>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             <div className="quiz__actions">
-                                <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
                                 <button
                                     className="guru-btn guru-btn--primary"
                                     disabled={selectedIssues.length === 0 || isSoftwareOnly}
@@ -355,115 +396,10 @@ export default function RepairQuiz() {
                         </div>
                     )}
 
-                    {/* ─── Step 2: Per-Issue Tier Selection ─────── */}
-                    {step === 2 && (
+                    {/* ─── Step 1: When & where? (Schedule) ─────── */}
+                    {step === 1 && !confirmed && (
                         <div className="quiz__panel animate-fade-in-up">
-                            <h2 className="quiz__title">Choose parts quality</h2>
-                            <p className="quiz__subtitle">
-                                Pick a quality tier for each repair. All include professional installation.
-                            </p>
-                            <div className="quiz__per-issue-tiers">
-                                {selectedIssues.map((issueId) => {
-                                    const type = REPAIR_TYPES.find((t) => t.id === issueId);
-                                    const currentTier = issueTiers[issueId] || 'premium';
-                                    return (
-                                        <div key={issueId} className="pit-row">
-                                            <div className="pit-row__info">
-                                                <span className="pit-row__icon">{type?.icon}</span>
-                                                <span className="pit-row__name">{type?.name}</span>
-                                            </div>
-                                            <div className="pit-row__tiers">
-                                                {PARTS_TIERS.map((tier) => {
-                                                    const price = SAMPLE_PRICING[issueId]?.[tier.id] || 0;
-                                                    return (
-                                                        <button
-                                                            key={tier.id}
-                                                            className={`pit-tier ${currentTier === tier.id ? 'pit-tier--selected' : ''}`}
-                                                            onClick={() => setTierForIssue(issueId, tier.id)}
-                                                            style={currentTier === tier.id ? { borderColor: tier.color, background: `${tier.color}10` } : undefined}
-                                                        >
-                                                            <span className="pit-tier__label">{tier.name}</span>
-                                                            <span className="pit-tier__price">${price}</span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            <div className="quiz__running-total">
-                                <span>Running total</span>
-                                <span className="quiz__running-total-price">${calculateTotal()}</span>
-                            </div>
-                            <div className="quiz__actions">
-                                <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
-                                <button
-                                    className="guru-btn guru-btn--primary"
-                                    onClick={goNext}
-                                >
-                                    See Your Quote →
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ─── Step 3: Quote Summary ─────── */}
-                    {step === 3 && (
-                        <div className="quiz__panel animate-fade-in-up">
-                            <h2 className="quiz__title">Your Repair Quote</h2>
-                            <p className="quiz__subtitle">Review your selections below.</p>
-                            <div className="quiz__quote">
-                                <div className="quiz__quote-section">
-                                    <div className="quiz__quote-label">Device</div>
-                                    <div className="quiz__quote-value">{selectedDevice?.name}</div>
-                                </div>
-                                <div className="quiz__quote-section">
-                                    <div className="quiz__quote-label">Repairs</div>
-                                    {selectedIssues.map((issueId) => {
-                                        const type = REPAIR_TYPES.find((t) => t.id === issueId);
-                                        const tier = PARTS_TIERS.find((t) => t.id === issueTiers[issueId]);
-                                        const price = getIssuePrice(issueId);
-                                        return (
-                                            <div key={issueId} className="quiz__quote-line">
-                                                <span>{type?.icon} {type?.name}</span>
-                                                <span className="quiz__quote-line-right">
-                                                    <span className="quiz__quote-tier-tag">{tier?.name}</span>
-                                                    <span>${price}</span>
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                    <div className="quiz__quote-line">
-                                        <span>🚗 On-site Service Fee</span>
-                                        <span className="quiz__quote-value">${SERVICE_FEE}</span>
-                                    </div>
-                                </div>
-                                <div className="quiz__quote-total">
-                                    <span>Estimated Total</span>
-                                    <span className="quiz__quote-total-price">${calculateTotal()}</span>
-                                </div>
-                            </div>
-                            <div className="quiz__warranty-notice">
-                                <strong>Note:</strong> Repairs do not include a warranty on parts or service.
-                            </div>
-                            <div className="quiz__actions">
-                                <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
-                                <button className="guru-btn guru-btn--primary guru-btn--lg" onClick={goNext}>
-                                    Schedule Appointment →
-                                </button>
-                            </div>
-                            <p className="quiz__disclaimer">
-                                * Prices are estimates. Final pricing confirmed after technician diagnosis.
-                                Parts are ordered after confirmation and typically arrive within 3 days.
-                            </p>
-                        </div>
-                    )}
-
-                    {/* ─── Step 4: Schedule ─────── */}
-                    {step === 4 && !confirmed && (
-                        <div className="quiz__panel animate-fade-in-up">
-                            <h2 className="quiz__title">Schedule your repair</h2>
+                            <h2 className="quiz__title">When & where?</h2>
                             <p className="quiz__subtitle">
                                 Pick a date and time. We need at least 3 days to order parts.
                             </p>
@@ -512,68 +448,120 @@ export default function RepairQuiz() {
                                     disabled={!scheduleDate || !scheduleTime || !scheduleAddress}
                                     onClick={goNext}
                                 >
-                                    Continue to Details →
+                                    Review & Book →
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    {/* ─── Step 5: Contact & Auth ─────── */}
-                    {step === 5 && !confirmed && (
+                    {/* ─── Step 2: Confirm & book (Quote Review + Contact + Auth) ─────── */}
+                    {step === 2 && !confirmed && (
                         <div className="quiz__panel animate-fade-in-up">
                             {!otpSent ? (
                                 <>
-                                    <h2 className="quiz__title">Your Details</h2>
-                                    <p className="quiz__subtitle">
-                                        We need your contact info to confirm the appointment.
-                                    </p>
-                                    <form onSubmit={handleSendOtp}>
-                                        <div className="guru-input-group" style={{ marginBottom: 16 }}>
-                                            <label className="sched-label">Full Name</label>
-                                            <input
-                                                className="guru-input"
-                                                type="text"
-                                                placeholder="Jane Doe"
-                                                value={contact.name}
-                                                onChange={(e) => handleContactChange('name', e.target.value)}
-                                                required
-                                            />
+                                    <h2 className="quiz__title">Confirm & book</h2>
+                                    <p className="quiz__subtitle">Review your repair and enter your details to book.</p>
+
+                                    {/* Quote Review */}
+                                    <div className="quiz__quote">
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Device</div>
+                                            <div className="quiz__quote-value">{selectedDevice?.name}</div>
                                         </div>
-                                        <div className="guru-input-group" style={{ marginBottom: 16 }}>
-                                            <label className="sched-label">Email Address</label>
-                                            <input
-                                                className="guru-input"
-                                                type="email"
-                                                placeholder="jane@example.com"
-                                                value={contact.email}
-                                                onChange={(e) => handleContactChange('email', e.target.value)}
-                                                required
-                                            />
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Repairs</div>
+                                            {selectedIssues.map((issueId) => {
+                                                const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                                const tier = PARTS_TIERS.find((t) => t.id === issueTiers[issueId]);
+                                                const price = getIssuePrice(issueId);
+                                                return (
+                                                    <div key={issueId} className="quiz__quote-line">
+                                                        <span>{type?.icon} {type?.name}</span>
+                                                        <span className="quiz__quote-line-right">
+                                                            <span className="quiz__quote-tier-tag">{tier?.name}</span>
+                                                            <span>${price}</span>
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                            <div className="quiz__quote-line">
+                                                <span>🚗 On-site Service Fee</span>
+                                                <span className="quiz__quote-value">${SERVICE_FEE}</span>
+                                            </div>
                                         </div>
-                                        <div className="guru-input-group" style={{ marginBottom: 24 }}>
-                                            <label className="sched-label">Phone Number <span style={{ color: 'var(--guru-gray-400)', fontWeight: 400 }}>(optional)</span></label>
-                                            <input
-                                                className="guru-input"
-                                                type="tel"
-                                                placeholder="(555) 123-4567"
-                                                value={contact.phone}
-                                                onChange={(e) => handleContactChange('phone', e.target.value)}
-                                            />
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Appointment</div>
+                                            <div className="quiz__quote-line">
+                                                <span>📅 {scheduleDate}</span>
+                                            </div>
+                                            <div className="quiz__quote-line">
+                                                <span>🕐 {timeSlots.find(s => s.id === scheduleTime)?.range}</span>
+                                            </div>
+                                            <div className="quiz__quote-line">
+                                                <span>📍 {scheduleAddress}</span>
+                                            </div>
                                         </div>
-                                        {authError && (
-                                            <p style={{ color: '#ef4444', fontSize: '0.875rem', textAlign: 'center', marginBottom: 12 }}>{authError}</p>
-                                        )}
-                                        <div className="quiz__actions">
-                                            <button type="button" className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
-                                            <button
-                                                type="submit"
-                                                className="guru-btn guru-btn--primary guru-btn--lg"
-                                                disabled={!contact.name || !contact.email || isVerifying}
-                                            >
-                                                {isVerifying ? 'Sending...' : 'Verify & Book →'}
-                                            </button>
+                                        <div className="quiz__quote-total">
+                                            <span>Estimated Total</span>
+                                            <span className="quiz__quote-total-price">${calculateTotal()}</span>
                                         </div>
-                                    </form>
+                                    </div>
+
+                                    {/* Contact Form */}
+                                    <div className="quiz__section">
+                                        <h3 className="quiz__section-title">Your contact details</h3>
+                                        <form onSubmit={handleSendOtp}>
+                                            <div className="guru-input-group" style={{ marginBottom: 16 }}>
+                                                <label className="sched-label">Full Name</label>
+                                                <input
+                                                    className="guru-input"
+                                                    type="text"
+                                                    placeholder="Jane Doe"
+                                                    value={contact.name}
+                                                    onChange={(e) => handleContactChange('name', e.target.value)}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="guru-input-group" style={{ marginBottom: 16 }}>
+                                                <label className="sched-label">Email Address</label>
+                                                <input
+                                                    className="guru-input"
+                                                    type="email"
+                                                    placeholder="jane@example.com"
+                                                    value={contact.email}
+                                                    onChange={(e) => handleContactChange('email', e.target.value)}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="guru-input-group" style={{ marginBottom: 24 }}>
+                                                <label className="sched-label">Phone Number <span style={{ color: 'var(--guru-gray-400)', fontWeight: 400 }}>(optional)</span></label>
+                                                <input
+                                                    className="guru-input"
+                                                    type="tel"
+                                                    placeholder="(555) 123-4567"
+                                                    value={contact.phone}
+                                                    onChange={(e) => handleContactChange('phone', e.target.value)}
+                                                />
+                                            </div>
+                                            {authError && (
+                                                <p className="login-card__error">{authError}</p>
+                                            )}
+                                            <div className="quiz__warranty-notice" style={{ marginBottom: 16 }}>
+                                                <strong>Note:</strong> Repairs do not include a warranty on parts or service.
+                                                Prices are estimates. Final pricing confirmed after technician diagnosis.
+                                            </div>
+                                            <div className="quiz__actions">
+                                                <button type="button" className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                                <button
+                                                    type="submit"
+                                                    className="guru-btn guru-btn--primary guru-btn--lg"
+                                                    disabled={!contact.name || !contact.email || isVerifying}
+                                                >
+                                                    {isVerifying ? 'Sending...' : 'Send Verification Code'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </>
                             ) : (
                                 <>
@@ -601,7 +589,7 @@ export default function RepairQuiz() {
                                             ))}
                                         </div>
                                         {authError && (
-                                            <p style={{ color: '#ef4444', fontSize: '0.875rem', textAlign: 'center', marginBottom: 12 }}>{authError}</p>
+                                            <p className="login-card__error">{authError}</p>
                                         )}
                                         <div className="quiz__actions">
                                             <button
@@ -652,7 +640,7 @@ export default function RepairQuiz() {
                                 </div>
                                 <div className="confirm__row">
                                     <span>💰</span>
-                                    <span>Estimated {' '}${calculateTotal()}</span>
+                                    <span>Estimated ${calculateTotal()}</span>
                                 </div>
                             </div>
                             <p className="quiz__disclaimer">
@@ -662,6 +650,21 @@ export default function RepairQuiz() {
                             <Link to="/" className="guru-btn guru-btn--primary guru-btn--lg" style={{ marginTop: 16 }}>
                                 Back to Home
                             </Link>
+                        </div>
+                    )}
+
+                    {/* ─── Live Pricing Footer ─────── */}
+                    {selectedIssues.length > 0 && !confirmed && step < 2 && (
+                        <div className="quiz__price-footer">
+                            <div className="quiz__price-footer-inner">
+                                <div className="quiz__price-footer-label">
+                                    Estimated Total
+                                    <span className="quiz__price-footer-items">
+                                        {selectedIssues.length} repair{selectedIssues.length > 1 ? 's' : ''} + service fee
+                                    </span>
+                                </div>
+                                <div className="quiz__price-footer-amount">${calculateTotal()}</div>
+                            </div>
                         </div>
                     )}
                 </div>

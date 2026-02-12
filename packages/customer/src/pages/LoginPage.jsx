@@ -96,7 +96,7 @@ export default function LoginPage() {
             <div className="login-page">
                 <div className="login-card animate-scale-in">
                     <div className="login-card__logo">
-                        <div className="navbar__logo-icon" style={{ width: 48, height: 48, fontSize: '1.5rem' }}>G</div>
+                        <div className="login-card__logo-icon">G</div>
                     </div>
 
                     {step === 1 ? (
@@ -136,7 +136,7 @@ export default function LoginPage() {
                                     />
                                 </div>
                                 {authError && (
-                                    <p style={{ color: '#ef4444', fontSize: '0.875rem', textAlign: 'center', marginBottom: 12 }}>{authError}</p>
+                                    <p className="login-card__error">{authError}</p>
                                 )}
                                 <button
                                     type="submit"
@@ -198,7 +198,7 @@ export default function LoginPage() {
                                 }}>
                                     Resend
                                 </button>
-                                <span style={{ margin: '0 8px' }}>·</span>
+                                <span className="login-card__separator">·</span>
                                 <button className="login-card__switch" onClick={() => { setStep(1); setCode(['', '', '', '', '', '']); }}>
                                     Change email
                                 </button>

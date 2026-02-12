@@ -113,21 +113,21 @@ export default function QueuePage() {
 
                     <div className="queue-list stagger-children">
                         {loading ? (
-                            <div style={{ textAlign: 'center', padding: '4rem 0', color: '#737373' }}>
-                                <div style={{ fontSize: '2rem', marginBottom: 12 }}>⏳</div>
-                                Loading repairs...
+                            <div className="tech-loading-state">
+                                <div className="tech-loading-state__icon">⏳</div>
+                                <div className="tech-loading-state__text">Loading repairs...</div>
                             </div>
                         ) : filteredRepairs.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '4rem 0', color: '#737373' }}>
-                                <div style={{ fontSize: '2rem', marginBottom: 12 }}>📋</div>
-                                No repairs in this category
+                            <div className="tech-empty-state">
+                                <div className="tech-empty-state__icon">📋</div>
+                                <div className="tech-empty-state__text">No repairs in this category</div>
                             </div>
                         ) : filteredRepairs.map((repair) => {
                             const priority = getPriority(repair);
                             const customerName = repair.customers?.full_name || 'Unknown Customer';
                             const issues = Array.isArray(repair.issues) ? repair.issues : [];
                             return (
-                                <Link to={`/repair/${repair.id}`} key={repair.id} className="repair-card animate-fade-in-up" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <Link to={`/repair/${repair.id}`} key={repair.id} className="repair-card animate-fade-in-up">
                                     <div className={`repair-card__priority repair-card__priority--${priority}`}></div>
                                     <div className="repair-card__info">
                                         <div className="repair-card__device">{repair.device}</div>

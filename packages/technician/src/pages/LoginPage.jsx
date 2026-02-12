@@ -36,7 +36,7 @@ export default function LoginPage() {
             <div className="tech-login__bg"></div>
             <div className="tech-login__card animate-scale-in">
                 <div className="tech-login__logo">
-                    <div className="navbar__logo-icon" style={{ width: 48, height: 48, fontSize: '1.5rem', background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', borderRadius: 12 }}>
+                    <div className="tech-login__logo-icon">
                         G
                     </div>
                     <span className="tech-login__logo-text">Guru</span>
@@ -73,9 +73,9 @@ export default function LoginPage() {
                         />
                     </div>
                     {authError && (
-                        <p style={{ color: '#ef4444', fontSize: '0.875rem', textAlign: 'center', marginBottom: 4 }}>{authError}</p>
+                        <p className="tech-login__error">{authError}</p>
                     )}
-                    <button type="submit" className="guru-btn guru-btn--primary guru-btn--full guru-btn--lg" style={{ marginTop: 8 }} disabled={loading}>
+                    <button type="submit" className="guru-btn guru-btn--primary guru-btn--full guru-btn--lg" disabled={loading}>
                         {loading ? 'Signing in...' : 'Sign In'}
                     </button>
                 </form>

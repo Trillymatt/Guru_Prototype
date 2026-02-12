@@ -9,7 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
     return (
-        <div className="app app--tech">
+        <div className="app app--tech dark">
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route

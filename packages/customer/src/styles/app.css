@@ -27,6 +27,33 @@ body {
     flex: 1;
 }
 
+/* ─── Container Utility ────────────────────────────────────────── */
+
+.guru-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: var(--space-10);
+    padding-right: var(--space-10);
+}
+
+.guru-container--narrow {
+    max-width: 800px;
+}
+
+@media (max-width: 1024px) {
+    .guru-container {
+        padding-left: var(--space-8);
+        padding-right: var(--space-8);
+    }
+}
+
+/* ─── Button Utilities ─────────────────────────────────────────── */
+
+.guru-btn--full {
+    width: 100%;
+}
+
 /* ─── Scroll-Reveal Animation ──────────────────────────────────── */
 
 .reveal {
@@ -39,6 +66,21 @@ body {
 .reveal.revealed {
     opacity: 1;
     transform: translateY(0);
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 /* ─── Navbar ──────────────────────────────────────────────────── */
@@ -935,6 +977,11 @@ body {
 }
 
 @media (max-width: 768px) {
+    .guru-container {
+        padding-left: var(--space-6);
+        padding-right: var(--space-6);
+    }
+
     .footer__grid {
         grid-template-columns: 1fr 1fr;
         gap: var(--space-8);

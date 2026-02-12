@@ -27,14 +27,8 @@ export default function TechNav() {
     return (
         <nav className="tech-nav">
             <div className="guru-container tech-nav__inner">
-                <Link to="/queue" className="tech-nav__logo" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{
-                        width: 32, height: 32,
-                        background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
-                        borderRadius: 8,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'white', fontWeight: 800, fontSize: 14,
-                    }}>G</div>
+                <Link to="/queue" className="tech-nav__logo">
+                    <div className="tech-nav__logo-icon">G</div>
                     Guru
                     <span className="tech-nav__logo-badge">Tech</span>
                 </Link>
@@ -52,7 +46,7 @@ export default function TechNav() {
                         History
                     </Link>
                 </div>
-                <Link to="/profile" className="tech-nav__user" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link to="/profile" className="tech-nav__user">
                     <span>{techName}</span>
                     <div className="tech-nav__avatar">
                         {techName.charAt(0).toUpperCase()}

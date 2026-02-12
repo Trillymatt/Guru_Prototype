@@ -139,6 +139,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  min-width: 320px; /* Prevent content from being too narrow */
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 /* ─── Utility Classes ──────────────────────────────────────────── */
@@ -148,8 +150,8 @@ body {
   max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
-  padding-left: var(--space-6);
-  padding-right: var(--space-6);
+  padding-left: var(--space-10);
+  padding-right: var(--space-10);
 }
 
 /* ─── Component: Button ────────────────────────────────────────── */
