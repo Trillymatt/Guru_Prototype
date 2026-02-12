@@ -660,8 +660,8 @@ export default function RepairQuiz() {
                                 We'll confirm your appointment and begin ordering parts.
                                 You'll receive updates via email or text.
                             </p>
-                            <Link to="/" className="guru-btn guru-btn--primary guru-btn--lg" style={{ marginTop: 16 }}>
-                                Back to Home
+                            <Link to="/dashboard" className="guru-btn guru-btn--primary guru-btn--lg" style={{ marginTop: 16 }}>
+                                View My Repairs
                             </Link>
                         </div>
                     )}

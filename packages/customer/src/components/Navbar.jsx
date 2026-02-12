@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@shared/AuthProvider';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const { user, loading, signOut } = useAuth();
+    const navigate = useNavigate();
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -22,6 +25,14 @@ export default function Navbar() {
 
     const closeMenu = () => setMenuOpen(false);
 
+    const handleSignOut = async () => {
+        closeMenu();
+        await signOut();
+        navigate('/');
+    };
+
+    const isLoggedIn = !loading && user;
+
     return (
         <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
             <div className="guru-container navbar__inner">
@@ -32,18 +43,43 @@ export default function Navbar() {
 
                 <div className={`navbar__links ${menuOpen ? 'navbar__links--open' : ''}`}>
                     <Link to="/" className="navbar__link" onClick={closeMenu}>Home</Link>
-                    <a href="#how-it-works" className="navbar__link" onClick={closeMenu}>How It Works</a>
-                    <a href="#features" className="navbar__link" onClick={closeMenu}>Features</a>
+                    {isLoggedIn && (
+                        <Link to="/dashboard" className="navbar__link" onClick={closeMenu}>My Repairs</Link>
+                    )}
+                    {!isLoggedIn && (
+                        <>
+                            <a href="#how-it-works" className="navbar__link" onClick={closeMenu}>How It Works</a>
+                            <a href="#features" className="navbar__link" onClick={closeMenu}>Features</a>
+                        </>
+                    )}
                     <Link to="/repair" className="navbar__link" onClick={closeMenu}>Start Repair</Link>
                     <div className="navbar__mobile-actions">
-                        <Link to="/login" className="guru-btn guru-btn--ghost guru-btn--full" onClick={closeMenu}>Sign In</Link>
-                        <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--full" onClick={closeMenu}>Get Started</Link>
+                        {isLoggedIn ? (
+                            <>
+                                <Link to="/dashboard" className="guru-btn guru-btn--ghost guru-btn--full" onClick={closeMenu}>My Repairs</Link>
+                                <button className="guru-btn guru-btn--primary guru-btn--full" onClick={handleSignOut}>Sign Out</button>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/login" className="guru-btn guru-btn--ghost guru-btn--full" onClick={closeMenu}>Sign In</Link>
+                                <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--full" onClick={closeMenu}>Get Started</Link>
+                            </>
+                        )}
                     </div>
                 </div>
 
                 <div className="navbar__actions">
-                    <Link to="/login" className="guru-btn guru-btn--ghost guru-btn--sm">Sign In</Link>
-                    <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--sm">Get Started</Link>
+                    {isLoggedIn ? (
+                        <>
+                            <Link to="/dashboard" className="guru-btn guru-btn--ghost guru-btn--sm">My Repairs</Link>
+                            <button className="guru-btn guru-btn--primary guru-btn--sm" onClick={handleSignOut}>Sign Out</button>
+                        </>
+                    ) : (
+                        <>
+                            <Link to="/login" className="guru-btn guru-btn--ghost guru-btn--sm">Sign In</Link>
+                            <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--sm">Get Started</Link>
+                        </>
+                    )}
                 </div>
 
                 <button
