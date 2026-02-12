@@ -81,7 +81,7 @@ export default function LoginPage() {
                 return;
             }
             setSending(false);
-            navigate('/repair');
+            navigate('/dashboard');
         } catch (err) {
             setAuthError('Verification failed. Check your code and try again.');
             setSending(false);
