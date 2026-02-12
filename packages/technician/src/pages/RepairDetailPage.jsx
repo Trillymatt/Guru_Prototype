@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW } from '@shared/constants';
+import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, SERVICE_FEE, TAX_RATE } from '@shared/constants';
 import { supabase } from '@shared/supabase';
 import TechNav from '../components/TechNav';
+import '../styles/tech-repair-detail.css';
 
 const AGREEMENT_TEXT = `GURU MOBILE REPAIR AGREEMENT
 
@@ -178,7 +179,6 @@ export default function RepairDetailPage() {
     const customerPhone = repair.customers?.phone || '—';
     const customerEmail = repair.customers?.email || '—';
     const issues = Array.isArray(repair.issues) ? repair.issues : [];
-    const partsTier = typeof repair.parts_tier === 'object' ? JSON.stringify(repair.parts_tier) : repair.parts_tier || '—';
 
     return (
         <>
@@ -203,27 +203,28 @@ export default function RepairDetailPage() {
                             {/* Device & Issues */}
                             <div className="repair-detail__section">
                                 <h2 className="repair-detail__section-title">Repair Details</h2>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                <div className="repair-detail__info-stack">
                                     <div>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Device</span>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 700, marginTop: 4 }}>{repair.device}</div>
+                                        <span className="repair-detail__info-label">Device</span>
+                                        <div className="repair-detail__info-value">{repair.device}</div>
                                     </div>
                                     <div>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Issues</span>
+                                        <span className="repair-detail__info-label">Issues</span>
                                         <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                                            {issues.map((issue) => (
-                                                <span key={issue} className="guru-badge guru-badge--purple">{issue}</span>
-                                            ))}
+                                            {issues.map((issue) => {
+                                                const type = REPAIR_TYPES.find((t) => t.id === issue);
+                                                return (
+                                                    <span key={issue} className="guru-badge guru-badge--purple">
+                                                        {type?.icon} {type?.name || issue}
+                                                    </span>
+                                                );
+                                            })}
                                         </div>
-                                    </div>
-                                    <div>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Parts Tier</span>
-                                        <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: 4 }}>{partsTier}</div>
                                     </div>
                                     {repair.notes && (
                                         <div>
-                                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Notes</span>
-                                            <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', marginTop: 4, lineHeight: 1.6 }}>{repair.notes}</div>
+                                            <span className="repair-detail__info-label">Notes</span>
+                                            <div className="repair-detail__info-value--sm" style={{ marginTop: 4, lineHeight: 1.6 }}>{repair.notes}</div>
                                         </div>
                                     )}
                                 </div>
@@ -232,22 +233,22 @@ export default function RepairDetailPage() {
                             {/* Customer Info */}
                             <div className="repair-detail__section">
                                 <h2 className="repair-detail__section-title">Customer Information</h2>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Name</span>
-                                        <span style={{ fontWeight: 600 }}>{customerName}</span>
+                                <div>
+                                    <div className="repair-detail__row">
+                                        <span className="repair-detail__row-label">Name</span>
+                                        <span className="repair-detail__row-value">{customerName}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Phone</span>
-                                        <span style={{ fontWeight: 600 }}>{customerPhone}</span>
+                                    <div className="repair-detail__row">
+                                        <span className="repair-detail__row-label">Phone</span>
+                                        <span className="repair-detail__row-value">{customerPhone}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Email</span>
-                                        <span style={{ fontWeight: 600 }}>{customerEmail}</span>
+                                    <div className="repair-detail__row">
+                                        <span className="repair-detail__row-label">Email</span>
+                                        <span className="repair-detail__row-value">{customerEmail}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Location</span>
-                                        <span style={{ fontWeight: 600 }}>{repair.address}</span>
+                                    <div className="repair-detail__row">
+                                        <span className="repair-detail__row-label">Location</span>
+                                        <span className="repair-detail__row-value">{repair.address}</span>
                                     </div>
                                 </div>
                             </div>
@@ -329,28 +330,69 @@ export default function RepairDetailPage() {
 
                             <div className="repair-detail__section">
                                 <h2 className="repair-detail__section-title">Schedule</h2>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Date</span>
-                                        <span style={{ fontWeight: 600 }}>{repair.schedule_date}</span>
+                                <div>
+                                    <div className="repair-detail__row">
+                                        <span className="repair-detail__row-label">Date</span>
+                                        <span className="repair-detail__row-value">{repair.schedule_date}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Time</span>
-                                        <span style={{ fontWeight: 600 }}>{repair.schedule_time}</span>
+                                    <div className="repair-detail__row">
+                                        <span className="repair-detail__row-label">Time</span>
+                                        <span className="repair-detail__row-value">{repair.schedule_time}</span>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="repair-detail__section">
-                                <h2 className="repair-detail__section-title">Pricing</h2>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Service Fee</span>
-                                        <span style={{ fontWeight: 600 }}>${repair.service_fee}</span>
+                                <h2 className="repair-detail__section-title">Pricing Breakdown</h2>
+                                <div className="pricing-breakdown">
+                                    {/* Individual repair line items */}
+                                    {issues.map((issueId) => {
+                                        const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                        const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
+                                        const tierId = tierObj[issueId] || 'premium';
+                                        const tier = PARTS_TIERS.find((t) => t.id === tierId);
+                                        const price = SAMPLE_PRICING[issueId]?.[tierId] || 0;
+                                        return (
+                                            <div key={issueId} className="pricing-breakdown__line">
+                                                <div className="pricing-breakdown__item">
+                                                    <span>{type?.icon} {type?.name}</span>
+                                                    <span className="pricing-breakdown__tier-tag" style={{ color: tier?.color }}>
+                                                        {tier?.name}
+                                                    </span>
+                                                </div>
+                                                <span className="pricing-breakdown__amount">${price}</span>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="pricing-breakdown__line">
+                                        <span>🚗 On-site Service Fee</span>
+                                        <span className="pricing-breakdown__amount">${repair.service_fee || SERVICE_FEE}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: 8 }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Estimated Total</span>
-                                        <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--guru-purple-600)' }}>${repair.total_estimate}</span>
+
+                                    <div className="pricing-breakdown__divider"></div>
+
+                                    {/* Subtotal */}
+                                    <div className="pricing-breakdown__line">
+                                        <span className="pricing-breakdown__label">Subtotal</span>
+                                        <span className="pricing-breakdown__amount">${repair.total_estimate}</span>
+                                    </div>
+
+                                    {/* Tax */}
+                                    <div className="pricing-breakdown__line">
+                                        <span className="pricing-breakdown__label">Sales Tax (8.25%)</span>
+                                        <span className="pricing-breakdown__amount">
+                                            ${(repair.total_estimate * TAX_RATE).toFixed(2)}
+                                        </span>
+                                    </div>
+
+                                    <div className="pricing-breakdown__divider pricing-breakdown__divider--strong"></div>
+
+                                    {/* Grand Total */}
+                                    <div className="pricing-breakdown__total">
+                                        <span>Total Due</span>
+                                        <span className="pricing-breakdown__total-amount">
+                                            ${(repair.total_estimate * (1 + TAX_RATE)).toFixed(2)}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

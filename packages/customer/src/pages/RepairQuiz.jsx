@@ -88,7 +88,7 @@ export default function RepairQuiz() {
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
     const [scheduleAddress, setScheduleAddress] = useState('');
-    const [showQualitySelector, setShowQualitySelector] = useState(false);
+    // Quality must be explicitly chosen by customer
 
     // Auth / Contact State
     const [contact, setContact] = useState({ name: '', email: '', phone: '' });
@@ -108,9 +108,13 @@ export default function RepairQuiz() {
     const toggleIssue = (id) => {
         setSelectedIssues((prev) => {
             const next = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
-            // Auto-set default tier when adding
-            if (!prev.includes(id)) {
-                setIssueTiers((t) => ({ ...t, [id]: 'premium' }));
+            // Remove tier if deselecting
+            if (prev.includes(id)) {
+                setIssueTiers((t) => {
+                    const copy = { ...t };
+                    delete copy[id];
+                    return copy;
+                });
             }
             return next;
         });
@@ -345,54 +349,50 @@ export default function RepairQuiz() {
                                 </div>
                             )}
 
-                            {/* Quality Tier Selection (Collapsible) */}
+                            {/* Quality Tier Selection (Required) */}
                             {selectedIssues.length > 0 && !isSoftwareOnly && (
                                 <div className="quiz__section">
-                                    <div className="quiz__quality-header">
-                                        <div>
-                                            <h3 className="quiz__section-title">Parts Quality</h3>
-                                            <p className="quiz__quality-default">Premium parts selected by default</p>
-                                        </div>
-                                        <button
-                                            className="quiz__quality-toggle"
-                                            onClick={() => setShowQualitySelector(!showQualitySelector)}
-                                        >
-                                            {showQualitySelector ? 'Hide options' : 'Change quality'}
-                                        </button>
+                                    <h3 className="quiz__section-title">Choose Parts Quality</h3>
+                                    <p className="quiz__quality-subtitle">Select a quality tier for each repair. This affects pricing and part longevity.</p>
+                                    <div className="quiz__tier-legend">
+                                        {PARTS_TIERS.map((tier) => (
+                                            <div key={tier.id} className="quiz__tier-legend-item">
+                                                <span className="quiz__tier-legend-dot" style={{ background: tier.color }}></span>
+                                                <span className="quiz__tier-legend-name">{tier.name}</span>
+                                                <span className="quiz__tier-legend-desc">— {tier.description}</span>
+                                            </div>
+                                        ))}
                                     </div>
-
-                                    {showQualitySelector && (
-                                        <div className="quiz__per-issue-tiers">
-                                            {selectedIssues.map((issueId) => {
-                                                const type = REPAIR_TYPES.find((t) => t.id === issueId);
-                                                const currentTier = issueTiers[issueId] || 'premium';
-                                                return (
-                                                    <div key={issueId} className="pit-row">
-                                                        <div className="pit-row__info">
-                                                            <span className="pit-row__icon">{type?.icon}</span>
-                                                            <span className="pit-row__name">{type?.name}</span>
-                                                        </div>
-                                                        <div className="pit-row__tiers">
-                                                            {PARTS_TIERS.map((tier) => {
-                                                                const price = SAMPLE_PRICING[issueId]?.[tier.id] || 0;
-                                                                return (
-                                                                    <button
-                                                                        key={tier.id}
-                                                                        className={`pit-tier ${currentTier === tier.id ? 'pit-tier--selected' : ''}`}
-                                                                        onClick={() => setTierForIssue(issueId, tier.id)}
-                                                                        style={currentTier === tier.id ? { borderColor: tier.color, background: `${tier.color}10` } : undefined}
-                                                                    >
-                                                                        <span className="pit-tier__label">{tier.name}</span>
-                                                                        <span className="pit-tier__price">${price}</span>
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
+                                    <div className="quiz__per-issue-tiers">
+                                        {selectedIssues.map((issueId) => {
+                                            const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                            const currentTier = issueTiers[issueId];
+                                            return (
+                                                <div key={issueId} className="pit-row">
+                                                    <div className="pit-row__info">
+                                                        <span className="pit-row__icon">{type?.icon}</span>
+                                                        <span className="pit-row__name">{type?.name}</span>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                                                    <div className="pit-row__tiers">
+                                                        {PARTS_TIERS.map((tier) => {
+                                                            const price = SAMPLE_PRICING[issueId]?.[tier.id] || 0;
+                                                            return (
+                                                                <button
+                                                                    key={tier.id}
+                                                                    className={`pit-tier ${currentTier === tier.id ? 'pit-tier--selected' : ''}`}
+                                                                    onClick={() => setTierForIssue(issueId, tier.id)}
+                                                                    style={currentTier === tier.id ? { borderColor: tier.color, background: `${tier.color}10` } : undefined}
+                                                                >
+                                                                    <span className="pit-tier__label">{tier.name}</span>
+                                                                    <span className="pit-tier__price">${price}</span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             )}
 
@@ -400,7 +400,7 @@ export default function RepairQuiz() {
                                 <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
                                 <button
                                     className="guru-btn guru-btn--primary"
-                                    disabled={selectedIssues.length === 0 || isSoftwareOnly}
+                                    disabled={selectedIssues.length === 0 || isSoftwareOnly || selectedIssues.some(id => !issueTiers[id])}
                                     onClick={goNext}
                                 >
                                     Continue →

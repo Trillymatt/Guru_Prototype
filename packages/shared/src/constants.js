@@ -142,6 +142,10 @@ export const NOTIFICATION_PREFERENCES = {
 
 export const SERVICE_FEE = 29;
 
+// ─── Tax Rate (Texas) ───────────────────────────────────────────────────────
+
+export const TAX_RATE = 0.0825; // 8.25% Texas sales tax
+
 // ─── Sample Pricing (placeholder until database is wired) ────────────────────
 
 export const SAMPLE_PRICING = {
