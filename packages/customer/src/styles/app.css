@@ -837,6 +837,30 @@ body {
     color: #F59E0B;
 }
 
+/* Coming Soon Card */
+.bento-card--coming-soon {
+    position: relative;
+    border: 2px dashed var(--guru-purple-300);
+    background: linear-gradient(135deg, var(--guru-purple-50), var(--guru-white));
+}
+
+.bento-card--coming-soon:hover {
+    border-color: var(--guru-purple-400);
+}
+
+.bento-card__coming-soon-badge {
+    display: inline-block;
+    padding: var(--space-1) var(--space-3);
+    background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700));
+    color: white;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-3);
+}
+
 @media (max-width: 768px) {
     .bento-grid {
         grid-template-columns: 1fr;

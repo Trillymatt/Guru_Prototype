@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import RepairQuiz from './pages/RepairQuiz';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import RepairDetailPage from './pages/RepairDetailPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -16,6 +17,11 @@ export default function App() {
                 <Route path="/dashboard" element={
                     <ProtectedRoute>
                         <DashboardPage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/repair/:id" element={
+                    <ProtectedRoute>
+                        <RepairDetailPage />
                     </ProtectedRoute>
                 } />
             </Routes>

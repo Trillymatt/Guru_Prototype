@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
-import { REPAIR_TYPES } from '@shared/constants';
+import { REPAIR_TYPES, REPAIR_STATUS_LABELS } from '@shared/constants';
 
 export default function DashboardPage() {
     const { user } = useAuth();
@@ -28,15 +28,21 @@ export default function DashboardPage() {
     }, [user]);
 
     const getStatusBadge = (status) => {
-        const map = {
-            pending: { label: 'Pending', className: 'dash-badge--pending' },
-            confirmed: { label: 'Confirmed', className: 'dash-badge--confirmed' },
-            in_progress: { label: 'In Progress', className: 'dash-badge--progress' },
-            completed: { label: 'Completed', className: 'dash-badge--completed' },
-            cancelled: { label: 'Cancelled', className: 'dash-badge--cancelled' },
+        const classMap = {
+            pending: 'dash-badge--pending',
+            confirmed: 'dash-badge--confirmed',
+            parts_ordered: 'dash-badge--pending',
+            parts_received: 'dash-badge--confirmed',
+            scheduled: 'dash-badge--confirmed',
+            en_route: 'dash-badge--progress',
+            arrived: 'dash-badge--progress',
+            in_progress: 'dash-badge--progress',
+            complete: 'dash-badge--completed',
+            cancelled: 'dash-badge--cancelled',
         };
-        const info = map[status] || { label: status, className: '' };
-        return <span className={`dash-badge ${info.className}`}>{info.label}</span>;
+        const label = REPAIR_STATUS_LABELS[status] || status;
+        const className = classMap[status] || '';
+        return <span className={`dash-badge ${className}`}>{label}</span>;
     };
 
     const getIssueName = (issueId) => {
@@ -75,7 +81,7 @@ export default function DashboardPage() {
                     ) : (
                         <div className="dash-repairs">
                             {repairs.map((repair) => (
-                                <div key={repair.id} className="dash-card">
+                                <Link key={repair.id} to={`/repair/${repair.id}`} className="dash-card dash-card--clickable">
                                     <div className="dash-card__header">
                                         <span className="dash-card__device">{repair.device}</span>
                                         {getStatusBadge(repair.status)}
@@ -106,7 +112,10 @@ export default function DashboardPage() {
                                             <span>${repair.total_estimate}</span>
                                         </div>
                                     </div>
-                                </div>
+                                    <div className="dash-card__footer">
+                                        <span className="dash-card__view-link">View Details →</span>
+                                    </div>
+                                </Link>
                             ))}
                         </div>
                     )}
