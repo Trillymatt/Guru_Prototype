@@ -222,6 +222,14 @@ export default function LandingPage() {
                                 Most repairs completed on-site while you wait. No drop-offs needed.
                             </p>
                         </Reveal>
+                        <Reveal className="bento-card bento-card--coming-soon" delay={350}>
+                            <div className="bento-card__coming-soon-badge">Coming Soon</div>
+                            <div className="bento-card__icon">⚡</div>
+                            <h3 className="bento-card__title">On-demand repairs</h3>
+                            <p className="bento-card__desc">
+                                Need it fixed now? Request a same-day technician for urgent repairs — no appointment needed.
+                            </p>
+                        </Reveal>
                     </div>
                 </div>
             </section>

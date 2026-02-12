@@ -846,3 +846,58 @@
     border-top: 1px solid var(--guru-gray-200);
     background: var(--guru-gray-50);
 }
+
+/* ─── Service Area Error ─────────────────────────────────────── */
+
+.sched-service-error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    margin-top: var(--space-3);
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: var(--radius-xl);
+    color: #991B1B;
+}
+
+.sched-service-error__icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.sched-service-error strong {
+    display: block;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.sched-service-error p {
+    font-size: var(--font-size-xs);
+    color: #B91C1C;
+    margin: 0;
+}
+
+/* ─── Alert Box ──────────────────────────────────────────────── */
+
+.quiz__alert-box {
+    padding: var(--space-4);
+    background: #FEF3C7;
+    border: 1px solid #FDE68A;
+    border-radius: var(--radius-xl);
+    font-size: var(--font-size-sm);
+    color: #92400E;
+    margin-top: var(--space-4);
+}
+
+.quiz__warranty-notice {
+    padding: var(--space-4);
+    background: var(--guru-gray-50);
+    border: 1px solid var(--guru-gray-200);
+    border-radius: var(--radius-xl);
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-600);
+    line-height: 1.6;
+}

@@ -1,0 +1,480 @@
+/* ─── Repair Detail Page ──────────────────────────────────────── */
+
+.repair-detail {
+    padding: 120px 0 var(--space-16);
+    min-height: 100vh;
+}
+
+.rd-loading,
+.rd-empty {
+    text-align: center;
+    padding: var(--space-16) 0;
+    color: var(--guru-gray-500);
+}
+
+.rd-empty h2 {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--guru-black);
+    margin-bottom: var(--space-2);
+}
+
+.rd-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--guru-purple-600);
+    margin-bottom: var(--space-6);
+    transition: color var(--transition-fast);
+}
+
+.rd-back:hover {
+    color: var(--guru-purple-800);
+}
+
+.rd-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+}
+
+.rd-title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 800;
+    color: var(--guru-black);
+    letter-spacing: -0.02em;
+}
+
+.rd-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-500);
+    margin-top: var(--space-1);
+}
+
+.dash-badge--lg {
+    font-size: var(--font-size-sm);
+    padding: var(--space-2) var(--space-4);
+}
+
+.rd-section-title {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--guru-black);
+    margin-bottom: var(--space-4);
+}
+
+/* ─── Status Stepper ──────────────────────────────────────────── */
+
+.rd-stepper {
+    background: var(--guru-white);
+    border: 1px solid var(--guru-gray-200);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.rd-stepper__track {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    align-items: flex-start;
+}
+
+.rd-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    flex: 1;
+    min-width: 70px;
+    position: relative;
+}
+
+.rd-step__dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    background: var(--guru-gray-100);
+    color: var(--guru-gray-400);
+    border: 2px solid var(--guru-gray-200);
+    position: relative;
+    z-index: 2;
+    transition: all var(--transition-base);
+}
+
+.rd-step--complete .rd-step__dot {
+    background: var(--guru-purple-600);
+    color: white;
+    border-color: var(--guru-purple-600);
+}
+
+.rd-step--current .rd-step__dot {
+    background: var(--guru-white);
+    color: var(--guru-purple-600);
+    border-color: var(--guru-purple-600);
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
+}
+
+.rd-step__label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--guru-gray-400);
+    text-align: center;
+    line-height: 1.2;
+}
+
+.rd-step--complete .rd-step__label,
+.rd-step--current .rd-step__label {
+    color: var(--guru-gray-700);
+}
+
+.rd-step__line {
+    position: absolute;
+    top: 16px;
+    left: calc(50% + 20px);
+    right: calc(-50% + 20px);
+    height: 2px;
+    background: var(--guru-gray-200);
+    z-index: 1;
+}
+
+.rd-step__line--filled {
+    background: var(--guru-purple-500);
+}
+
+@media (max-width: 768px) {
+    .rd-stepper__track {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .rd-step {
+        flex-direction: row;
+        gap: var(--space-3);
+        min-width: auto;
+        padding: var(--space-2) 0;
+    }
+
+    .rd-step__line {
+        display: none;
+    }
+}
+
+/* ─── Map Section ─────────────────────────────────────────────── */
+
+.rd-map-section {
+    background: var(--guru-white);
+    border: 1px solid var(--guru-gray-200);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.rd-eta-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    background: linear-gradient(135deg, var(--guru-purple-50), var(--guru-purple-100));
+    border: 1px solid var(--guru-purple-200);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-4);
+    position: relative;
+    overflow: hidden;
+}
+
+.rd-eta-banner--arrived {
+    background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+    border-color: #6EE7B7;
+}
+
+.rd-eta-banner__icon {
+    font-size: 1.75rem;
+    flex-shrink: 0;
+}
+
+.rd-eta-banner__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rd-eta-banner__label {
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-600);
+    font-weight: 500;
+}
+
+.rd-eta-banner__time {
+    font-size: var(--font-size-2xl);
+    font-weight: 800;
+    color: var(--guru-purple-700);
+}
+
+.rd-eta-banner--arrived .rd-eta-banner__time {
+    color: #065F46;
+}
+
+.rd-eta-banner__pulse {
+    position: absolute;
+    right: var(--space-5);
+    width: 12px;
+    height: 12px;
+    background: var(--guru-purple-500);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+/* ─── Map Container ───────────────────────────────────────────── */
+
+.rd-map {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    border: 1px solid var(--guru-gray-200);
+}
+
+.rd-map__container {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background: linear-gradient(135deg, #EDE9FE, #F3E8FF, #FAF5FF);
+    overflow: hidden;
+}
+
+/* Map grid roads */
+.rd-map__grid {
+    position: absolute;
+    inset: 0;
+}
+
+.rd-map__road {
+    position: absolute;
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.rd-map__road--h1 { top: 25%; left: 0; right: 0; height: 2px; }
+.rd-map__road--h2 { top: 50%; left: 0; right: 0; height: 2px; }
+.rd-map__road--h3 { top: 75%; left: 0; right: 0; height: 2px; }
+.rd-map__road--v1 { left: 25%; top: 0; bottom: 0; width: 2px; }
+.rd-map__road--v2 { left: 50%; top: 0; bottom: 0; width: 2px; }
+.rd-map__road--v3 { left: 75%; top: 0; bottom: 0; width: 2px; }
+
+/* Map pins */
+.rd-map__pin {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 3;
+}
+
+.rd-map__pin-icon {
+    font-size: 2rem;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.rd-map__pin-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--guru-gray-800);
+    background: var(--guru-white);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-md);
+    margin-top: 2px;
+    white-space: nowrap;
+}
+
+.rd-map__pin-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 2px solid var(--guru-purple-300);
+    background: rgba(124, 58, 237, 0.06);
+    z-index: -1;
+}
+
+.rd-map__pin-pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(124, 58, 237, 0.12);
+    z-index: -1;
+    animation: mapPulse 2s infinite;
+}
+
+@keyframes mapPulse {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+}
+
+.rd-map__route {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.rd-map__watermark {
+    position: absolute;
+    bottom: var(--space-3);
+    right: var(--space-3);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--guru-purple-400);
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+}
+
+/* ─── Detail Cards ────────────────────────────────────────────── */
+
+.rd-card {
+    background: var(--guru-white);
+    border: 1px solid var(--guru-gray-200);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.rd-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.rd-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+    font-size: var(--font-size-sm);
+}
+
+.rd-detail-label {
+    color: var(--guru-gray-400);
+    font-weight: 500;
+}
+
+.rd-detail-value {
+    color: var(--guru-gray-800);
+    font-weight: 600;
+    text-align: right;
+}
+
+/* ─── Pricing Section ─────────────────────────────────────────── */
+
+.rd-pricing {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.rd-price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-700);
+}
+
+.rd-price-row__left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.rd-price-tier {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    background: var(--guru-purple-100);
+    color: var(--guru-purple-700);
+}
+
+.rd-price-row__amount {
+    font-weight: 700;
+    color: var(--guru-gray-900);
+}
+
+.rd-price-row--total {
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 2px solid var(--guru-purple-200);
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+    color: var(--guru-black);
+}
+
+.rd-price-row--total .rd-price-row__amount {
+    font-size: var(--font-size-2xl);
+    font-weight: 800;
+    color: var(--guru-purple-600);
+}
+
+.rd-notes {
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-600);
+    line-height: 1.6;
+}
+
+/* ─── Dashboard card clickable styles ─────────────────────────── */
+
+.dash-card--clickable {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.dash-card--clickable:hover {
+    border-color: var(--guru-purple-300);
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
+    transform: translateY(-2px);
+    transition: all var(--transition-base);
+}
+
+.dash-card__footer {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--guru-gray-100);
+    text-align: right;
+}
+
+.dash-card__view-link {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--guru-purple-600);
+}
+
+@media (max-width: 480px) {
+    .rd-header {
+        flex-direction: column;
+    }
+
+    .rd-map__container {
+        height: 220px;
+    }
+}

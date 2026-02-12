@@ -18,27 +18,63 @@ import { useRef } from 'react';
 
 const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
 
-// Mock Address Search Component
-const AddressSearch = ({ value, onChange }) => {
+// Supported cities in the Dallas-Fort Worth metroplex
+const SUPPORTED_CITIES = [
+    'dallas', 'fort worth', 'plano', 'frisco', 'mckinney',
+    'arlington', 'irving', 'garland', 'grand prairie', 'mesquite',
+    'carrollton', 'denton', 'richardson', 'lewisville', 'allen',
+    'flower mound', 'north richland hills', 'mansfield', 'rowlett',
+    'euless', 'desoto', 'grapevine', 'bedford', 'cedar hill',
+    'wylie', 'keller', 'coppell', 'haltom city', 'the colony',
+    'southlake', 'colleyville', 'farmers branch', 'addison',
+    'trophy club', 'prosper', 'celina', 'little elm', 'sachse',
+    'murphy', 'highland park', 'university park', 'duncanville',
+    'lancaster', 'watauga', 'hurst', 'benbrook', 'saginaw',
+    'burleson', 'crowley', 'weatherford', 'cleburne', 'rockwall',
+    'forney', 'heath', 'midlothian', 'waxahachie', 'ennis',
+];
+
+function isCitySupported(addressDisplay) {
+    const lower = addressDisplay.toLowerCase();
+    return SUPPORTED_CITIES.some(city => lower.includes(city));
+}
+
+// Address Search Component using OpenStreetMap Nominatim
+const AddressSearch = ({ value, onChange, onServiceError }) => {
     const [query, setQuery] = useState(value);
     const [results, setResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
 
     React.useEffect(() => {
-        if (query === value) return; // Don't search if matches selected
+        if (query === value) return;
         const timer = setTimeout(() => {
             if (query.length > 2) {
                 setIsSearching(true);
-                // Simulate API delay
-                setTimeout(() => {
-                    setResults([
-                        `${query}, Dallas, TX`,
-                        `${query} Ave, Plano, TX`,
-                        `${query} Blvd, Frisco, TX`,
-                        `100 ${query} St, Fort Worth, TX`
-                    ]);
-                    setIsSearching(false);
-                }, 800);
+                fetch(
+                    `https://nominatim.openstreetmap.org/search?` +
+                    `format=json&q=${encodeURIComponent(query)}&countrycodes=us` +
+                    `&addressdetails=1&limit=6&viewbox=-97.5,-96.5,33.4,32.5&bounded=0`
+                )
+                    .then(res => res.json())
+                    .then(data => {
+                        const formatted = data
+                            .filter(r => r.address && (r.type === 'house' || r.type === 'residential' || r.class === 'place' || r.class === 'building' || r.class === 'highway' || r.address.road))
+                            .map(r => ({
+                                display: r.display_name,
+                                city: r.address.city || r.address.town || r.address.village || r.address.hamlet || r.address.county || '',
+                                state: r.address.state || '',
+                            }));
+                        setResults(formatted.length > 0 ? formatted : data.slice(0, 5).map(r => ({
+                            display: r.display_name,
+                            city: r.address?.city || r.address?.town || r.address?.village || r.address?.hamlet || r.address?.county || '',
+                            state: r.address?.state || '',
+                        })));
+                        setIsSearching(false);
+                    })
+                    .catch(() => {
+                        setResults([]);
+                        setIsSearching(false);
+                    });
             } else {
                 setResults([]);
             }
@@ -46,9 +82,17 @@ const AddressSearch = ({ value, onChange }) => {
         return () => clearTimeout(timer);
     }, [query, value]);
 
-    const handleSelect = (addr) => {
-        setQuery(addr);
-        onChange(addr);
+    const handleSelect = (result) => {
+        const shortDisplay = result.display.split(',').slice(0, 4).join(',');
+        setQuery(shortDisplay);
+
+        if (!isCitySupported(result.display)) {
+            onChange('');
+            if (onServiceError) onServiceError(result.city || 'that area');
+        } else {
+            onChange(shortDisplay);
+            if (onServiceError) onServiceError(null);
+        }
         setResults([]);
     };
 
@@ -61,7 +105,10 @@ const AddressSearch = ({ value, onChange }) => {
                 value={query}
                 onChange={(e) => {
                     setQuery(e.target.value);
-                    if (e.target.value === '') onChange('');
+                    if (e.target.value === '') {
+                        onChange('');
+                        if (onServiceError) onServiceError(null);
+                    }
                 }}
             />
             {isSearching && <div className="address-searching">Searching addresses...</div>}
@@ -69,10 +116,10 @@ const AddressSearch = ({ value, onChange }) => {
                 <div className="address-results">
                     {results.map((r, i) => (
                         <button key={i} className="address-result-item" onClick={() => handleSelect(r)}>
-                            📍 {r}
+                            📍 {r.display.split(',').slice(0, 3).join(',')}
                         </button>
                     ))}
-                    <div className="address-api-note">Powered by AddressAPI (Simulated)</div>
+                    <div className="address-api-note">Powered by OpenStreetMap</div>
                 </div>
             )}
         </div>
@@ -88,6 +135,7 @@ export default function RepairQuiz() {
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
     const [scheduleAddress, setScheduleAddress] = useState('');
+    const [serviceAreaError, setServiceAreaError] = useState(null);
     // Quality must be explicitly chosen by customer
 
     // Auth / Contact State
@@ -450,8 +498,19 @@ export default function RepairQuiz() {
                                 <AddressSearch
                                     value={scheduleAddress}
                                     onChange={setScheduleAddress}
+                                    onServiceError={setServiceAreaError}
                                 />
-                                <p className="sched-hint">We come to your home, office, or wherever you are.</p>
+                                {serviceAreaError ? (
+                                    <div className="sched-service-error">
+                                        <span className="sched-service-error__icon">⚠️</span>
+                                        <div>
+                                            <strong>Not available in {serviceAreaError}</strong>
+                                            <p>We currently only serve the Dallas–Fort Worth metroplex. We're expanding soon!</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="sched-hint">We come to your home, office, or wherever you are. Currently serving the DFW metroplex.</p>
+                                )}
                             </div>
 
                             <div className="quiz__actions">
