@@ -1,0 +1,260 @@
+/* ═══════════════════════════════════════════════════════════════
+   Guru Calendar - Custom Date Picker
+   Matches the Guru design system (purple brand, rounded cards)
+   ═══════════════════════════════════════════════════════════════ */
+
+.guru-calendar {
+  background: var(--guru-white);
+  border: 2px solid var(--guru-gray-200);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-5);
+  user-select: none;
+}
+
+/* ─── Header (Month/Year + Nav) ─────────────────────────────── */
+
+.guru-calendar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.guru-calendar__month-year {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--guru-gray-900);
+  letter-spacing: -0.01em;
+}
+
+.guru-calendar__nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--guru-gray-200);
+  background: var(--guru-white);
+  color: var(--guru-gray-600);
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.guru-calendar__nav-btn:hover:not(:disabled) {
+  background: var(--guru-purple-50);
+  border-color: var(--guru-purple-300);
+  color: var(--guru-purple-600);
+}
+
+.guru-calendar__nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ─── Weekday Headers ───────────────────────────────────────── */
+
+.guru-calendar__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  margin-bottom: var(--space-2);
+}
+
+.guru-calendar__weekday {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--guru-gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-2) 0;
+}
+
+/* ─── Day Grid ──────────────────────────────────────────────── */
+
+.guru-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.guru-calendar__day {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  border: 2px solid transparent;
+  background: transparent;
+  color: var(--guru-gray-800);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.guru-calendar__day--blank {
+  cursor: default;
+}
+
+.guru-calendar__day:hover:not(:disabled):not(.guru-calendar__day--blank):not(.guru-calendar__day--selected) {
+  background: var(--guru-purple-50);
+  border-color: var(--guru-purple-200);
+  color: var(--guru-purple-700);
+}
+
+.guru-calendar__day--disabled {
+  color: var(--guru-gray-300);
+  cursor: not-allowed;
+}
+
+.guru-calendar__day--disabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+.guru-calendar__day--today {
+  background: var(--guru-gray-100);
+  font-weight: 800;
+  color: var(--guru-gray-700);
+}
+
+.guru-calendar__day--selected {
+  background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700));
+  color: var(--guru-white);
+  font-weight: 700;
+  border-color: var(--guru-purple-600);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.guru-calendar__day--selected:hover {
+  background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700));
+}
+
+/* Available dot indicator */
+.guru-calendar__day--available::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--guru-purple-500);
+}
+
+/* ─── Legend ─────────────────────────────────────────────────── */
+
+.guru-calendar__legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--guru-gray-100);
+}
+
+.guru-calendar__legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.guru-calendar__legend-dot--available {
+  background: var(--guru-purple-500);
+}
+
+.guru-calendar__legend-text {
+  font-size: var(--font-size-xs);
+  color: var(--guru-gray-500);
+}
+
+/* ─── Dark Mode ─────────────────────────────────────────────── */
+
+.dark .guru-calendar {
+  background: var(--dark-bg-card);
+  border-color: var(--dark-border-medium);
+}
+
+.dark .guru-calendar__month-year {
+  color: var(--dark-text-primary);
+}
+
+.dark .guru-calendar__nav-btn {
+  background: var(--dark-bg-elevated);
+  border-color: var(--dark-border-medium);
+  color: var(--dark-text-secondary);
+}
+
+.dark .guru-calendar__nav-btn:hover:not(:disabled) {
+  background: var(--dark-bg-hover);
+  border-color: var(--dark-purple-500);
+  color: var(--dark-purple-400);
+}
+
+.dark .guru-calendar__weekday {
+  color: var(--dark-text-tertiary);
+}
+
+.dark .guru-calendar__day {
+  color: var(--dark-text-primary);
+}
+
+.dark .guru-calendar__day:hover:not(:disabled):not(.guru-calendar__day--blank):not(.guru-calendar__day--selected) {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: var(--dark-purple-400);
+}
+
+.dark .guru-calendar__day--disabled {
+  color: var(--dark-text-tertiary);
+  opacity: 0.4;
+}
+
+.dark .guru-calendar__day--today {
+  background: var(--dark-bg-hover);
+  color: var(--dark-text-primary);
+}
+
+.dark .guru-calendar__day--selected {
+  background: linear-gradient(135deg, var(--dark-purple-500), var(--dark-purple-600));
+  color: white;
+  border-color: var(--dark-purple-500);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.35);
+}
+
+.dark .guru-calendar__day--available::after {
+  background: var(--dark-purple-400);
+}
+
+.dark .guru-calendar__legend {
+  border-top-color: var(--dark-border-subtle);
+}
+
+.dark .guru-calendar__legend-dot--available {
+  background: var(--dark-purple-400);
+}
+
+.dark .guru-calendar__legend-text {
+  color: var(--dark-text-tertiary);
+}
+
+/* ─── Responsive ────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .guru-calendar {
+    padding: var(--space-3);
+  }
+
+  .guru-calendar__day {
+    font-size: var(--font-size-xs);
+  }
+}

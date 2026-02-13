@@ -197,10 +197,52 @@ CREATE POLICY "Users can insert own read timestamps"
 CREATE POLICY "Users can update own read timestamps"
   ON chat_last_read FOR UPDATE USING (auth.uid() = user_id);
 
+-- ─── Technician Schedules ─────────────────────────────────────────────────────
+-- Technicians set their availability per date. Customers see available dates.
+
+CREATE TABLE IF NOT EXISTS tech_schedules (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  technician_id UUID NOT NULL REFERENCES technicians(id) ON DELETE CASCADE,
+  schedule_date DATE NOT NULL,
+  time_slots JSONB DEFAULT '["morning","afternoon","evening"]'::jsonb,
+  is_available BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(technician_id, schedule_date)
+);
+
+CREATE INDEX idx_tech_schedules_date ON tech_schedules(schedule_date);
+CREATE INDEX idx_tech_schedules_tech ON tech_schedules(technician_id);
+
+ALTER TABLE tech_schedules ENABLE ROW LEVEL SECURITY;
+
+-- Technicians can manage their own schedule
+CREATE POLICY "Technicians can view own schedule"
+  ON tech_schedules FOR SELECT USING (auth.uid() = technician_id);
+
+CREATE POLICY "Technicians can insert own schedule"
+  ON tech_schedules FOR INSERT WITH CHECK (auth.uid() = technician_id);
+
+CREATE POLICY "Technicians can update own schedule"
+  ON tech_schedules FOR UPDATE USING (auth.uid() = technician_id);
+
+CREATE POLICY "Technicians can delete own schedule"
+  ON tech_schedules FOR DELETE USING (auth.uid() = technician_id);
+
+-- Customers can read all tech schedules (to see available dates)
+CREATE POLICY "Anyone can view available schedules"
+  ON tech_schedules FOR SELECT USING (is_available = true);
+
+-- Auto-update timestamps
+CREATE TRIGGER update_tech_schedules_updated_at
+  BEFORE UPDATE ON tech_schedules
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 -- ─── Enable Realtime ─────────────────────────────────────────────────────────
 
 ALTER PUBLICATION supabase_realtime ADD TABLE repairs;
 ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE tech_schedules;
 
 -- ─── IMPORTANT: After running this schema ────────────────────────────────────
 -- 1. Create a Supabase auth user for your technician (email + password).
