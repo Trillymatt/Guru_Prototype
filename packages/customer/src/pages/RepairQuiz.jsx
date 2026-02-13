@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { supabase } from '@shared/supabase';
+import { useAuth } from '@shared/AuthProvider';
 import { formatPhoneE164 } from '@shared/validation';
 import {
-    DEVICES,
     DEVICE_GENERATIONS,
     getDevicesByGeneration,
     REPAIR_TYPES,
@@ -14,29 +14,54 @@ import {
 } from '@shared/constants';
 import '../styles/repair-quiz.css';
 
-import { useRef } from 'react';
-
 const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
 
-// Supported cities in the Dallas-Fort Worth metroplex
-const SUPPORTED_CITIES = [
-    'dallas', 'fort worth', 'plano', 'frisco', 'mckinney',
-    'arlington', 'irving', 'garland', 'grand prairie', 'mesquite',
-    'carrollton', 'denton', 'richardson', 'lewisville', 'allen',
-    'flower mound', 'north richland hills', 'mansfield', 'rowlett',
-    'euless', 'desoto', 'grapevine', 'bedford', 'cedar hill',
-    'wylie', 'keller', 'coppell', 'haltom city', 'the colony',
-    'southlake', 'colleyville', 'farmers branch', 'addison',
-    'trophy club', 'prosper', 'celina', 'little elm', 'sachse',
-    'murphy', 'highland park', 'university park', 'duncanville',
-    'lancaster', 'watauga', 'hurst', 'benbrook', 'saginaw',
-    'burleson', 'crowley', 'weatherford', 'cleburne', 'rockwall',
-    'forney', 'heath', 'midlothian', 'waxahachie', 'ennis',
-];
+const REPAIR_TYPES_ALWAYS_AVAILABLE = new Set(['screen', 'battery', 'camera-rear', 'camera-front']);
+const BACK_GLASS_SUPPORTED_DEVICE_IDS = new Set([
+    'iphone-14',
+    'iphone-14-plus',
+    'iphone-15',
+    'iphone-15-plus',
+    'iphone-15-pro',
+    'iphone-15-pro-max',
+    'iphone-16',
+    'iphone-16-plus',
+    'iphone-16-pro',
+    'iphone-16-pro-max',
+    'iphone-16e',
+    'iphone-17',
+    'iphone-17-air',
+    'iphone-17-pro',
+    'iphone-17-pro-max',
+]);
 
-function isCitySupported(addressDisplay) {
-    const lower = addressDisplay.toLowerCase();
-    return SUPPORTED_CITIES.some(city => lower.includes(city));
+const SUPPORTED_TEXAS_CITIES = new Set([
+    'denton',
+    'lewisville',
+    'corinth',
+    'lake dallas',
+    'plano',
+    'frisco',
+    'grapevine',
+    'southlake',
+    'trophy club',
+    'justin',
+    'northlake',
+    'north lake',
+    'argyle',
+    'lantana',
+    'the colony',
+]);
+
+function normalizeLocationValue(value) {
+    return (value || '').toLowerCase().trim();
+}
+
+function isCitySupported(city, state) {
+    const normalizedState = normalizeLocationValue(state);
+    const normalizedCity = normalizeLocationValue(city);
+    const isTexas = normalizedState === 'tx' || normalizedState === 'texas';
+    return isTexas && SUPPORTED_TEXAS_CITIES.has(normalizedCity);
 }
 
 // Address Search Component using OpenStreetMap Nominatim
@@ -86,9 +111,9 @@ const AddressSearch = ({ value, onChange, onServiceError }) => {
         const shortDisplay = result.display.split(',').slice(0, 4).join(',');
         setQuery(shortDisplay);
 
-        if (!isCitySupported(result.display)) {
+        if (!isCitySupported(result.city, result.state)) {
             onChange('');
-            if (onServiceError) onServiceError(result.city || 'that area');
+            if (onServiceError) onServiceError(result.city || 'this city');
         } else {
             onChange(shortDisplay);
             if (onServiceError) onServiceError(null);
@@ -127,6 +152,7 @@ const AddressSearch = ({ value, onChange, onServiceError }) => {
 };
 
 export default function RepairQuiz() {
+    const { user } = useAuth();
     const [step, setStep] = useState(0);
     const [selectedDevice, setSelectedDevice] = useState(null);
     const [selectedIssues, setSelectedIssues] = useState([]);
@@ -148,10 +174,51 @@ export default function RepairQuiz() {
     const otpRefs = useRef([]);
 
     const [confirmed, setConfirmed] = useState(false);
-    const navigate = useNavigate();
+    const isLoggedIn = Boolean(user);
 
     const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
     const goBack = () => setStep((s) => Math.max(s - 1, 0));
+
+    const availableRepairTypes = useMemo(() => {
+        if (!selectedDevice) return REPAIR_TYPES.filter(type => REPAIR_TYPES_ALWAYS_AVAILABLE.has(type.id));
+
+        return REPAIR_TYPES.filter((type) => {
+            if (REPAIR_TYPES_ALWAYS_AVAILABLE.has(type.id)) return true;
+            return type.id === 'back-glass' && BACK_GLASS_SUPPORTED_DEVICE_IDS.has(selectedDevice.id);
+        });
+    }, [selectedDevice]);
+
+    useEffect(() => {
+        const allowedIssues = new Set(availableRepairTypes.map((type) => type.id));
+        setSelectedIssues((prev) => prev.filter((issueId) => allowedIssues.has(issueId)));
+        setIssueTiers((prev) => {
+            const next = {};
+            Object.entries(prev).forEach(([issueId, tier]) => {
+                if (allowedIssues.has(issueId)) next[issueId] = tier;
+            });
+            return next;
+        });
+    }, [availableRepairTypes]);
+
+    useEffect(() => {
+        async function hydrateLoggedInContact() {
+            if (!user) return;
+
+            const { data: profile } = await supabase
+                .from('customers')
+                .select('full_name, email, phone')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            setContact({
+                name: profile?.full_name || user.user_metadata?.full_name || '',
+                email: profile?.email || user.email || '',
+                phone: profile?.phone || '',
+            });
+        }
+
+        hydrateLoggedInContact();
+    }, [user]);
 
     const toggleIssue = (id) => {
         setSelectedIssues((prev) => {
@@ -268,10 +335,11 @@ export default function RepairQuiz() {
             // Create/update customer profile
             const userId = authData.user?.id;
             if (userId) {
+                const normalizedPhone = contact.phone ? (formatPhoneE164(contact.phone) || contact.phone) : null;
                 const { error: profileError } = await supabase.from('customers').upsert({
                     id: userId,
                     full_name: contact.name,
-                    phone: contact.phone,
+                    phone: normalizedPhone,
                     email: contact.email,
                 }, { onConflict: 'id' });
 
@@ -308,6 +376,60 @@ export default function RepairQuiz() {
             setConfirmed(true);
         } catch (err) {
             setAuthError('Verification failed. Please check your code and try again.');
+            setIsVerifying(false);
+        }
+    };
+
+    const handleBookLoggedIn = async () => {
+        if (!user) return;
+
+        setIsVerifying(true);
+        setAuthError('');
+
+        try {
+            const fallbackName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Customer';
+            const normalizedPhone = contact.phone ? (formatPhoneE164(contact.phone) || contact.phone) : null;
+            const profilePayload = {
+                id: user.id,
+                full_name: contact.name || fallbackName,
+                phone: normalizedPhone,
+                email: contact.email || user.email,
+            };
+
+            const { error: profileError } = await supabase
+                .from('customers')
+                .upsert(profilePayload, { onConflict: 'id' });
+
+            if (profileError) {
+                setAuthError('Failed to load your profile. Please try again.');
+                setIsVerifying(false);
+                return;
+            }
+
+            const { error: repairError } = await supabase.from('repairs').insert({
+                customer_id: user.id,
+                device: selectedDevice?.name || 'Unknown Device',
+                issues: selectedIssues,
+                parts_tier: issueTiers,
+                service_fee: SERVICE_FEE,
+                total_estimate: calculateTotal(),
+                schedule_date: scheduleDate,
+                schedule_time: scheduleTime,
+                address: scheduleAddress,
+                status: 'pending',
+            });
+
+            if (repairError) {
+                setAuthError('Failed to book your repair. Please try again.');
+                setIsVerifying(false);
+                return;
+            }
+
+            setContact((prev) => ({ ...prev, name: profilePayload.full_name, email: profilePayload.email }));
+            setConfirmed(true);
+            setIsVerifying(false);
+        } catch (err) {
+            setAuthError('Failed to book your repair. Please try again.');
             setIsVerifying(false);
         }
     };
@@ -372,7 +494,7 @@ export default function RepairQuiz() {
                                 <div className="quiz__section">
                                     <h3 className="quiz__section-title">What's wrong with your {selectedDevice.name}?</h3>
                                     <div className="quiz__issues">
-                                        {REPAIR_TYPES.map((type) => (
+                                        {availableRepairTypes.map((type) => (
                                             <button
                                                 key={type.id}
                                                 className={`quiz__issue-card ${selectedIssues.includes(type.id) ? 'quiz__issue-card--selected' : ''}`}
@@ -413,7 +535,7 @@ export default function RepairQuiz() {
                                     </div>
                                     <div className="quiz__per-issue-tiers">
                                         {selectedIssues.map((issueId) => {
-                                            const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                            const type = availableRepairTypes.find((t) => t.id === issueId) || REPAIR_TYPES.find((t) => t.id === issueId);
                                             const currentTier = issueTiers[issueId];
                                             return (
                                                 <div key={issueId} className="pit-row">
@@ -505,11 +627,11 @@ export default function RepairQuiz() {
                                         <span className="sched-service-error__icon">⚠️</span>
                                         <div>
                                             <strong>Not available in {serviceAreaError}</strong>
-                                            <p>We currently only serve the Dallas–Fort Worth metroplex. We're expanding soon!</p>
+                                            <p>We currently serve select cities in Texas. We are coming to other cities soon.</p>
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="sched-hint">We come to your home, office, or wherever you are. Currently serving the DFW metroplex.</p>
+                                    <p className="sched-hint">We come to your home, office, or wherever you are. Currently serving select cities in Texas.</p>
                                 )}
                             </div>
 
@@ -529,7 +651,82 @@ export default function RepairQuiz() {
                     {/* ─── Step 2: Confirm & book (Quote Review + Contact + Auth) ─────── */}
                     {step === 2 && !confirmed && (
                         <div className="quiz__panel animate-fade-in-up">
-                            {!otpSent ? (
+                            {isLoggedIn ? (
+                                <>
+                                    <h2 className="quiz__title">Confirm & book</h2>
+                                    <p className="quiz__subtitle">Review your repair and confirm your appointment.</p>
+
+                                    {/* Quote Review */}
+                                    <div className="quiz__quote">
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Device</div>
+                                            <div className="quiz__quote-value">{selectedDevice?.name}</div>
+                                        </div>
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Repairs</div>
+                                            {selectedIssues.map((issueId) => {
+                                                const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                                const tier = PARTS_TIERS.find((t) => t.id === issueTiers[issueId]);
+                                                const price = getIssuePrice(issueId);
+                                                return (
+                                                    <div key={issueId} className="quiz__quote-line">
+                                                        <span>{type?.icon} {type?.name}</span>
+                                                        <span className="quiz__quote-line-right">
+                                                            <span className="quiz__quote-tier-tag">{tier?.name}</span>
+                                                            <span>${price}</span>
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                            <div className="quiz__quote-line">
+                                                <span>🚗 On-site Service Fee</span>
+                                                <span className="quiz__quote-value">${SERVICE_FEE}</span>
+                                            </div>
+                                        </div>
+                                        <div className="quiz__quote-section">
+                                            <div className="quiz__quote-label">Appointment</div>
+                                            <div className="quiz__quote-line">
+                                                <span>📅 {scheduleDate}</span>
+                                            </div>
+                                            <div className="quiz__quote-line">
+                                                <span>🕐 {timeSlots.find(s => s.id === scheduleTime)?.range}</span>
+                                            </div>
+                                            <div className="quiz__quote-line">
+                                                <span>📍 {scheduleAddress}</span>
+                                            </div>
+                                        </div>
+                                        <div className="quiz__quote-total">
+                                            <span>Estimated Total</span>
+                                            <span className="quiz__quote-total-price">${calculateTotal()}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="quiz__section">
+                                        <h3 className="quiz__section-title">Signed in account</h3>
+                                        <p className="quiz__subtitle" style={{ marginBottom: 16 }}>
+                                            Booking as <strong>{contact.email || user.email}</strong>.
+                                        </p>
+                                        {authError && (
+                                            <p className="login-card__error">{authError}</p>
+                                        )}
+                                        <div className="quiz__warranty-notice" style={{ marginBottom: 16 }}>
+                                            <strong>Note:</strong> Repairs do not include a warranty on parts or service.
+                                            Prices are estimates. Final pricing confirmed after technician diagnosis.
+                                        </div>
+                                        <div className="quiz__actions">
+                                            <button type="button" className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                            <button
+                                                type="button"
+                                                className="guru-btn guru-btn--primary guru-btn--lg"
+                                                disabled={isVerifying}
+                                                onClick={handleBookLoggedIn}
+                                            >
+                                                {isVerifying ? 'Booking...' : 'Confirm Appointment'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : !otpSent ? (
                                 <>
                                     <h2 className="quiz__title">Confirm & book</h2>
                                     <p className="quiz__subtitle">Review your repair and enter your details to book.</p>

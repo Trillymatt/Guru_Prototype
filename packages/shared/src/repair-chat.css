@@ -1,0 +1,414 @@
+/* ═══════════════════════════════════════════════════════════════
+   RepairChat — Shared chat widget styles
+   Works in both light (customer) and dark (technician) themes
+   ═══════════════════════════════════════════════════════════════ */
+
+.rc-chat {
+    border: 1px solid var(--guru-gray-200);
+    border-radius: var(--radius-2xl);
+    overflow: hidden;
+    background: var(--guru-white);
+    margin-bottom: var(--space-6);
+}
+
+/* ─── Toggle Header ───────────────────────────────────────────── */
+
+.rc-chat__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--space-4) var(--space-5);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background var(--transition-fast);
+}
+
+.rc-chat__toggle:hover {
+    background: var(--guru-gray-50);
+}
+
+.rc-chat__toggle-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.rc-chat__toggle-icon {
+    font-size: 1.125rem;
+}
+
+.rc-chat__toggle-title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--guru-gray-800);
+    letter-spacing: -0.01em;
+}
+
+.rc-chat__unread {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    background: var(--guru-purple-600);
+    border-radius: var(--radius-full);
+    animation: rcPulse 2s infinite;
+}
+
+.rc-chat__chevron {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--guru-gray-400);
+    transform: rotate(90deg);
+    transition: transform var(--transition-fast);
+    line-height: 1;
+}
+
+.rc-chat__chevron--open {
+    transform: rotate(270deg);
+}
+
+/* ─── Chat Body ───────────────────────────────────────────────── */
+
+.rc-chat__body {
+    border-top: 1px solid var(--guru-gray-200);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ─── Messages Area ───────────────────────────────────────────── */
+
+.rc-chat__messages {
+    height: 260px;
+    overflow-y: auto;
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    scroll-behavior: smooth;
+}
+
+/* Scrollbar styling */
+.rc-chat__messages::-webkit-scrollbar {
+    width: 5px;
+}
+
+.rc-chat__messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.rc-chat__messages::-webkit-scrollbar-thumb {
+    background: var(--guru-gray-200);
+    border-radius: var(--radius-full);
+}
+
+.rc-chat__messages::-webkit-scrollbar-thumb:hover {
+    background: var(--guru-gray-300);
+}
+
+/* ─── Empty State ─────────────────────────────────────────────── */
+
+.rc-chat__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: var(--guru-gray-400);
+    gap: var(--space-1);
+}
+
+.rc-chat__empty-icon {
+    font-size: 1.75rem;
+    opacity: 0.5;
+    margin-bottom: var(--space-1);
+}
+
+.rc-chat__empty p {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.rc-chat__empty-hint {
+    font-size: var(--font-size-xs) !important;
+    font-weight: 400 !important;
+    color: var(--guru-gray-300);
+}
+
+/* ─── Date Divider ────────────────────────────────────────────── */
+
+.rc-chat__date-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2) 0;
+}
+
+.rc-chat__date-divider span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--guru-gray-400);
+    background: var(--guru-gray-100);
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+}
+
+/* ─── Message Bubbles ─────────────────────────────────────────── */
+
+.rc-chat__bubble-row {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: var(--space-2);
+}
+
+.rc-chat__bubble-row:last-child {
+    margin-bottom: 0;
+}
+
+.rc-chat__bubble-row--own {
+    justify-content: flex-end;
+}
+
+.rc-chat__bubble-row--own + .rc-chat__bubble-row--own {
+    margin-top: var(--space-1);
+}
+
+.rc-chat__bubble-row:not(.rc-chat__bubble-row--own) + .rc-chat__bubble-row:not(.rc-chat__bubble-row--own) {
+    margin-top: var(--space-1);
+}
+
+.rc-chat__bubble {
+    max-width: 80%;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-xl);
+    position: relative;
+}
+
+.rc-chat__bubble--own {
+    background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700));
+    color: white;
+    border-bottom-right-radius: var(--radius-sm);
+}
+
+.rc-chat__bubble--other {
+    background: var(--guru-gray-100);
+    color: var(--guru-gray-800);
+    border-bottom-left-radius: var(--radius-sm);
+}
+
+.rc-chat__sender {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--guru-purple-600);
+    margin-bottom: 2px;
+}
+
+.rc-chat__text {
+    font-size: var(--font-size-sm);
+    line-height: 1.45;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.rc-chat__time {
+    display: block;
+    font-size: 10px;
+    margin-top: 2px;
+    opacity: 0.6;
+    text-align: right;
+}
+
+.rc-chat__bubble--own .rc-chat__time {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.rc-chat__bubble--other .rc-chat__time {
+    color: var(--guru-gray-400);
+}
+
+/* ─── Input Area ──────────────────────────────────────────────── */
+
+.rc-chat__input-area {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--guru-gray-200);
+    background: var(--guru-gray-50);
+}
+
+.rc-chat__input {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    font-size: max(16px, var(--font-size-sm));
+    font-family: inherit;
+    color: var(--guru-gray-900);
+    background: var(--guru-white);
+    border: 1.5px solid var(--guru-gray-200);
+    border-radius: var(--radius-xl);
+    outline: none;
+    transition: border-color var(--transition-fast);
+}
+
+.rc-chat__input::placeholder {
+    color: var(--guru-gray-400);
+}
+
+.rc-chat__input:focus {
+    border-color: var(--guru-purple-400);
+}
+
+.rc-chat__send {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700));
+    color: white;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+    outline: none;
+    box-shadow: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.rc-chat__send:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+
+.rc-chat__send:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.rc-chat__send:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* ─── Unread Pulse Animation ──────────────────────────────────── */
+
+@keyframes rcPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Dark Mode Overrides (Technician Portal)
+   ═══════════════════════════════════════════════════════════════ */
+
+.dark .rc-chat {
+    background: var(--dark-bg-card);
+    border-color: var(--dark-border-subtle);
+}
+
+.dark .rc-chat__toggle:hover {
+    background: var(--dark-bg-hover);
+}
+
+.dark .rc-chat__toggle-title {
+    color: var(--dark-text-primary);
+}
+
+.dark .rc-chat__unread {
+    background: var(--dark-purple-500);
+}
+
+.dark .rc-chat__chevron {
+    color: var(--dark-text-tertiary);
+}
+
+.dark .rc-chat__body {
+    border-top-color: var(--dark-border-subtle);
+}
+
+.dark .rc-chat__messages::-webkit-scrollbar-thumb {
+    background: var(--dark-border-medium);
+}
+
+.dark .rc-chat__messages::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-border-strong);
+}
+
+.dark .rc-chat__empty {
+    color: var(--dark-text-tertiary);
+}
+
+.dark .rc-chat__empty-hint {
+    color: var(--dark-text-tertiary);
+}
+
+.dark .rc-chat__date-divider span {
+    background: var(--dark-bg-hover);
+    color: var(--dark-text-tertiary);
+}
+
+.dark .rc-chat__bubble--own {
+    background: linear-gradient(135deg, var(--dark-purple-500), var(--dark-purple-600));
+}
+
+.dark .rc-chat__bubble--other {
+    background: var(--dark-bg-hover);
+    color: var(--dark-text-primary);
+}
+
+.dark .rc-chat__sender {
+    color: var(--dark-purple-400);
+}
+
+.dark .rc-chat__bubble--other .rc-chat__time {
+    color: var(--dark-text-tertiary);
+}
+
+.dark .rc-chat__input-area {
+    border-top-color: var(--dark-border-subtle);
+    background: var(--dark-bg-elevated);
+}
+
+.dark .rc-chat__input {
+    background: var(--dark-bg-input);
+    border-color: var(--dark-border-medium);
+    color: var(--dark-text-primary);
+}
+
+.dark .rc-chat__input::placeholder {
+    color: var(--dark-text-tertiary);
+}
+
+.dark .rc-chat__input:focus {
+    border-color: var(--dark-purple-500);
+}
+
+.dark .rc-chat__send {
+    background: linear-gradient(135deg, var(--dark-purple-500), var(--dark-purple-600));
+    box-shadow: none;
+    border: none;
+    outline: none;
+}
+
+.dark .rc-chat__send:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+    transform: scale(1.05);
+}
+
+.dark .rc-chat__send:disabled {
+    box-shadow: none;
+}

@@ -5,6 +5,7 @@ import RepairQuiz from './pages/RepairQuiz';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import RepairDetailPage from './pages/RepairDetailPage';
+import ProfilePage from './pages/ProfilePage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -22,6 +23,11 @@ export default function App() {
                 <Route path="/repair/:id" element={
                     <ProtectedRoute>
                         <RepairDetailPage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                    <ProtectedRoute>
+                        <ProfilePage />
                     </ProtectedRoute>
                 } />
             </Routes>

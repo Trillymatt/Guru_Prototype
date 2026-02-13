@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
+import RepairChat from '@shared/RepairChat';
 import {
     REPAIR_TYPES,
     REPAIR_STATUS,
@@ -13,6 +14,7 @@ import {
     SAMPLE_PRICING,
     TAX_RATE,
 } from '@shared/constants';
+import '@shared/repair-chat.css';
 import '../styles/repair-detail.css';
 
 const TIME_SLOT_LABELS = {
@@ -68,8 +70,28 @@ export default function RepairDetailPage() {
     const { user } = useAuth();
     const [repair, setRepair] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editDate, setEditDate] = useState('');
+    const [editTime, setEditTime] = useState('');
+    const [editAddress, setEditAddress] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState('');
+    const [customerName, setCustomerName] = useState('');
 
     const { techLocation, eta } = useSimulatedTechLocation(repair);
+
+    // Fetch the customer's display name for chat
+    useEffect(() => {
+        if (!user) return;
+        supabase
+            .from('customers')
+            .select('full_name')
+            .eq('id', user.id)
+            .single()
+            .then(({ data }) => {
+                if (data?.full_name) setCustomerName(data.full_name);
+            });
+    }, [user]);
 
     useEffect(() => {
         if (!user || !id) return;
@@ -94,7 +116,8 @@ export default function RepairDetailPage() {
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'repairs', filter: `id=eq.${id}` },
                 (payload) => {
-                    setRepair(payload.new);
+                    // Update the entire repair object with new data
+                    setRepair(prev => ({ ...prev, ...payload.new }));
                 }
             )
             .subscribe();
@@ -111,6 +134,63 @@ export default function RepairDetailPage() {
         const tier = repair?.parts_tier?.[issueId] || 'premium';
         return SAMPLE_PRICING[issueId]?.[tier] || 0;
     };
+
+    const handleEditToggle = () => {
+        if (!isEditing) {
+            // Entering edit mode - populate with current values
+            setEditDate(repair.schedule_date || '');
+            setEditTime(repair.schedule_time || '');
+            setEditAddress(repair.address || '');
+            setSaveError('');
+        }
+        setIsEditing(!isEditing);
+    };
+
+    const handleSaveChanges = async () => {
+        if (!editDate || !editTime || !editAddress) {
+            setSaveError('Please fill in all fields');
+            return;
+        }
+
+        setIsSaving(true);
+        setSaveError('');
+
+        const { error } = await supabase
+            .from('repairs')
+            .update({
+                schedule_date: editDate,
+                schedule_time: editTime,
+                address: editAddress,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', id);
+
+        if (error) {
+            setSaveError('Failed to save changes. Please try again.');
+            setIsSaving(false);
+            return;
+        }
+
+        // Update local state
+        setRepair(prev => ({
+            ...prev,
+            schedule_date: editDate,
+            schedule_time: editTime,
+            address: editAddress,
+        }));
+        setIsEditing(false);
+        setIsSaving(false);
+    };
+
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + 3);
+    const minDateStr = minDate.toISOString().split('T')[0];
+
+    const timeSlots = [
+        { id: 'morning', label: 'Morning', range: '8:00 AM – 12:00 PM', icon: '🌅' },
+        { id: 'afternoon', label: 'Afternoon', range: '12:00 PM – 4:00 PM', icon: '☀️' },
+        { id: 'evening', label: 'Evening', range: '4:00 PM – 7:00 PM', icon: '🌆' },
+    ];
 
     const currentStepIndex = repair ? REPAIR_STATUS_FLOW.indexOf(repair.status) : 0;
 
@@ -161,7 +241,7 @@ export default function RepairDetailPage() {
                             <h1 className="rd-title">{repair.device}</h1>
                             <p className="rd-subtitle">
                                 Booked on {new Date(repair.created_at).toLocaleDateString('en-US', {
-                                    month: 'long', day: 'numeric', year: 'numeric'
+                                    month: '2-digit', day: '2-digit', year: 'numeric'
                                 })}
                             </p>
                         </div>
@@ -175,8 +255,8 @@ export default function RepairDetailPage() {
                         <h3 className="rd-section-title">Repair Progress</h3>
                         <div className="rd-stepper__track">
                             {REPAIR_STATUS_FLOW.map((status, i) => {
-                                const isComplete = i < currentStepIndex;
-                                const isCurrent = i === currentStepIndex;
+                                const isComplete = i < currentStepIndex || (i === currentStepIndex && repair.status === 'complete');
+                                const isCurrent = i === currentStepIndex && repair.status !== 'complete';
                                 return (
                                     <div
                                         key={status}
@@ -196,6 +276,14 @@ export default function RepairDetailPage() {
                             })}
                         </div>
                     </div>
+
+                    {/* Chat with Technician */}
+                    <RepairChat
+                        repairId={id}
+                        userId={user.id}
+                        senderRole="customer"
+                        senderName={customerName}
+                    />
 
                     {/* En Route Map Section */}
                     {(isEnRoute || isArrived) && (
@@ -287,35 +375,117 @@ export default function RepairDetailPage() {
 
                     {/* Repair Details */}
                     <div className="rd-card">
-                        <h3 className="rd-section-title">Repair Details</h3>
-                        <div className="rd-details">
-                            <div className="rd-detail-row">
-                                <span className="rd-detail-label">Device</span>
-                                <span className="rd-detail-value">{repair.device}</span>
-                            </div>
-                            <div className="rd-detail-row">
-                                <span className="rd-detail-label">Issues</span>
-                                <span className="rd-detail-value">
-                                    {Array.isArray(repair.issues)
-                                        ? repair.issues.map(id => getIssueName(id)).join(', ')
-                                        : '—'}
-                                </span>
-                            </div>
-                            <div className="rd-detail-row">
-                                <span className="rd-detail-label">Date</span>
-                                <span className="rd-detail-value">{repair.schedule_date || '—'}</span>
-                            </div>
-                            <div className="rd-detail-row">
-                                <span className="rd-detail-label">Time</span>
-                                <span className="rd-detail-value">
-                                    {TIME_SLOT_LABELS[repair.schedule_time]?.range || repair.schedule_time || '—'}
-                                </span>
-                            </div>
-                            <div className="rd-detail-row">
-                                <span className="rd-detail-label">Address</span>
-                                <span className="rd-detail-value">{repair.address || '—'}</span>
-                            </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <h3 className="rd-section-title" style={{ margin: 0 }}>Repair Details</h3>
+                            {!isEditing && repair.status === 'pending' && (
+                                <button
+                                    className="guru-btn guru-btn--ghost guru-btn--sm"
+                                    onClick={handleEditToggle}
+                                >
+                                    ✏️ Edit
+                                </button>
+                            )}
                         </div>
+                        {isEditing ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>
+                                        Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        className="guru-input"
+                                        min={minDateStr}
+                                        value={editDate}
+                                        onChange={(e) => setEditDate(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>
+                                        Time Slot
+                                    </label>
+                                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                        {timeSlots.map((slot) => (
+                                            <button
+                                                key={slot.id}
+                                                className={`sched-slot ${editTime === slot.id ? 'sched-slot--selected' : ''}`}
+                                                onClick={() => setEditTime(slot.id)}
+                                                style={{ flex: '1 1 auto', minWidth: 150 }}
+                                            >
+                                                <span className="sched-slot__icon">{slot.icon}</span>
+                                                <span className="sched-slot__label">{slot.label}</span>
+                                                <span className="sched-slot__range">{slot.range}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>
+                                        Address
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="guru-input"
+                                        value={editAddress}
+                                        onChange={(e) => setEditAddress(e.target.value)}
+                                        placeholder="Enter your address"
+                                    />
+                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: 8 }}>
+                                        We come to your home, office, or wherever you are.
+                                    </p>
+                                </div>
+                                {saveError && (
+                                    <div style={{ padding: 12, background: 'var(--guru-error-bg)', color: 'var(--guru-error)', borderRadius: 8, fontSize: '0.875rem' }}>
+                                        {saveError}
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                                    <button
+                                        className="guru-btn guru-btn--ghost"
+                                        onClick={handleEditToggle}
+                                        disabled={isSaving}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="guru-btn guru-btn--primary"
+                                        onClick={handleSaveChanges}
+                                        disabled={isSaving}
+                                    >
+                                        {isSaving ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="rd-details">
+                                <div className="rd-detail-row">
+                                    <span className="rd-detail-label">Device</span>
+                                    <span className="rd-detail-value">{repair.device}</span>
+                                </div>
+                                <div className="rd-detail-row">
+                                    <span className="rd-detail-label">Issues</span>
+                                    <span className="rd-detail-value">
+                                        {Array.isArray(repair.issues)
+                                            ? repair.issues.map(id => getIssueName(id)).join(', ')
+                                            : '—'}
+                                    </span>
+                                </div>
+                                <div className="rd-detail-row">
+                                    <span className="rd-detail-label">Date</span>
+                                    <span className="rd-detail-value">{repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
+                                </div>
+                                <div className="rd-detail-row">
+                                    <span className="rd-detail-label">Time</span>
+                                    <span className="rd-detail-value">
+                                        {TIME_SLOT_LABELS[repair.schedule_time]?.range || repair.schedule_time || '—'}
+                                    </span>
+                                </div>
+                                <div className="rd-detail-row">
+                                    <span className="rd-detail-label">Address</span>
+                                    <span className="rd-detail-value">{repair.address || '—'}</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Pricing Breakdown */}

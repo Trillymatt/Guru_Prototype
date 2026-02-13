@@ -115,7 +115,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* ─── Priority Indicator (Left Edge) ────────────────────────────── */
+/* ─── Status Indicator (Left Edge) ──────────────────────────────── */
 
 .repair-card__priority {
   border-radius: var(--radius-full);
@@ -123,19 +123,54 @@
   align-self: stretch;
 }
 
-.repair-card__priority--high {
-  background: var(--dark-error);
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
-}
-
-.repair-card__priority--medium {
+.repair-card__priority--pending {
   background: var(--dark-warning);
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
 }
 
-.repair-card__priority--low {
+.repair-card__priority--confirmed {
   background: var(--dark-info);
   box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.repair-card__priority--parts_ordered {
+  background: var(--dark-warning);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+}
+
+.repair-card__priority--parts_received {
+  background: var(--dark-info);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.repair-card__priority--scheduled {
+  background: var(--dark-info);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.repair-card__priority--en_route {
+  background: var(--dark-purple-500);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+}
+
+.repair-card__priority--arrived {
+  background: var(--dark-purple-500);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+}
+
+.repair-card__priority--in_progress {
+  background: var(--dark-purple-400);
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.4);
+}
+
+.repair-card__priority--complete {
+  background: var(--dark-success);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+}
+
+.repair-card__priority--cancelled {
+  background: var(--dark-error);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
 }
 
 /* ─── Card Info Section ─────────────────────────────────────────── */
@@ -221,6 +256,31 @@
   .repair-card__price {
     font-size: var(--font-size-lg);
   }
+}
+
+/* ─── Message Notification Badge ──────────────────────────────── */
+
+.msg-notify-badge {
+    position: absolute;
+    top: -8px;
+    right: -4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    background: var(--dark-purple-500);
+    border-radius: var(--radius-full);
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.5);
+    z-index: 2;
+    animation: notifyPulse 2s ease-in-out infinite;
+}
+
+@keyframes notifyPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
 }
 
 @media (max-width: 480px) {

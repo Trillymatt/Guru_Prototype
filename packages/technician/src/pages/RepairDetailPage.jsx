@@ -2,7 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, SERVICE_FEE, TAX_RATE } from '@shared/constants';
 import { supabase } from '@shared/supabase';
+import RepairChat from '@shared/RepairChat';
 import TechNav from '../components/TechNav';
+import '@shared/repair-chat.css';
 import '../styles/tech-repair-detail.css';
 
 const AGREEMENT_TEXT = `GURU MOBILE REPAIR AGREEMENT
@@ -27,8 +29,27 @@ export default function RepairDetailPage() {
     const [showSignature, setShowSignature] = useState(false);
     const [signed, setSigned] = useState(false);
     const [updating, setUpdating] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
+    const [techName, setTechName] = useState('');
     const canvasRef = useRef(null);
     const sigPadRef = useRef(null);
+
+    // Get current user id + name for chat
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                setCurrentUserId(user.id);
+                supabase
+                    .from('technicians')
+                    .select('full_name')
+                    .eq('id', user.id)
+                    .single()
+                    .then(({ data }) => {
+                        if (data?.full_name) setTechName(data.full_name);
+                    });
+            }
+        });
+    }, []);
 
     // Fetch repair from Supabase
     useEffect(() => {
@@ -248,7 +269,16 @@ export default function RepairDetailPage() {
                                     </div>
                                     <div className="repair-detail__row">
                                         <span className="repair-detail__row-label">Location</span>
-                                        <span className="repair-detail__row-value">{repair.address}</span>
+                                        <a 
+                                            href={`http://maps.apple.com/?q=${encodeURIComponent(repair.address)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="repair-detail__row-value"
+                                            style={{ color: 'var(--guru-purple-600)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}
+                                        >
+                                            <span>{repair.address}</span>
+                                            <span style={{ fontSize: '0.875rem' }}>🗺️</span>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -261,7 +291,7 @@ export default function RepairDetailPage() {
                                         <div style={{ fontSize: '2rem', marginBottom: 8 }}>✓</div>
                                         <div style={{ fontWeight: 700, fontSize: '1.125rem' }}>Customer has signed the agreement</div>
                                         <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: 4 }}>
-                                            Signed at {new Date().toLocaleString()}
+                                            Signed at {new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                                         </div>
                                     </div>
                                 ) : showSignature ? (
@@ -328,12 +358,24 @@ export default function RepairDetailPage() {
                                 )}
                             </div>
 
+                            {/* Chat with Customer */}
+                            {currentUserId && (
+                                <div className="repair-detail__section" style={{ padding: 0, overflow: 'hidden' }}>
+                                    <RepairChat
+                                        repairId={id}
+                                        userId={currentUserId}
+                                        senderRole="technician"
+                                        senderName={techName}
+                                    />
+                                </div>
+                            )}
+
                             <div className="repair-detail__section">
                                 <h2 className="repair-detail__section-title">Schedule</h2>
                                 <div>
                                     <div className="repair-detail__row">
                                         <span className="repair-detail__row-label">Date</span>
-                                        <span className="repair-detail__row-value">{repair.schedule_date}</span>
+                                        <span className="repair-detail__row-value">{repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
                                     </div>
                                     <div className="repair-detail__row">
                                         <span className="repair-detail__row-label">Time</span>

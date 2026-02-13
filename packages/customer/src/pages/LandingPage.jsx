@@ -193,14 +193,7 @@ export default function LandingPage() {
                                 Watch your tech arrive in real-time, just like a rideshare.
                             </p>
                         </Reveal>
-                        <Reveal className="bento-card" delay={150}>
-                            <div className="bento-card__icon">💬</div>
-                            <h3 className="bento-card__title">In-app chat</h3>
-                            <p className="bento-card__desc">
-                                Message your tech directly for updates during the repair.
-                            </p>
-                        </Reveal>
-                        <Reveal className="bento-card bento-card--wide bento-card--dark" delay={250}>
+                        <Reveal className="bento-card bento-card--wide bento-card--dark" delay={150}>
                             <div className="bento-card__row">
                                 <div>
                                     <h3 className="bento-card__title">3-tier parts model</h3>
@@ -214,6 +207,13 @@ export default function LandingPage() {
                                     <span className="bento-tier bento-tier--gen">$$$</span>
                                 </div>
                             </div>
+                        </Reveal>
+                        <Reveal className="bento-card" delay={250}>
+                            <div className="bento-card__icon">💬</div>
+                            <h3 className="bento-card__title">In-app chat</h3>
+                            <p className="bento-card__desc">
+                                Message your tech directly for updates during the repair.
+                            </p>
                         </Reveal>
                         <Reveal className="bento-card" delay={300}>
                             <div className="bento-card__icon">⏱️</div>

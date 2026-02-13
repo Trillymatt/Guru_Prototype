@@ -116,9 +116,91 @@ CREATE TRIGGER update_repairs_updated_at
   BEFORE UPDATE ON repairs
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- ─── Messages (Chat per Repair) ──────────────────────────────────────────────
+-- Each repair has its own chat thread between customer and technician.
+
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  repair_id UUID NOT NULL REFERENCES repairs(id) ON DELETE CASCADE,
+  sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  sender_role TEXT NOT NULL CHECK (sender_role IN ('customer', 'technician')),
+  sender_name TEXT DEFAULT '',
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for fast lookup by repair
+CREATE INDEX idx_messages_repair_id ON messages(repair_id);
+CREATE INDEX idx_messages_created_at ON messages(repair_id, created_at);
+
+-- ─── Messages RLS ────────────────────────────────────────────────────────────
+
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- Customers can read messages for their own repairs
+CREATE POLICY "Customers can view messages for own repairs"
+  ON messages FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM repairs
+      WHERE repairs.id = messages.repair_id
+        AND repairs.customer_id = auth.uid()
+    )
+  );
+
+-- Technicians can read all messages
+CREATE POLICY "Technicians can view all messages"
+  ON messages FOR SELECT USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+-- Customers can send messages on their own repairs
+CREATE POLICY "Customers can send messages on own repairs"
+  ON messages FOR INSERT WITH CHECK (
+    auth.uid() = sender_id
+    AND sender_role = 'customer'
+    AND EXISTS (
+      SELECT 1 FROM repairs
+      WHERE repairs.id = messages.repair_id
+        AND repairs.customer_id = auth.uid()
+    )
+  );
+
+-- Technicians can send messages on any repair
+CREATE POLICY "Technicians can send messages"
+  ON messages FOR INSERT WITH CHECK (
+    auth.uid() = sender_id
+    AND sender_role = 'technician'
+    AND EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+-- ─── Chat Read Tracking ──────────────────────────────────────────────────────
+-- Tracks when each user last opened the chat for a given repair.
+
+CREATE TABLE IF NOT EXISTS chat_last_read (
+  repair_id UUID NOT NULL REFERENCES repairs(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  last_read_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (repair_id, user_id)
+);
+
+ALTER TABLE chat_last_read ENABLE ROW LEVEL SECURITY;
+
+-- Users can read their own last-read timestamps
+CREATE POLICY "Users can view own read timestamps"
+  ON chat_last_read FOR SELECT USING (auth.uid() = user_id);
+
+-- Users can insert their own last-read timestamps
+CREATE POLICY "Users can insert own read timestamps"
+  ON chat_last_read FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own last-read timestamps
+CREATE POLICY "Users can update own read timestamps"
+  ON chat_last_read FOR UPDATE USING (auth.uid() = user_id);
+
 -- ─── Enable Realtime ─────────────────────────────────────────────────────────
 
 ALTER PUBLICATION supabase_realtime ADD TABLE repairs;
+ALTER PUBLICATION supabase_realtime ADD TABLE messages;
 
 -- ─── IMPORTANT: After running this schema ────────────────────────────────────
 -- 1. Create a Supabase auth user for your technician (email + password).

@@ -469,6 +469,47 @@
     color: var(--guru-purple-600);
 }
 
+.dash-card__view-link {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--guru-purple-600);
+}
+
+/* ─── Dashboard Tabs ───────────────────────────────────────────── */
+
+.dash-tabs {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-1);
+    background: var(--guru-gray-100);
+    border-radius: var(--radius-xl);
+    width: fit-content;
+}
+
+.dash-tab {
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--guru-gray-600);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.dash-tab:hover {
+    color: var(--guru-gray-800);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.dash-tab--active {
+    color: var(--guru-purple-700);
+    background: var(--guru-white);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
 @media (max-width: 480px) {
     .rd-header {
         flex-direction: column;

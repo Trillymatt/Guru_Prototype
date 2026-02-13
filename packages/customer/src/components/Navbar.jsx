@@ -57,6 +57,7 @@ export default function Navbar() {
                         {isLoggedIn ? (
                             <>
                                 <Link to="/dashboard" className="guru-btn guru-btn--ghost guru-btn--full" onClick={closeMenu}>My Repairs</Link>
+                                <Link to="/profile" className="guru-btn guru-btn--ghost guru-btn--full" onClick={closeMenu}>Profile</Link>
                                 <button className="guru-btn guru-btn--primary guru-btn--full" onClick={handleSignOut}>Sign Out</button>
                             </>
                         ) : (
@@ -72,6 +73,12 @@ export default function Navbar() {
                     {isLoggedIn ? (
                         <>
                             <Link to="/dashboard" className="guru-btn guru-btn--ghost guru-btn--sm">My Repairs</Link>
+                            <Link to="/profile" className="navbar__profile-btn" aria-label="Profile">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                            </Link>
                             <button className="guru-btn guru-btn--primary guru-btn--sm" onClick={handleSignOut}>Sign Out</button>
                         </>
                     ) : (

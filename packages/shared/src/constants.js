@@ -6,9 +6,6 @@
 // ─── iPhone Device Catalog ───────────────────────────────────────────────────
 
 export const DEVICES = [
-    { id: 'iphone-11', name: 'iPhone 11', year: 2019, generation: '11' },
-    { id: 'iphone-11-pro', name: 'iPhone 11 Pro', year: 2019, generation: '11' },
-    { id: 'iphone-11-pro-max', name: 'iPhone 11 Pro Max', year: 2019, generation: '11' },
     { id: 'iphone-se-2nd', name: 'iPhone SE (2nd gen)', year: 2020, generation: 'SE' },
     { id: 'iphone-12-mini', name: 'iPhone 12 mini', year: 2020, generation: '12' },
     { id: 'iphone-12', name: 'iPhone 12', year: 2020, generation: '12' },

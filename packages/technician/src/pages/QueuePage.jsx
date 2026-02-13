@@ -8,6 +8,7 @@ export default function QueuePage() {
     const [filter, setFilter] = useState('all');
     const [repairs, setRepairs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [unreadCounts, setUnreadCounts] = useState({}); // { repairId: count }
 
     // Fetch repairs from Supabase
     useEffect(() => {
@@ -17,6 +18,7 @@ export default function QueuePage() {
             if (!user) return;
 
             // Technicians see: their assigned repairs + all unassigned pending repairs
+            // Exclude completed and cancelled repairs from queue
             const { data, error } = await supabase
                 .from('repairs')
                 .select(`
@@ -37,10 +39,45 @@ export default function QueuePage() {
                     customers (full_name, phone, email)
                 `)
                 .or(`technician_id.eq.${user.id},and(technician_id.is.null,status.eq.pending)`)
+                .neq('status', 'complete')
+                .neq('status', 'cancelled')
                 .order('schedule_date', { ascending: true });
 
             if (!error && data) {
                 setRepairs(data);
+
+                // Fetch unread message counts (only messages newer than last read)
+                if (data.length > 0) {
+                    const repairIds = data.map(r => r.id);
+
+                    // Get last-read timestamps for this tech
+                    const { data: readRows } = await supabase
+                        .from('chat_last_read')
+                        .select('repair_id, last_read_at')
+                        .eq('user_id', user.id)
+                        .in('repair_id', repairIds);
+
+                    const lastReadMap = {};
+                    (readRows || []).forEach(r => { lastReadMap[r.repair_id] = r.last_read_at; });
+
+                    // Get all customer messages for these repairs
+                    const { data: msgs } = await supabase
+                        .from('messages')
+                        .select('repair_id, created_at')
+                        .in('repair_id', repairIds)
+                        .eq('sender_role', 'customer');
+
+                    if (msgs) {
+                        const counts = {};
+                        msgs.forEach(m => {
+                            const lastRead = lastReadMap[m.repair_id];
+                            if (!lastRead || new Date(m.created_at) > new Date(lastRead)) {
+                                counts[m.repair_id] = (counts[m.repair_id] || 0) + 1;
+                            }
+                        });
+                        setUnreadCounts(counts);
+                    }
+                }
             }
             setLoading(false);
         };
@@ -48,7 +85,7 @@ export default function QueuePage() {
         fetchRepairs();
 
         // Subscribe to realtime changes on repairs table
-        const channel = supabase
+        const repairsChannel = supabase
             .channel('repairs-queue')
             .on('postgres_changes', {
                 event: '*',
@@ -60,22 +97,32 @@ export default function QueuePage() {
             })
             .subscribe();
 
+        // Listen for new customer messages to update badge counts
+        const messagesChannel = supabase
+            .channel('queue-messages')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+            }, (payload) => {
+                if (payload.new.sender_role === 'customer') {
+                    setUnreadCounts(prev => ({
+                        ...prev,
+                        [payload.new.repair_id]: (prev[payload.new.repair_id] || 0) + 1,
+                    }));
+                }
+            })
+            .subscribe();
+
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(repairsChannel);
+            supabase.removeChannel(messagesChannel);
         };
     }, []);
 
     const filteredRepairs = filter === 'all'
         ? repairs
         : repairs.filter((r) => r.status === filter);
-
-    // Derive priority from schedule proximity
-    const getPriority = (repair) => {
-        const daysUntil = Math.ceil((new Date(repair.schedule_date) - new Date()) / (1000 * 60 * 60 * 24));
-        if (daysUntil <= 1) return 'high';
-        if (daysUntil <= 3) return 'medium';
-        return 'low';
-    };
 
     return (
         <>
@@ -123,18 +170,22 @@ export default function QueuePage() {
                                 <div className="tech-empty-state__text">No repairs in this category</div>
                             </div>
                         ) : filteredRepairs.map((repair) => {
-                            const priority = getPriority(repair);
                             const customerName = repair.customers?.full_name || 'Unknown Customer';
                             const issues = Array.isArray(repair.issues) ? repair.issues : [];
                             return (
-                                <Link to={`/repair/${repair.id}`} key={repair.id} className="repair-card animate-fade-in-up">
-                                    <div className={`repair-card__priority repair-card__priority--${priority}`}></div>
+                                <Link to={`/repair/${repair.id}`} key={repair.id} className="repair-card animate-fade-in-up" style={{ position: 'relative' }}>
+                                    {unreadCounts[repair.id] > 0 && (
+                                        <span className="msg-notify-badge">
+                                            💬 {unreadCounts[repair.id]}
+                                        </span>
+                                    )}
+                                    <div className={`repair-card__priority repair-card__priority--${repair.status}`}></div>
                                     <div className="repair-card__info">
                                         <div className="repair-card__device">{repair.device}</div>
                                         <div className="repair-card__issues">{issues.join(' · ')}</div>
                                         <div className="repair-card__meta">
                                             <span>👤 {customerName}</span>
-                                            <span>📅 {repair.schedule_date}</span>
+                                            <span>📅 {repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
                                             <span>🕐 {repair.schedule_time}</span>
                                         </div>
                                     </div>
