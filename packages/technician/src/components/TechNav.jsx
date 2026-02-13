@@ -40,6 +40,12 @@ export default function TechNav() {
                         Queue
                     </Link>
                     <Link
+                        to="/schedule"
+                        className={`tech-nav__link ${isActive('/schedule') ? 'tech-nav__link--active' : ''}`}
+                    >
+                        Schedule
+                    </Link>
+                    <Link
                         to="/history"
                         className={`tech-nav__link ${isActive('/history') ? 'tech-nav__link--active' : ''}`}
                     >

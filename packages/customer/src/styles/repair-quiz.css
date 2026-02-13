@@ -494,6 +494,19 @@
     color: var(--guru-gray-500);
 }
 
+.sched-slot--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: var(--guru-gray-200);
+    background: var(--guru-gray-50);
+}
+
+.sched-slot--disabled:hover {
+    border-color: var(--guru-gray-200);
+    box-shadow: none;
+    transform: none;
+}
+
 @media (max-width: 600px) {
     .sched-slots {
         grid-template-columns: 1fr;

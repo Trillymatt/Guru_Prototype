@@ -9,6 +9,7 @@ import './styles/tech-components.css';
 import './styles/tech-nav.css';
 import './styles/tech-login.css';
 import './styles/tech-queue.css';
+import './styles/tech-schedule.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>

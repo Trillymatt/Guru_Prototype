@@ -12,6 +12,8 @@ import {
     SAMPLE_PRICING,
     SERVICE_FEE,
 } from '@shared/constants';
+import GuruCalendar from '@shared/GuruCalendar';
+import '@shared/guru-calendar.css';
 import '../styles/repair-quiz.css';
 
 const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
@@ -174,7 +176,55 @@ export default function RepairQuiz() {
     const otpRefs = useRef([]);
 
     const [confirmed, setConfirmed] = useState(false);
+    const [availableDates, setAvailableDates] = useState(null); // Set<string> of ISO dates
+    const [availableSlotsByDate, setAvailableSlotsByDate] = useState({}); // { 'YYYY-MM-DD': ['morning','afternoon',...] }
     const isLoggedIn = Boolean(user);
+
+    // Fetch tech availability from Supabase
+    useEffect(() => {
+        const fetchAvailability = async () => {
+            const today = new Date();
+            const startDate = new Date(today);
+            startDate.setDate(startDate.getDate() + 3); // 3-day lead time
+            const startStr = startDate.toISOString().split('T')[0];
+
+            // Fetch next 90 days of availability
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() + 93);
+            const endStr = endDate.toISOString().split('T')[0];
+
+            const { data, error } = await supabase
+                .from('tech_schedules')
+                .select('schedule_date, time_slots')
+                .gte('schedule_date', startStr)
+                .lte('schedule_date', endStr)
+                .eq('is_available', true);
+
+            if (!error && data && data.length > 0) {
+                const dates = new Set();
+                const slotsByDate = {};
+                data.forEach((row) => {
+                    dates.add(row.schedule_date);
+                    // Merge slots across techs for each date
+                    const slots = Array.isArray(row.time_slots) ? row.time_slots : [];
+                    if (!slotsByDate[row.schedule_date]) {
+                        slotsByDate[row.schedule_date] = new Set();
+                    }
+                    slots.forEach((s) => slotsByDate[row.schedule_date].add(s));
+                });
+                // Convert sets to arrays
+                const slotsObj = {};
+                Object.entries(slotsByDate).forEach(([date, slotSet]) => {
+                    slotsObj[date] = [...slotSet];
+                });
+                setAvailableDates(dates);
+                setAvailableSlotsByDate(slotsObj);
+            }
+            // If no data (no tech_schedules table yet or empty), leave null to allow all dates
+        };
+
+        fetchAvailability();
+    }, []);
 
     const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
     const goBack = () => setStep((s) => Math.max(s - 1, 0));
@@ -588,31 +638,48 @@ export default function RepairQuiz() {
                             </p>
 
                             <div className="sched-section">
-                                <label className="sched-label">Date</label>
-                                <input
-                                    type="date"
-                                    className="guru-input"
-                                    min={minDateStr}
+                                <label className="sched-label">Pick a Date</label>
+                                <GuruCalendar
                                     value={scheduleDate}
-                                    onChange={(e) => setScheduleDate(e.target.value)}
+                                    onChange={(date) => {
+                                        setScheduleDate(date);
+                                        // Reset time if the newly selected date doesn't support the current slot
+                                        if (availableSlotsByDate[date] && scheduleTime && !availableSlotsByDate[date].includes(scheduleTime)) {
+                                            setScheduleTime('');
+                                        }
+                                    }}
+                                    minDate={minDateStr}
+                                    availableDates={availableDates}
                                 />
                             </div>
 
                             <div className="sched-section">
                                 <label className="sched-label">Time Slot</label>
                                 <div className="sched-slots">
-                                    {timeSlots.map((slot) => (
-                                        <button
-                                            key={slot.id}
-                                            className={`sched-slot ${scheduleTime === slot.id ? 'sched-slot--selected' : ''}`}
-                                            onClick={() => setScheduleTime(slot.id)}
-                                        >
-                                            <span className="sched-slot__icon">{slot.icon}</span>
-                                            <span className="sched-slot__label">{slot.label}</span>
-                                            <span className="sched-slot__range">{slot.range}</span>
-                                        </button>
-                                    ))}
+                                    {timeSlots.map((slot) => {
+                                        // If tech availability data exists and a date is selected, check if this slot is available
+                                        const slotDisabled = scheduleDate
+                                            && availableSlotsByDate[scheduleDate]
+                                            && !availableSlotsByDate[scheduleDate].includes(slot.id);
+                                        return (
+                                            <button
+                                                key={slot.id}
+                                                className={`sched-slot ${scheduleTime === slot.id ? 'sched-slot--selected' : ''} ${slotDisabled ? 'sched-slot--disabled' : ''}`}
+                                                onClick={() => !slotDisabled && setScheduleTime(slot.id)}
+                                                disabled={slotDisabled}
+                                            >
+                                                <span className="sched-slot__icon">{slot.icon}</span>
+                                                <span className="sched-slot__label">{slot.label}</span>
+                                                <span className="sched-slot__range">{slot.range}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
+                                {scheduleDate && availableSlotsByDate[scheduleDate] && availableSlotsByDate[scheduleDate].length === 0 && (
+                                    <p className="sched-hint" style={{ color: 'var(--guru-gray-500)', marginTop: 'var(--space-3)' }}>
+                                        No time slots available on this date. Please select a different date.
+                                    </p>
+                                )}
                             </div>
 
                             <div className="sched-section">

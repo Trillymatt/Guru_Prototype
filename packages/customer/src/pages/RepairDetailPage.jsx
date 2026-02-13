@@ -14,6 +14,8 @@ import {
     SAMPLE_PRICING,
     TAX_RATE,
 } from '@shared/constants';
+import GuruCalendar from '@shared/GuruCalendar';
+import '@shared/guru-calendar.css';
 import '@shared/repair-chat.css';
 import '../styles/repair-detail.css';
 
@@ -392,12 +394,10 @@ export default function RepairDetailPage() {
                                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>
                                         Date
                                     </label>
-                                    <input
-                                        type="date"
-                                        className="guru-input"
-                                        min={minDateStr}
+                                    <GuruCalendar
                                         value={editDate}
-                                        onChange={(e) => setEditDate(e.target.value)}
+                                        onChange={setEditDate}
+                                        minDate={minDateStr}
                                     />
                                 </div>
                                 <div>
