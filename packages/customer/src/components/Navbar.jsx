@@ -38,7 +38,10 @@ export default function Navbar() {
             <div className="guru-container navbar__inner">
                 <Link to="/" className="navbar__logo" onClick={closeMenu}>
                     <div className="navbar__logo-icon">G</div>
-                    Guru
+                    <div className="navbar__logo-text">
+                        <span className="navbar__logo-name">Guru</span>
+                        <span className="navbar__logo-tagline">Mobile Repairs</span>
+                    </div>
                 </Link>
 
                 <div className={`navbar__links ${menuOpen ? 'navbar__links--open' : ''}`}>
