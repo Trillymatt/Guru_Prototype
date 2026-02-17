@@ -289,6 +289,28 @@
   color: var(--dark-success);
 }
 
+/* ─── Inventory Status Badge ──────────────────────────────────── */
+
+.tech-inventory-badge {
+  padding: 8px 14px;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+}
+
+.tech-inventory-badge--in-stock {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ADE80;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.tech-inventory-badge--order {
+  background: rgba(245, 158, 11, 0.12);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
 /* ─── Responsive ───────────────────────────────────────────────── */
 
 @media (max-width: 768px) {

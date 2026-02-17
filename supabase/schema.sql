@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS repairs (
     'pending', 'confirmed', 'parts_ordered', 'parts_received',
     'scheduled', 'en_route', 'arrived', 'in_progress', 'complete', 'cancelled'
   )),
+  parts_in_stock BOOLEAN DEFAULT NULL,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -238,11 +239,64 @@ CREATE TRIGGER update_tech_schedules_updated_at
   BEFORE UPDATE ON tech_schedules
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- ─── Parts Inventory ────────────────────────────────────────────────────────
+-- Shared inventory of parts across all technicians.
+-- Tracks quantity per device + repair_type + parts_tier combination.
+
+CREATE TABLE IF NOT EXISTS parts_inventory (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  device TEXT NOT NULL,
+  repair_type TEXT NOT NULL,
+  parts_tier TEXT NOT NULL CHECK (parts_tier IN ('economy', 'premium', 'genuine')),
+  quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(device, repair_type, parts_tier)
+);
+
+CREATE INDEX idx_parts_inventory_device ON parts_inventory(device);
+CREATE INDEX idx_parts_inventory_lookup ON parts_inventory(device, repair_type, parts_tier);
+
+CREATE TRIGGER update_parts_inventory_updated_at
+  BEFORE UPDATE ON parts_inventory
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE parts_inventory ENABLE ROW LEVEL SECURITY;
+
+-- Technicians can fully manage inventory
+CREATE POLICY "Technicians can view inventory"
+  ON parts_inventory FOR SELECT USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+CREATE POLICY "Technicians can insert inventory"
+  ON parts_inventory FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+CREATE POLICY "Technicians can update inventory"
+  ON parts_inventory FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+CREATE POLICY "Technicians can delete inventory"
+  ON parts_inventory FOR DELETE USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+-- Customers can view inventory (for checking part availability)
+CREATE POLICY "Customers can view inventory"
+  ON parts_inventory FOR SELECT USING (
+    EXISTS (SELECT 1 FROM customers WHERE id = auth.uid())
+  );
+
 -- ─── Enable Realtime ─────────────────────────────────────────────────────────
 
 ALTER PUBLICATION supabase_realtime ADD TABLE repairs;
 ALTER PUBLICATION supabase_realtime ADD TABLE messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE tech_schedules;
+ALTER PUBLICATION supabase_realtime ADD TABLE parts_inventory;
 
 -- ─── IMPORTANT: After running this schema ────────────────────────────────────
 -- 1. Create a Supabase auth user for your technician (email + password).
