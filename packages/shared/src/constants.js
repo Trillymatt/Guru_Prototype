@@ -186,6 +186,37 @@ export function formatDisplayDate(isoDate) {
     return `${dayNames[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
+// ─── Back Glass Colors by Device ─────────────────────────────────────────────
+// Official Apple release colors for back glass repair ordering.
+// Only devices in BACK_GLASS_SUPPORTED_DEVICE_IDS need colors here.
+
+export const BACK_GLASS_COLORS = {
+    // ── iPhone 14 series (2022) ───────────────────────────────────────────────
+    'iphone-14':          ['Blue', 'Midnight', 'Purple', '(Product)RED', 'Starlight', 'Yellow'],
+    'iphone-14-plus':     ['Blue', 'Midnight', 'Purple', '(Product)RED', 'Starlight', 'Yellow'],
+    'iphone-14-pro':      ['Deep Purple', 'Gold', 'Silver', 'Space Black'],
+    'iphone-14-pro-max':  ['Deep Purple', 'Gold', 'Silver', 'Space Black'],
+
+    // ── iPhone 15 series (2023) ───────────────────────────────────────────────
+    'iphone-15':          ['Black', 'Blue', 'Green', 'Pink', 'Yellow'],
+    'iphone-15-plus':     ['Black', 'Blue', 'Green', 'Pink', 'Yellow'],
+    'iphone-15-pro':      ['Black Titanium', 'Blue Titanium', 'Natural Titanium', 'White Titanium'],
+    'iphone-15-pro-max':  ['Black Titanium', 'Blue Titanium', 'Natural Titanium', 'White Titanium'],
+
+    // ── iPhone 16 series (2024) ───────────────────────────────────────────────
+    'iphone-16':          ['Black', 'Pink', 'Teal', 'Ultramarine', 'White'],
+    'iphone-16-plus':     ['Black', 'Pink', 'Teal', 'Ultramarine', 'White'],
+    'iphone-16-pro':      ['Black Titanium', 'Desert Titanium', 'Natural Titanium', 'White Titanium'],
+    'iphone-16-pro-max':  ['Black Titanium', 'Desert Titanium', 'Natural Titanium', 'White Titanium'],
+    'iphone-16e':         ['Black', 'White'],
+
+    // ── iPhone 17 series (2025) ───────────────────────────────────────────────
+    'iphone-17':          ['Black', 'White', 'Sky Blue', 'Pink'],
+    'iphone-17-air':      ['Black', 'White', 'Sky Blue'],
+    'iphone-17-pro':      ['Deep Blue', 'Orange', 'Silver'],
+    'iphone-17-pro-max':  ['Deep Blue', 'Orange', 'Silver'],
+};
+
 // ─── Service Fees ────────────────────────────────────────────────────────────
 
 export const SERVICE_FEE = 29;

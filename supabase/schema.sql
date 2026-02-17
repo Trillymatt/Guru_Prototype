@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS repairs (
     'scheduled', 'en_route', 'arrived', 'in_progress', 'complete', 'cancelled'
   )),
   parts_in_stock BOOLEAN DEFAULT NULL,
+  device_color TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

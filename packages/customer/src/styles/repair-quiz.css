@@ -974,6 +974,47 @@
     color: #C2410C;
 }
 
+/* ─── Back Glass Color Selection ────────────────────────────── */
+
+.quiz__color-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.quiz__color-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    border: 2px solid var(--guru-gray-200);
+    border-radius: var(--radius-full);
+    background: var(--guru-white);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--guru-gray-700);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.quiz__color-chip:hover {
+    border-color: var(--guru-purple-400);
+    color: var(--guru-purple-700);
+    background: var(--guru-purple-50);
+}
+
+.quiz__color-chip--selected {
+    border-color: var(--guru-purple-500);
+    background: var(--guru-purple-600);
+    color: white;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+}
+
+.quiz__color-chip-check {
+    font-size: var(--font-size-xs);
+    font-weight: 800;
+}
+
 /* ─── Per-Issue Stock Indicators ────────────────────────────── */
 
 .pit-row__stock {
