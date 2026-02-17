@@ -1,33 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@shared/supabase';
+import { TIME_SLOTS, SCHEDULING_LEAD_DAYS, toLocalDateKey, formatDisplayDate } from '@shared/constants';
 import GuruCalendar from '@shared/GuruCalendar';
 import '@shared/guru-calendar.css';
 import TechNav from '../components/TechNav';
-
-const TIME_SLOTS = [
-    { id: 'morning', label: 'Morning', range: '8:00 AM – 12:00 PM' },
-    { id: 'afternoon', label: 'Afternoon', range: '12:00 PM – 4:00 PM' },
-    { id: 'evening', label: 'Evening', range: '4:00 PM – 7:00 PM' },
-];
-
-const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function toDateKey(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-}
-
-function formatDisplayDate(isoDate) {
-    const [y, m, d] = isoDate.split('-');
-    const date = new Date(Number(y), Number(m) - 1, Number(d));
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return `${dayNames[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-}
 
 export default function SchedulePage() {
     const [selectedDate, setSelectedDate] = useState('');
@@ -35,7 +11,7 @@ export default function SchedulePage() {
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const todayStr = toDateKey(new Date());
+    const todayStr = toLocalDateKey(new Date());
 
     // Fetch existing schedule
     useEffect(() => {
@@ -211,6 +187,10 @@ export default function SchedulePage() {
                                 {loading ? 'Loading...' : `${upcomingCount} available day${upcomingCount !== 1 ? 's' : ''} set`}
                             </p>
                         </div>
+                    </div>
+
+                    <div className="schedule-hint">
+                        Customers can book {SCHEDULING_LEAD_DAYS}+ days out. Set your availability in advance so customers can find open slots.
                     </div>
 
                     <div className="schedule-layout">

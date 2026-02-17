@@ -135,6 +135,43 @@ export const NOTIFICATION_PREFERENCES = {
     BOTH: 'both',
 };
 
+// ─── Scheduling ─────────────────────────────────────────────────────────────
+
+export const SCHEDULING_LEAD_DAYS = 3; // Minimum days in advance for booking
+
+export const TIME_SLOTS = [
+    { id: 'morning', label: 'Morning', range: '8:00 AM – 12:00 PM', icon: '🌅' },
+    { id: 'afternoon', label: 'Afternoon', range: '12:00 PM – 4:00 PM', icon: '☀️' },
+    { id: 'evening', label: 'Evening', range: '4:00 PM – 7:00 PM', icon: '🌆' },
+];
+
+export const SCHEDULING_WINDOW_DAYS = 90; // How far out customers can book
+
+/**
+ * Convert a Date to a local YYYY-MM-DD string (avoids UTC timezone shift).
+ */
+export function toLocalDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+/**
+ * Format an ISO date string (YYYY-MM-DD) to a human-readable form.
+ * e.g. "Thursday, February 20, 2026"
+ */
+export function formatDisplayDate(isoDate) {
+    const [y, m, d] = isoDate.split('-');
+    const date = new Date(Number(y), Number(m) - 1, Number(d));
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return `${dayNames[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
 // ─── Service Fees ────────────────────────────────────────────────────────────
 
 export const SERVICE_FEE = 29;
