@@ -11,6 +11,11 @@ import {
     PARTS_TIERS,
     SAMPLE_PRICING,
     SERVICE_FEE,
+    TIME_SLOTS,
+    SCHEDULING_LEAD_DAYS,
+    SCHEDULING_WINDOW_DAYS,
+    toLocalDateKey,
+    formatDisplayDate,
 } from '@shared/constants';
 import GuruCalendar from '@shared/GuruCalendar';
 import '@shared/guru-calendar.css';
@@ -185,13 +190,12 @@ export default function RepairQuiz() {
         const fetchAvailability = async () => {
             const today = new Date();
             const startDate = new Date(today);
-            startDate.setDate(startDate.getDate() + 3); // 3-day lead time
-            const startStr = startDate.toISOString().split('T')[0];
+            startDate.setDate(startDate.getDate() + SCHEDULING_LEAD_DAYS);
+            const startStr = toLocalDateKey(startDate);
 
-            // Fetch next 90 days of availability
             const endDate = new Date(today);
-            endDate.setDate(endDate.getDate() + 93);
-            const endStr = endDate.toISOString().split('T')[0];
+            endDate.setDate(endDate.getDate() + SCHEDULING_LEAD_DAYS + SCHEDULING_WINDOW_DAYS);
+            const endStr = toLocalDateKey(endDate);
 
             const { data, error } = await supabase
                 .from('tech_schedules')
@@ -301,16 +305,10 @@ export default function RepairQuiz() {
 
     const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
 
-    // Min date: 3 days from now
+    // Min date: SCHEDULING_LEAD_DAYS from now (local time)
     const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 3);
-    const minDateStr = minDate.toISOString().split('T')[0];
-
-    const timeSlots = [
-        { id: 'morning', label: 'Morning', range: '8:00 AM – 12:00 PM', icon: '🌅' },
-        { id: 'afternoon', label: 'Afternoon', range: '12:00 PM – 4:00 PM', icon: '☀️' },
-        { id: 'evening', label: 'Evening', range: '4:00 PM – 7:00 PM', icon: '🌆' },
-    ];
+    minDate.setDate(minDate.getDate() + SCHEDULING_LEAD_DAYS);
+    const minDateStr = toLocalDateKey(minDate);
 
     // ─── Auth Handlers ───
     const handleContactChange = (field, value) => {
@@ -644,8 +642,11 @@ export default function RepairQuiz() {
                                     onChange={(date) => {
                                         setScheduleDate(date);
                                         // Reset time if the newly selected date doesn't support the current slot
-                                        if (availableSlotsByDate[date] && scheduleTime && !availableSlotsByDate[date].includes(scheduleTime)) {
-                                            setScheduleTime('');
+                                        if (scheduleTime && availableDates) {
+                                            const dateSlots = availableSlotsByDate[date];
+                                            if (!dateSlots || !dateSlots.includes(scheduleTime)) {
+                                                setScheduleTime('');
+                                            }
                                         }
                                     }}
                                     minDate={minDateStr}
@@ -656,11 +657,12 @@ export default function RepairQuiz() {
                             <div className="sched-section">
                                 <label className="sched-label">Time Slot</label>
                                 <div className="sched-slots">
-                                    {timeSlots.map((slot) => {
-                                        // If tech availability data exists and a date is selected, check if this slot is available
-                                        const slotDisabled = scheduleDate
-                                            && availableSlotsByDate[scheduleDate]
-                                            && !availableSlotsByDate[scheduleDate].includes(slot.id);
+                                    {TIME_SLOTS.map((slot) => {
+                                        // Disable slot if: we have availability data, a date is selected, and this slot isn't available
+                                        const hasAvailabilityData = availableDates !== null;
+                                        const dateSlots = availableSlotsByDate[scheduleDate];
+                                        const slotDisabled = hasAvailabilityData && scheduleDate
+                                            && (!dateSlots || !dateSlots.includes(slot.id));
                                         return (
                                             <button
                                                 key={slot.id}
@@ -675,8 +677,11 @@ export default function RepairQuiz() {
                                         );
                                     })}
                                 </div>
-                                {scheduleDate && availableSlotsByDate[scheduleDate] && availableSlotsByDate[scheduleDate].length === 0 && (
-                                    <p className="sched-hint" style={{ color: 'var(--guru-gray-500)', marginTop: 'var(--space-3)' }}>
+                                {!scheduleDate && (
+                                    <p className="sched-hint">Select a date above to see available time slots.</p>
+                                )}
+                                {scheduleDate && availableDates && !availableSlotsByDate[scheduleDate] && (
+                                    <p className="sched-hint sched-hint--warn">
                                         No time slots available on this date. Please select a different date.
                                     </p>
                                 )}
@@ -753,10 +758,10 @@ export default function RepairQuiz() {
                                         <div className="quiz__quote-section">
                                             <div className="quiz__quote-label">Appointment</div>
                                             <div className="quiz__quote-line">
-                                                <span>📅 {scheduleDate}</span>
+                                                <span>📅 {scheduleDate ? formatDisplayDate(scheduleDate) : ''}</span>
                                             </div>
                                             <div className="quiz__quote-line">
-                                                <span>🕐 {timeSlots.find(s => s.id === scheduleTime)?.range}</span>
+                                                <span>🕐 {TIME_SLOTS.find(s => s.id === scheduleTime)?.range}</span>
                                             </div>
                                             <div className="quiz__quote-line">
                                                 <span>📍 {scheduleAddress}</span>
@@ -828,10 +833,10 @@ export default function RepairQuiz() {
                                         <div className="quiz__quote-section">
                                             <div className="quiz__quote-label">Appointment</div>
                                             <div className="quiz__quote-line">
-                                                <span>📅 {scheduleDate}</span>
+                                                <span>📅 {scheduleDate ? formatDisplayDate(scheduleDate) : ''}</span>
                                             </div>
                                             <div className="quiz__quote-line">
-                                                <span>🕐 {timeSlots.find(s => s.id === scheduleTime)?.range}</span>
+                                                <span>🕐 {TIME_SLOTS.find(s => s.id === scheduleTime)?.range}</span>
                                             </div>
                                             <div className="quiz__quote-line">
                                                 <span>📍 {scheduleAddress}</span>
@@ -960,11 +965,11 @@ export default function RepairQuiz() {
                             <div className="confirm__details">
                                 <div className="confirm__row">
                                     <span>📅</span>
-                                    <span>{scheduleDate}</span>
+                                    <span>{scheduleDate ? formatDisplayDate(scheduleDate) : ''}</span>
                                 </div>
                                 <div className="confirm__row">
                                     <span>🕐</span>
-                                    <span>{timeSlots.find(s => s.id === scheduleTime)?.range}</span>
+                                    <span>{TIME_SLOTS.find(s => s.id === scheduleTime)?.range}</span>
                                 </div>
                                 <div className="confirm__row">
                                     <span>📍</span>

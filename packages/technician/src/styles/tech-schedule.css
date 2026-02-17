@@ -3,6 +3,20 @@
    Tech availability management with calendar
    ═══════════════════════════════════════════════════════════════ */
 
+/* ─── Scheduling Hint ────────────────────────────────────────── */
+
+.schedule-hint {
+  font-size: var(--font-size-sm);
+  color: var(--dark-text-secondary);
+  background: var(--dark-bg-elevated);
+  border: 1px solid var(--dark-border-subtle);
+  border-left: 3px solid var(--dark-purple-500);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-6);
+  line-height: 1.5;
+}
+
 /* ─── Layout: Calendar + Editor side by side ─────────────────── */
 
 .schedule-layout {
