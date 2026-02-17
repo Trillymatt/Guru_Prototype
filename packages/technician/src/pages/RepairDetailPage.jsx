@@ -34,6 +34,15 @@ export default function RepairDetailPage() {
     const canvasRef = useRef(null);
     const sigPadRef = useRef(null);
 
+    // Photo state
+    const [photos, setPhotos] = useState([]);
+    const [photosLoading, setPhotosLoading] = useState(true);
+    const [uploading, setUploading] = useState(false);
+    const [photoType, setPhotoType] = useState('before');
+    const [photoError, setPhotoError] = useState('');
+    const [expandedPhoto, setExpandedPhoto] = useState(null);
+    const fileInputRef = useRef(null);
+
     // Get current user id + name for chat
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
@@ -111,6 +120,128 @@ export default function RepairDetailPage() {
             });
         }
     }, [showSignature]);
+
+    // Fetch repair photos
+    useEffect(() => {
+        const fetchPhotos = async () => {
+            setPhotosLoading(true);
+            const { data, error } = await supabase
+                .from('repair_photos')
+                .select('*')
+                .eq('repair_id', id)
+                .order('created_at', { ascending: true });
+
+            if (!error && data) {
+                // Generate signed URLs for each photo
+                const photosWithUrls = await Promise.all(
+                    data.map(async (photo) => {
+                        const { data: urlData } = await supabase.storage
+                            .from('repair-photos')
+                            .createSignedUrl(photo.file_path, 3600); // 1 hour expiry
+                        return { ...photo, signedUrl: urlData?.signedUrl || null };
+                    })
+                );
+                setPhotos(photosWithUrls);
+            }
+            setPhotosLoading(false);
+        };
+
+        fetchPhotos();
+    }, [id]);
+
+    // Upload photo handler
+    const handlePhotoUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/heic', 'image/heif'];
+        const validExtensions = ['.jpg', '.jpeg', '.heic', '.heif'];
+        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
+            setPhotoError('Only JPEG and HEIC files are accepted.');
+            return;
+        }
+
+        // Validate file size (max 20MB)
+        if (file.size > 20 * 1024 * 1024) {
+            setPhotoError('File size must be under 20MB.');
+            return;
+        }
+
+        setUploading(true);
+        setPhotoError('');
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Not authenticated');
+
+            const timestamp = Date.now();
+            const fileExt = ext || '.jpg';
+            const filePath = `repairs/${id}/${photoType}_${timestamp}${fileExt}`;
+
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+                .from('repair-photos')
+                .upload(filePath, file, { contentType: file.type || 'image/jpeg' });
+
+            if (uploadError) throw uploadError;
+
+            // Insert metadata record
+            const { data: photoRecord, error: insertError } = await supabase
+                .from('repair_photos')
+                .insert({
+                    repair_id: id,
+                    technician_id: user.id,
+                    photo_type: photoType,
+                    file_path: filePath,
+                    file_name: file.name,
+                    content_type: file.type || 'image/jpeg',
+                })
+                .select()
+                .single();
+
+            if (insertError) throw insertError;
+
+            // Get signed URL for the new photo
+            const { data: urlData } = await supabase.storage
+                .from('repair-photos')
+                .createSignedUrl(filePath, 3600);
+
+            setPhotos(prev => [...prev, { ...photoRecord, signedUrl: urlData?.signedUrl || null }]);
+        } catch (err) {
+            console.error('Photo upload failed:', err);
+            setPhotoError(err.message || 'Upload failed. Please try again.');
+        }
+
+        setUploading(false);
+        // Reset file input
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    // Delete photo handler
+    const handlePhotoDelete = async (photo) => {
+        try {
+            // Delete from storage
+            await supabase.storage
+                .from('repair-photos')
+                .remove([photo.file_path]);
+
+            // Delete metadata record
+            await supabase
+                .from('repair_photos')
+                .delete()
+                .eq('id', photo.id);
+
+            setPhotos(prev => prev.filter(p => p.id !== photo.id));
+            if (expandedPhoto?.id === photo.id) setExpandedPhoto(null);
+        } catch (err) {
+            console.error('Photo delete failed:', err);
+        }
+    };
+
+    const beforePhotos = photos.filter(p => p.photo_type === 'before');
+    const afterPhotos = photos.filter(p => p.photo_type === 'after');
 
     const clearSignature = () => {
         if (sigPadRef.current) {
@@ -285,6 +416,156 @@ export default function RepairDetailPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Repair Photos (Tech-Only) */}
+                            <div className="repair-detail__section">
+                                <h2 className="repair-detail__section-title">Repair Photos</h2>
+                                <p className="repair-photos__note">
+                                    For technician records only — not visible to customers.
+                                </p>
+
+                                {/* Upload Controls */}
+                                <div className="repair-photos__upload">
+                                    <div className="repair-photos__type-toggle">
+                                        <button
+                                            className={`repair-photos__type-btn ${photoType === 'before' ? 'repair-photos__type-btn--active' : ''}`}
+                                            onClick={() => setPhotoType('before')}
+                                        >
+                                            Before
+                                        </button>
+                                        <button
+                                            className={`repair-photos__type-btn ${photoType === 'after' ? 'repair-photos__type-btn--active' : ''}`}
+                                            onClick={() => setPhotoType('after')}
+                                        >
+                                            After
+                                        </button>
+                                    </div>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/heic,image/heif,.jpg,.jpeg,.heic,.heif"
+                                        onChange={handlePhotoUpload}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <button
+                                        className="guru-btn guru-btn--primary guru-btn--sm"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploading}
+                                    >
+                                        {uploading ? 'Uploading...' : `Upload ${photoType} photo`}
+                                    </button>
+                                </div>
+
+                                {photoError && (
+                                    <div className="repair-photos__error">{photoError}</div>
+                                )}
+
+                                {/* Before Photos */}
+                                {beforePhotos.length > 0 && (
+                                    <div className="repair-photos__group">
+                                        <h3 className="repair-photos__group-label">Before</h3>
+                                        <div className="repair-photos__grid">
+                                            {beforePhotos.map(photo => (
+                                                <div key={photo.id} className="repair-photos__item">
+                                                    {photo.signedUrl && !photo.content_type?.includes('heic') && !photo.content_type?.includes('heif') ? (
+                                                        <img
+                                                            src={photo.signedUrl}
+                                                            alt={photo.file_name || 'Before photo'}
+                                                            className="repair-photos__img"
+                                                            onClick={() => setExpandedPhoto(photo)}
+                                                        />
+                                                    ) : (
+                                                        <div className="repair-photos__heic-placeholder" onClick={() => {
+                                                            if (photo.signedUrl) window.open(photo.signedUrl, '_blank');
+                                                        }}>
+                                                            <span className="repair-photos__heic-icon">HEIC</span>
+                                                            <span className="repair-photos__heic-name">{photo.file_name}</span>
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        className="repair-photos__delete-btn"
+                                                        onClick={() => handlePhotoDelete(photo)}
+                                                        title="Delete photo"
+                                                    >
+                                                        x
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* After Photos */}
+                                {afterPhotos.length > 0 && (
+                                    <div className="repair-photos__group">
+                                        <h3 className="repair-photos__group-label">After</h3>
+                                        <div className="repair-photos__grid">
+                                            {afterPhotos.map(photo => (
+                                                <div key={photo.id} className="repair-photos__item">
+                                                    {photo.signedUrl && !photo.content_type?.includes('heic') && !photo.content_type?.includes('heif') ? (
+                                                        <img
+                                                            src={photo.signedUrl}
+                                                            alt={photo.file_name || 'After photo'}
+                                                            className="repair-photos__img"
+                                                            onClick={() => setExpandedPhoto(photo)}
+                                                        />
+                                                    ) : (
+                                                        <div className="repair-photos__heic-placeholder" onClick={() => {
+                                                            if (photo.signedUrl) window.open(photo.signedUrl, '_blank');
+                                                        }}>
+                                                            <span className="repair-photos__heic-icon">HEIC</span>
+                                                            <span className="repair-photos__heic-name">{photo.file_name}</span>
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        className="repair-photos__delete-btn"
+                                                        onClick={() => handlePhotoDelete(photo)}
+                                                        title="Delete photo"
+                                                    >
+                                                        x
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Empty state */}
+                                {photos.length === 0 && !photosLoading && (
+                                    <div className="repair-photos__empty">
+                                        No photos uploaded yet. Use the upload button above to add before/after photos.
+                                    </div>
+                                )}
+
+                                {photosLoading && (
+                                    <div className="repair-photos__empty">Loading photos...</div>
+                                )}
+                            </div>
+
+                            {/* Expanded Photo Modal */}
+                            {expandedPhoto && (
+                                <div className="repair-photos__modal" onClick={() => setExpandedPhoto(null)}>
+                                    <div className="repair-photos__modal-content" onClick={(e) => e.stopPropagation()}>
+                                        <img
+                                            src={expandedPhoto.signedUrl}
+                                            alt={expandedPhoto.file_name || 'Repair photo'}
+                                            className="repair-photos__modal-img"
+                                        />
+                                        <div className="repair-photos__modal-info">
+                                            <span className={`guru-badge ${expandedPhoto.photo_type === 'before' ? 'guru-badge--warning' : 'guru-badge--success'}`}>
+                                                {expandedPhoto.photo_type === 'before' ? 'Before' : 'After'}
+                                            </span>
+                                            <span className="repair-photos__modal-name">{expandedPhoto.file_name}</span>
+                                        </div>
+                                        <button
+                                            className="repair-photos__modal-close"
+                                            onClick={() => setExpandedPhoto(null)}
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Signature / Legal Docs */}
                             <div className="repair-detail__section">

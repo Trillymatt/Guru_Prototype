@@ -311,6 +311,238 @@
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
+/* ─── Repair Photos (Tech-Only) ───────────────────────────────── */
+
+.repair-photos__note {
+  font-size: var(--font-size-xs);
+  color: var(--dark-text-tertiary);
+  margin-bottom: var(--space-4);
+  font-style: italic;
+}
+
+.repair-photos__upload {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.repair-photos__type-toggle {
+  display: flex;
+  background: var(--dark-bg-base);
+  border-radius: var(--radius-lg);
+  padding: 2px;
+  border: 1px solid var(--dark-border-subtle);
+}
+
+.repair-photos__type-btn {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--dark-text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.repair-photos__type-btn--active {
+  background: var(--dark-purple-600);
+  color: var(--dark-text-primary);
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.25);
+}
+
+.repair-photos__type-btn:hover:not(.repair-photos__type-btn--active) {
+  color: var(--dark-text-secondary);
+}
+
+.repair-photos__error {
+  font-size: var(--font-size-sm);
+  color: var(--dark-error);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+}
+
+.repair-photos__group {
+  margin-bottom: var(--space-4);
+}
+
+.repair-photos__group:last-child {
+  margin-bottom: 0;
+}
+
+.repair-photos__group-label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--dark-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--space-3);
+}
+
+.repair-photos__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-3);
+}
+
+.repair-photos__item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--dark-border-subtle);
+  background: var(--dark-bg-base);
+  transition: border-color var(--transition-fast);
+}
+
+.repair-photos__item:hover {
+  border-color: var(--dark-border-medium);
+}
+
+.repair-photos__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform var(--transition-base);
+}
+
+.repair-photos__img:hover {
+  transform: scale(1.05);
+}
+
+.repair-photos__heic-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  padding: var(--space-2);
+}
+
+.repair-photos__heic-icon {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--dark-purple-400);
+  background: rgba(168, 85, 247, 0.15);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.repair-photos__heic-name {
+  font-size: 10px;
+  color: var(--dark-text-tertiary);
+  text-align: center;
+  word-break: break-all;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.repair-photos__delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(10, 10, 10, 0.75);
+  color: var(--dark-text-primary);
+  border: none;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.repair-photos__item:hover .repair-photos__delete-btn {
+  opacity: 1;
+}
+
+.repair-photos__delete-btn:hover {
+  background: var(--dark-error);
+}
+
+.repair-photos__empty {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  color: var(--dark-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* ─── Photo Expanded Modal ────────────────────────────────────── */
+
+.repair-photos__modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+}
+
+.repair-photos__modal-content {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.repair-photos__modal-img {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--radius-xl);
+}
+
+.repair-photos__modal-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.repair-photos__modal-name {
+  font-size: var(--font-size-sm);
+  color: var(--dark-text-secondary);
+}
+
+.repair-photos__modal-close {
+  align-self: center;
+  padding: var(--space-2) var(--space-6);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--dark-text-primary);
+  background: var(--dark-bg-elevated);
+  border: 1px solid var(--dark-border-medium);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.repair-photos__modal-close:hover {
+  background: var(--dark-bg-hover);
+  border-color: var(--dark-border-strong);
+}
+
 /* ─── Responsive ───────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
@@ -324,5 +556,18 @@
 
   .pricing-breakdown__total-amount {
     font-size: var(--font-size-xl);
+  }
+
+  .repair-photos__upload {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .repair-photos__grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+
+  .repair-photos__modal {
+    padding: var(--space-4);
   }
 }
