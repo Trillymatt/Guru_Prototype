@@ -16,6 +16,7 @@ import {
     SCHEDULING_WINDOW_DAYS,
     toLocalDateKey,
     formatDisplayDate,
+    BACK_GLASS_COLORS,
 } from '@shared/constants';
 import GuruCalendar from '@shared/GuruCalendar';
 import '@shared/guru-calendar.css';
@@ -180,6 +181,7 @@ export default function RepairQuiz() {
     const [authError, setAuthError] = useState('');
     const otpRefs = useRef([]);
 
+    const [backGlassColor, setBackGlassColor] = useState('');
     const [confirmed, setConfirmed] = useState(false);
     const [availableDates, setAvailableDates] = useState(null); // Set<string> of ISO dates
     const [availableSlotsByDate, setAvailableSlotsByDate] = useState({}); // { 'YYYY-MM-DD': ['morning','afternoon',...] }
@@ -315,7 +317,11 @@ export default function RepairQuiz() {
 
     useEffect(() => {
         const allowedIssues = new Set(availableRepairTypes.map((type) => type.id));
-        setSelectedIssues((prev) => prev.filter((issueId) => allowedIssues.has(issueId)));
+        setSelectedIssues((prev) => {
+            const next = prev.filter((issueId) => allowedIssues.has(issueId));
+            if (!next.includes('back-glass')) setBackGlassColor('');
+            return next;
+        });
         setIssueTiers((prev) => {
             const next = {};
             Object.entries(prev).forEach(([issueId, tier]) => {
@@ -348,13 +354,14 @@ export default function RepairQuiz() {
     const toggleIssue = (id) => {
         setSelectedIssues((prev) => {
             const next = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
-            // Remove tier if deselecting
+            // Remove tier and color if deselecting
             if (prev.includes(id)) {
                 setIssueTiers((t) => {
                     const copy = { ...t };
                     delete copy[id];
                     return copy;
                 });
+                if (id === 'back-glass') setBackGlassColor('');
             }
             return next;
         });
@@ -483,6 +490,7 @@ export default function RepairQuiz() {
                     address: scheduleAddress,
                     status: 'pending',
                     parts_in_stock: allPartsInStock === true,
+                    device_color: backGlassColor || null,
                 });
 
                 if (repairError) {
@@ -539,6 +547,7 @@ export default function RepairQuiz() {
                 address: scheduleAddress,
                 status: 'pending',
                 parts_in_stock: allPartsInStock === true,
+                device_color: backGlassColor || null,
             });
 
             if (repairError) {
@@ -641,6 +650,28 @@ export default function RepairQuiz() {
                                 </div>
                             )}
 
+                            {/* Back Glass Color Selection */}
+                            {selectedIssues.includes('back-glass') && selectedDevice && BACK_GLASS_COLORS[selectedDevice.id] && (
+                                <div className="quiz__section">
+                                    <h3 className="quiz__section-title">Back Glass Color</h3>
+                                    <p className="quiz__quality-subtitle">
+                                        Select the color of your {selectedDevice.name} so we order the correct part.
+                                    </p>
+                                    <div className="quiz__color-grid">
+                                        {BACK_GLASS_COLORS[selectedDevice.id].map((color) => (
+                                            <button
+                                                key={color}
+                                                className={`quiz__color-chip ${backGlassColor === color ? 'quiz__color-chip--selected' : ''}`}
+                                                onClick={() => setBackGlassColor(color)}
+                                            >
+                                                {backGlassColor === color && <span className="quiz__color-chip-check">✓</span>}
+                                                {color}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Quality Tier Selection (Required) */}
                             {selectedIssues.length > 0 && !isSoftwareOnly && (
                                 <div className="quiz__section">
@@ -704,7 +735,12 @@ export default function RepairQuiz() {
                                 <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
                                 <button
                                     className="guru-btn guru-btn--primary"
-                                    disabled={selectedIssues.length === 0 || isSoftwareOnly || selectedIssues.some(id => !issueTiers[id])}
+                                    disabled={
+                                        selectedIssues.length === 0 ||
+                                        isSoftwareOnly ||
+                                        selectedIssues.some(id => !issueTiers[id]) ||
+                                        (selectedIssues.includes('back-glass') && !backGlassColor)
+                                    }
                                     onClick={goNext}
                                 >
                                     Continue →
@@ -839,6 +875,12 @@ export default function RepairQuiz() {
                                         <div className="quiz__quote-section">
                                             <div className="quiz__quote-label">Device</div>
                                             <div className="quiz__quote-value">{selectedDevice?.name}</div>
+                                            {backGlassColor && (
+                                                <div className="quiz__quote-line">
+                                                    <span>🎨 Back Glass Color</span>
+                                                    <span className="quiz__quote-value" style={{ fontSize: 'var(--font-size-base)' }}>{backGlassColor}</span>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="quiz__quote-section">
                                             <div className="quiz__quote-label">Repairs</div>
@@ -914,6 +956,12 @@ export default function RepairQuiz() {
                                         <div className="quiz__quote-section">
                                             <div className="quiz__quote-label">Device</div>
                                             <div className="quiz__quote-value">{selectedDevice?.name}</div>
+                                            {backGlassColor && (
+                                                <div className="quiz__quote-line">
+                                                    <span>🎨 Back Glass Color</span>
+                                                    <span className="quiz__quote-value" style={{ fontSize: 'var(--font-size-base)' }}>{backGlassColor}</span>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="quiz__quote-section">
                                             <div className="quiz__quote-label">Repairs</div>
