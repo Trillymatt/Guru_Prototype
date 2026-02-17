@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, SERVICE_FEE, TAX_RATE } from '@shared/constants';
+import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, SERVICE_FEE, TAX_RATE, getRepairStatusFlow } from '@shared/constants';
 import { supabase } from '@shared/supabase';
 import RepairChat from '@shared/RepairChat';
 import TechNav from '../components/TechNav';
@@ -138,15 +138,18 @@ export default function RepairDetailPage() {
         }
     };
 
+    // Get the correct status flow for this repair
+    const statusFlow = repair ? getRepairStatusFlow(repair.parts_in_stock) : REPAIR_STATUS_FLOW;
+
     // Advance repair status in Supabase
     const advanceStatus = async () => {
         if (!repair) return;
-        const currentIndex = REPAIR_STATUS_FLOW.indexOf(repair.status);
+        const currentIndex = statusFlow.indexOf(repair.status);
         const nextIndex = currentIndex + 1;
 
-        if (nextIndex >= REPAIR_STATUS_FLOW.length) return;
+        if (nextIndex >= statusFlow.length) return;
 
-        const nextStatus = REPAIR_STATUS_FLOW[nextIndex];
+        const nextStatus = statusFlow[nextIndex];
         setUpdating(true);
 
         // If claiming a pending job, also assign the technician
@@ -195,7 +198,7 @@ export default function RepairDetailPage() {
         );
     }
 
-    const currentStatusIndex = REPAIR_STATUS_FLOW.indexOf(repair.status);
+    const currentStatusIndex = statusFlow.indexOf(repair.status);
     const customerName = repair.customers?.full_name || 'Unknown';
     const customerPhone = repair.customers?.phone || '—';
     const customerEmail = repair.customers?.email || '—';
@@ -329,8 +332,21 @@ export default function RepairDetailPage() {
                         <div>
                             <div className="repair-detail__section">
                                 <h2 className="repair-detail__section-title">Repair Status</h2>
+
+                                {/* Inventory status indicator */}
+                                {repair.parts_in_stock === true && (
+                                    <div className="tech-inventory-badge tech-inventory-badge--in-stock">
+                                        ✓ Parts in stock — no ordering needed
+                                    </div>
+                                )}
+                                {repair.parts_in_stock === false && (
+                                    <div className="tech-inventory-badge tech-inventory-badge--order">
+                                        📦 Parts need to be ordered
+                                    </div>
+                                )}
+
                                 <div className="status-stepper">
-                                    {REPAIR_STATUS_FLOW.map((status, i) => {
+                                    {statusFlow.map((status, i) => {
                                         const isDone = i < currentStatusIndex;
                                         const isActive = i === currentStatusIndex;
                                         return (
@@ -352,7 +368,7 @@ export default function RepairDetailPage() {
                                             ? 'Updating...'
                                             : repair.status === REPAIR_STATUS.PENDING
                                                 ? 'Claim This Job'
-                                                : `Advance to: ${REPAIR_STATUS_LABELS[REPAIR_STATUS_FLOW[currentStatusIndex + 1]] || 'Done'}`
+                                                : `Advance to: ${REPAIR_STATUS_LABELS[statusFlow[currentStatusIndex + 1]] || 'Done'}`
                                         }
                                     </button>
                                 )}

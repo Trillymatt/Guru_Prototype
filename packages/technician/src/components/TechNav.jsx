@@ -46,6 +46,12 @@ export default function TechNav() {
                         Schedule
                     </Link>
                     <Link
+                        to="/inventory"
+                        className={`tech-nav__link ${isActive('/inventory') ? 'tech-nav__link--active' : ''}`}
+                    >
+                        Inventory
+                    </Link>
+                    <Link
                         to="/history"
                         className={`tech-nav__link ${isActive('/history') ? 'tech-nav__link--active' : ''}`}
                     >

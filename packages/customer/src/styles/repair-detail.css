@@ -510,6 +510,31 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+/* ─── Inventory Status Banner ─────────────────────────────────── */
+
+.rd-inventory-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-4);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.rd-inventory-banner--in-stock {
+    background: #F0FDF4;
+    border: 1px solid #BBF7D0;
+    color: #166534;
+}
+
+.rd-inventory-banner--order {
+    background: #FFF7ED;
+    border: 1px solid #FED7AA;
+    color: #9A3412;
+}
+
 @media (max-width: 480px) {
     .rd-header {
         flex-direction: column;

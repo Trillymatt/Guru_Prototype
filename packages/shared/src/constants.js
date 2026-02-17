@@ -127,6 +127,20 @@ export const REPAIR_STATUS_FLOW = [
     REPAIR_STATUS.COMPLETE,
 ];
 
+/**
+ * Get the repair status flow based on whether parts are in stock.
+ * When parts are in stock, skip parts_ordered and parts_received steps.
+ * @param {boolean|null} partsInStock - true if all parts in stock, false if ordering needed, null for legacy
+ */
+export function getRepairStatusFlow(partsInStock) {
+    if (partsInStock === true) {
+        return REPAIR_STATUS_FLOW.filter(
+            s => s !== REPAIR_STATUS.PARTS_ORDERED && s !== REPAIR_STATUS.PARTS_RECEIVED
+        );
+    }
+    return REPAIR_STATUS_FLOW;
+}
+
 // ─── Notification Preferences ────────────────────────────────────────────────
 
 export const NOTIFICATION_PREFERENCES = {

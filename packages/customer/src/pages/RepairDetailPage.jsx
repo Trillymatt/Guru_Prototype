@@ -13,6 +13,7 @@ import {
     SERVICE_FEE,
     SAMPLE_PRICING,
     TAX_RATE,
+    getRepairStatusFlow,
 } from '@shared/constants';
 import GuruCalendar from '@shared/GuruCalendar';
 import '@shared/guru-calendar.css';
@@ -194,7 +195,9 @@ export default function RepairDetailPage() {
         { id: 'evening', label: 'Evening', range: '4:00 PM – 7:00 PM', icon: '🌆' },
     ];
 
-    const currentStepIndex = repair ? REPAIR_STATUS_FLOW.indexOf(repair.status) : 0;
+    // Use conditional status flow based on whether parts were in stock
+    const statusFlow = repair ? getRepairStatusFlow(repair.parts_in_stock) : REPAIR_STATUS_FLOW;
+    const currentStepIndex = repair ? statusFlow.indexOf(repair.status) : 0;
 
     if (loading) {
         return (
@@ -252,11 +255,23 @@ export default function RepairDetailPage() {
                         </span>
                     </div>
 
+                    {/* Inventory status banner */}
+                    {repair.parts_in_stock === true && (
+                        <div className="rd-inventory-banner rd-inventory-banner--in-stock">
+                            <span>✓</span> All parts were in stock for this repair.
+                        </div>
+                    )}
+                    {repair.parts_in_stock === false && (
+                        <div className="rd-inventory-banner rd-inventory-banner--order">
+                            <span>📦</span> Parts are being ordered for this repair.
+                        </div>
+                    )}
+
                     {/* Status Progress Stepper */}
                     <div className="rd-stepper">
                         <h3 className="rd-section-title">Repair Progress</h3>
                         <div className="rd-stepper__track">
-                            {REPAIR_STATUS_FLOW.map((status, i) => {
+                            {statusFlow.map((status, i) => {
                                 const isComplete = i < currentStepIndex || (i === currentStepIndex && repair.status === 'complete');
                                 const isCurrent = i === currentStepIndex && repair.status !== 'complete';
                                 return (
@@ -270,7 +285,7 @@ export default function RepairDetailPage() {
                                         <span className="rd-step__label">
                                             {REPAIR_STATUS_LABELS[status]}
                                         </span>
-                                        {i < REPAIR_STATUS_FLOW.length - 1 && (
+                                        {i < statusFlow.length - 1 && (
                                             <div className={`rd-step__line ${isComplete ? 'rd-step__line--filled' : ''}`} />
                                         )}
                                     </div>

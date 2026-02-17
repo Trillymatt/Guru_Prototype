@@ -183,6 +183,8 @@ export default function RepairQuiz() {
     const [confirmed, setConfirmed] = useState(false);
     const [availableDates, setAvailableDates] = useState(null); // Set<string> of ISO dates
     const [availableSlotsByDate, setAvailableSlotsByDate] = useState({}); // { 'YYYY-MM-DD': ['morning','afternoon',...] }
+    const [inventoryData, setInventoryData] = useState([]); // parts_inventory rows for selected device
+    const [inventoryLoading, setInventoryLoading] = useState(false);
     const isLoggedIn = Boolean(user);
 
     // Fetch tech availability from Supabase
@@ -229,6 +231,75 @@ export default function RepairQuiz() {
 
         fetchAvailability();
     }, []);
+
+    // Fetch inventory data when device changes (real-time inventory check)
+    useEffect(() => {
+        if (!selectedDevice) {
+            setInventoryData([]);
+            return;
+        }
+
+        const fetchInventory = async () => {
+            setInventoryLoading(true);
+            const { data, error } = await supabase
+                .from('parts_inventory')
+                .select('repair_type, parts_tier, quantity')
+                .eq('device', selectedDevice.name);
+
+            if (!error && data) {
+                setInventoryData(data);
+            }
+            setInventoryLoading(false);
+        };
+
+        fetchInventory();
+
+        // Subscribe to real-time inventory changes for this device
+        const channel = supabase
+            .channel(`inventory-${selectedDevice.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'parts_inventory',
+            }, () => {
+                // Refetch on any change
+                fetchInventory();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [selectedDevice]);
+
+    // Check if a specific part is in stock
+    const isPartInStock = (issueId, tierId) => {
+        if (inventoryData.length === 0) return null; // No inventory data yet
+        const item = inventoryData.find(
+            i => i.repair_type === issueId && i.parts_tier === tierId
+        );
+        return item ? item.quantity > 0 : false;
+    };
+
+    // Check if ALL selected parts are in stock
+    const allPartsInStock = useMemo(() => {
+        if (selectedIssues.length === 0) return false;
+        if (inventoryData.length === 0) return null; // No inventory data
+        return selectedIssues.every(issueId => {
+            const tier = issueTiers[issueId];
+            if (!tier) return false;
+            return isPartInStock(issueId, tier);
+        });
+    }, [selectedIssues, issueTiers, inventoryData]);
+
+    // Determine if we need parts ordering (any part not in stock)
+    const needsPartsOrder = useMemo(() => {
+        if (selectedIssues.length === 0) return false;
+        if (inventoryData.length === 0) return true; // Default to ordering if no inventory data
+        return selectedIssues.some(issueId => {
+            const tier = issueTiers[issueId];
+            if (!tier) return true;
+            return !isPartInStock(issueId, tier);
+        });
+    }, [selectedIssues, issueTiers, inventoryData]);
 
     const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
     const goBack = () => setStep((s) => Math.max(s - 1, 0));
@@ -305,9 +376,10 @@ export default function RepairQuiz() {
 
     const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
 
-    // Min date: SCHEDULING_LEAD_DAYS from now (local time)
+    // Min date: If all parts in stock, allow tomorrow; otherwise 3 days out
+    const schedulingLeadDays = allPartsInStock === true ? 1 : SCHEDULING_LEAD_DAYS;
     const minDate = new Date();
-    minDate.setDate(minDate.getDate() + SCHEDULING_LEAD_DAYS);
+    minDate.setDate(minDate.getDate() + schedulingLeadDays);
     const minDateStr = toLocalDateKey(minDate);
 
     // ─── Auth Handlers ───
@@ -410,6 +482,7 @@ export default function RepairQuiz() {
                     schedule_time: scheduleTime,
                     address: scheduleAddress,
                     status: 'pending',
+                    parts_in_stock: allPartsInStock === true,
                 });
 
                 if (repairError) {
@@ -465,6 +538,7 @@ export default function RepairQuiz() {
                 schedule_time: scheduleTime,
                 address: scheduleAddress,
                 status: 'pending',
+                parts_in_stock: allPartsInStock === true,
             });
 
             if (repairError) {
@@ -585,15 +659,22 @@ export default function RepairQuiz() {
                                         {selectedIssues.map((issueId) => {
                                             const type = availableRepairTypes.find((t) => t.id === issueId) || REPAIR_TYPES.find((t) => t.id === issueId);
                                             const currentTier = issueTiers[issueId];
+                                            const stockStatus = currentTier ? isPartInStock(issueId, currentTier) : null;
                                             return (
                                                 <div key={issueId} className="pit-row">
                                                     <div className="pit-row__info">
                                                         <span className="pit-row__icon">{type?.icon}</span>
                                                         <span className="pit-row__name">{type?.name}</span>
+                                                        {currentTier && stockStatus !== null && (
+                                                            <span className={`pit-row__stock ${stockStatus ? 'pit-row__stock--in' : 'pit-row__stock--out'}`}>
+                                                                {stockStatus ? 'In Stock' : 'Needs Ordering'}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <div className="pit-row__tiers">
                                                         {PARTS_TIERS.map((tier) => {
                                                             const price = SAMPLE_PRICING[issueId]?.[tier.id] || 0;
+                                                            const tierStock = isPartInStock(issueId, tier.id);
                                                             return (
                                                                 <button
                                                                     key={tier.id}
@@ -603,6 +684,11 @@ export default function RepairQuiz() {
                                                                 >
                                                                     <span className="pit-tier__label">{tier.name}</span>
                                                                     <span className="pit-tier__price">${price}</span>
+                                                                    {tierStock !== null && (
+                                                                        <span className={`pit-tier__stock ${tierStock ? 'pit-tier__stock--in' : 'pit-tier__stock--out'}`}>
+                                                                            {tierStock ? '✓' : '○'}
+                                                                        </span>
+                                                                    )}
                                                                 </button>
                                                             );
                                                         })}
@@ -631,9 +717,29 @@ export default function RepairQuiz() {
                     {step === 1 && !confirmed && (
                         <div className="quiz__panel animate-fade-in-up">
                             <h2 className="quiz__title">When & where?</h2>
-                            <p className="quiz__subtitle">
-                                Pick a date and time. We need at least 3 days to order parts.
-                            </p>
+
+                            {/* Inventory status banner */}
+                            {allPartsInStock === true ? (
+                                <div className="quiz__inventory-banner quiz__inventory-banner--in-stock">
+                                    <span className="quiz__inventory-banner-icon">✓</span>
+                                    <div>
+                                        <strong>All parts are in stock!</strong>
+                                        <p>We have everything needed for your repair. Schedule at the earliest available time.</p>
+                                    </div>
+                                </div>
+                            ) : needsPartsOrder ? (
+                                <div className="quiz__inventory-banner quiz__inventory-banner--order">
+                                    <span className="quiz__inventory-banner-icon">📦</span>
+                                    <div>
+                                        <strong>Some parts need to be ordered</strong>
+                                        <p>We need to order parts for your repair. Please schedule at least 3 days out so we can have everything ready.</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="quiz__subtitle">
+                                    Pick a date and time for your repair.
+                                </p>
+                            )}
 
                             <div className="sched-section">
                                 <label className="sched-label">Pick a Date</label>
@@ -985,8 +1091,9 @@ export default function RepairQuiz() {
                                 </div>
                             </div>
                             <p className="quiz__disclaimer">
-                                We'll confirm your appointment and begin ordering parts.
-                                You'll receive updates via email or text.
+                                {allPartsInStock === true
+                                    ? 'All parts are in stock! We\'ll confirm your appointment shortly. You\'ll receive updates via email or text.'
+                                    : 'We\'ll confirm your appointment and begin ordering the needed parts. You\'ll receive updates via email or text.'}
                             </p>
                             <Link to="/dashboard" className="guru-btn guru-btn--primary guru-btn--lg" style={{ marginTop: 16 }}>
                                 View My Repairs
