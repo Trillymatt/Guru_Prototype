@@ -21,20 +21,25 @@
 
 .schedule-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--space-6);
   align-items: start;
 }
 
-@media (max-width: 768px) {
-  .schedule-layout {
-    grid-template-columns: 1fr;
-  }
+.schedule-layout__calendar {
+  position: static;
 }
 
-.schedule-layout__calendar {
-  position: sticky;
-  top: 88px; /* below nav */
+/* Only go side-by-side on wide screens where both columns have room */
+@media (min-width: 1024px) {
+  .schedule-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .schedule-layout__calendar {
+    position: sticky;
+    top: 88px; /* below nav */
+  }
 }
 
 /* ─── Availability Toggle ────────────────────────────────────── */
@@ -171,6 +176,19 @@
   align-items: center;
   padding-top: var(--space-4);
   border-top: 1px solid var(--dark-border-subtle);
+}
+
+/* ─── Auto-save Status ──────────────────────────────────────── */
+
+.schedule-save-status {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--dark-text-tertiary);
+  transition: opacity var(--transition-fast);
+}
+
+.schedule-save-status--done {
+  color: var(--dark-purple-400);
 }
 
 /* ─── Upcoming List ──────────────────────────────────────────── */

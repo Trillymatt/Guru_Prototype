@@ -10,6 +10,9 @@ import {
     REPAIR_TYPES,
     PARTS_TIERS,
     SAMPLE_PRICING,
+    DEVICE_REPAIR_PRICING,
+    getAvailableTiersForRepair,
+    getDeviceRepairPrice,
     SERVICE_FEE,
     TIME_SLOTS,
     SCHEDULING_LEAD_DAYS,
@@ -331,6 +334,21 @@ export default function RepairQuiz() {
         });
     }, [availableRepairTypes]);
 
+    // Reset tier selections that are no longer available when device changes
+    useEffect(() => {
+        if (!selectedDevice) return;
+        setIssueTiers((prev) => {
+            const next = { ...prev };
+            Object.entries(prev).forEach(([issueId, tierId]) => {
+                const availableTierIds = getAvailableTiersForRepair(selectedDevice.name, issueId);
+                if (availableTierIds && !availableTierIds.includes(tierId)) {
+                    delete next[issueId];
+                }
+            });
+            return next;
+        });
+    }, [selectedDevice]);
+
     useEffect(() => {
         async function hydrateLoggedInContact() {
             if (!user) return;
@@ -373,6 +391,10 @@ export default function RepairQuiz() {
 
     const getIssuePrice = (issueId) => {
         const tier = issueTiers[issueId] || 'premium';
+        if (selectedDevice) {
+            const devicePrice = getDeviceRepairPrice(selectedDevice.name, issueId, tier);
+            if (devicePrice !== null) return devicePrice;
+        }
         return SAMPLE_PRICING[issueId]?.[tier] || 0;
     };
 
@@ -691,6 +713,13 @@ export default function RepairQuiz() {
                                             const type = availableRepairTypes.find((t) => t.id === issueId) || REPAIR_TYPES.find((t) => t.id === issueId);
                                             const currentTier = issueTiers[issueId];
                                             const stockStatus = currentTier ? isPartInStock(issueId, currentTier) : null;
+                                            // Get available tier IDs for this device+repair; null means fall back to all tiers
+                                            const availableTierIds = selectedDevice
+                                                ? getAvailableTiersForRepair(selectedDevice.name, issueId)
+                                                : null;
+                                            const tiersToShow = availableTierIds
+                                                ? PARTS_TIERS.filter(t => availableTierIds.includes(t.id))
+                                                : PARTS_TIERS;
                                             return (
                                                 <div key={issueId} className="pit-row">
                                                     <div className="pit-row__info">
@@ -703,8 +732,10 @@ export default function RepairQuiz() {
                                                         )}
                                                     </div>
                                                     <div className="pit-row__tiers">
-                                                        {PARTS_TIERS.map((tier) => {
-                                                            const price = SAMPLE_PRICING[issueId]?.[tier.id] || 0;
+                                                        {tiersToShow.map((tier) => {
+                                                            const price = selectedDevice
+                                                                ? (getDeviceRepairPrice(selectedDevice.name, issueId, tier.id) ?? SAMPLE_PRICING[issueId]?.[tier.id] ?? 0)
+                                                                : (SAMPLE_PRICING[issueId]?.[tier.id] || 0);
                                                             const tierStock = isPartInStock(issueId, tier.id);
                                                             return (
                                                                 <button

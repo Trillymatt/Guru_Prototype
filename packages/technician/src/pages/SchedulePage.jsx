@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '@shared/supabase';
 import { TIME_SLOTS, SCHEDULING_LEAD_DAYS, toLocalDateKey, formatDisplayDate } from '@shared/constants';
 import GuruCalendar from '@shared/GuruCalendar';
@@ -10,6 +10,9 @@ export default function SchedulePage() {
     const [scheduleMap, setScheduleMap] = useState({}); // { 'YYYY-MM-DD': { id, time_slots, is_available } }
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'saved'
+    const saveTimerRef = useRef(null);
+    const saveStatusTimerRef = useRef(null);
 
     const todayStr = toLocalDateKey(new Date());
 
@@ -98,36 +101,33 @@ export default function SchedulePage() {
         }
     };
 
-    const saveSchedule = async () => {
-        if (!selectedDate) return;
+    const saveScheduleForDate = useCallback(async (dateToSave, mapSnapshot) => {
+        if (!dateToSave) return;
         setSaving(true);
+        setSaveStatus('saving');
 
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             setSaving(false);
+            setSaveStatus('');
             return;
         }
 
-        const entry = scheduleMap[selectedDate];
+        const entry = mapSnapshot[dateToSave];
         const slots = entry?.time_slots || [];
         const available = entry?.is_available ?? false;
 
         if (entry?.id) {
-            // Update existing
             await supabase
                 .from('tech_schedules')
-                .update({
-                    time_slots: slots,
-                    is_available: available,
-                })
+                .update({ time_slots: slots, is_available: available })
                 .eq('id', entry.id);
         } else {
-            // Insert new
             const { data } = await supabase
                 .from('tech_schedules')
                 .insert({
                     technician_id: user.id,
-                    schedule_date: selectedDate,
+                    schedule_date: dateToSave,
                     time_slots: slots,
                     is_available: available,
                 })
@@ -137,16 +137,35 @@ export default function SchedulePage() {
             if (data) {
                 setScheduleMap((prev) => ({
                     ...prev,
-                    [selectedDate]: {
-                        ...prev[selectedDate],
-                        id: data.id,
-                    },
+                    [dateToSave]: { ...prev[dateToSave], id: data.id },
                 }));
             }
         }
 
         setSaving(false);
-    };
+        setSaveStatus('saved');
+        clearTimeout(saveStatusTimerRef.current);
+        saveStatusTimerRef.current = setTimeout(() => setSaveStatus(''), 2000);
+    }, []);
+
+    // Auto-save when schedule entry changes (debounced)
+    const pendingSaveRef = useRef(null);
+    useEffect(() => {
+        if (!selectedDate || loading) return;
+        const entry = scheduleMap[selectedDate];
+        // Only auto-save if user has interacted (entry exists in map)
+        if (!entry) return;
+
+        clearTimeout(saveTimerRef.current);
+        pendingSaveRef.current = { date: selectedDate, map: { ...scheduleMap } };
+        saveTimerRef.current = setTimeout(() => {
+            if (pendingSaveRef.current) {
+                saveScheduleForDate(pendingSaveRef.current.date, pendingSaveRef.current.map);
+            }
+        }, 600);
+
+        return () => clearTimeout(saveTimerRef.current);
+    }, [scheduleMap, selectedDate, loading, saveScheduleForDate]);
 
     const removeDate = async () => {
         if (!selectedDate) return;
@@ -201,6 +220,7 @@ export default function SchedulePage() {
                                 onChange={setSelectedDate}
                                 minDate={todayStr}
                                 availableDates={availableDatesSet.size > 0 ? availableDatesSet : null}
+                                disableUnavailable={false}
                             />
                         </div>
 
@@ -249,13 +269,12 @@ export default function SchedulePage() {
 
                                     {/* Actions */}
                                     <div className="schedule-actions">
-                                        <button
-                                            className="guru-btn guru-btn--primary"
-                                            onClick={saveSchedule}
-                                            disabled={saving}
-                                        >
-                                            {saving ? 'Saving...' : 'Save'}
-                                        </button>
+                                        {saveStatus === 'saving' && (
+                                            <span className="schedule-save-status">Saving...</span>
+                                        )}
+                                        {saveStatus === 'saved' && (
+                                            <span className="schedule-save-status schedule-save-status--done">Saved</span>
+                                        )}
                                         {currentEntry?.id && (
                                             <button
                                                 className="guru-btn guru-btn--ghost"

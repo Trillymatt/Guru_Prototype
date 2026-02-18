@@ -174,7 +174,7 @@
   height: 28px;
   border-radius: var(--radius-md);
   border: 1px solid var(--dark-border-medium);
-  background: var(--dark-bg-surface);
+  background: var(--dark-bg-card);
   color: var(--dark-text-primary);
   font-size: 1rem;
   font-weight: 700;
@@ -270,7 +270,7 @@
 }
 
 .inventory-form {
-  background: var(--dark-bg-surface);
+  background: var(--dark-bg-card);
   border: 1px solid var(--dark-border-subtle);
   border-radius: var(--radius-2xl);
   padding: var(--space-6);
@@ -505,7 +505,40 @@
     flex-direction: column;
   }
 
+  /* Full-screen overlay on mobile for usability */
+  .inventory-form-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
   .inventory-form {
-    margin: var(--space-4);
+    margin: 0;
+    max-width: none;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: var(--space-5) var(--space-4);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .inventory-form__title {
+    font-size: 1.125rem;
+  }
+
+  .inventory-gen-tabs {
+    gap: 4px;
+  }
+
+  .inventory-gen-tab {
+    padding: 5px 10px;
+    font-size: 0.6875rem;
+  }
+
+  .inventory-form__actions {
+    flex-direction: column;
+  }
+
+  .inventory-form__actions .guru-btn {
+    width: 100%;
+    justify-content: center;
   }
 }

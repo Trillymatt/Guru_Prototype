@@ -569,12 +569,7 @@ body {
     }
 }
 
-/* ─── Timeline How It Works ──────────────────────────────────── */
-
-.timeline-section {
-    padding: var(--space-24) 0 var(--space-16);
-    position: relative;
-}
+/* ─── How It Works — Animated Section ────────────────────────── */
 
 .section-header {
     text-align: center;
@@ -598,105 +593,675 @@ body {
     letter-spacing: -0.02em;
 }
 
-.timeline {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
+.hiw-section {
+    padding: var(--space-24) 0 var(--space-16);
     position: relative;
+    overflow: hidden;
+}
+
+.hiw-header {
+    text-align: center;
+    margin-bottom: var(--space-16);
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hiw-section--visible .hiw-header {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Layout: phone left, steps right on desktop */
+.hiw-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-16);
+    align-items: start;
     max-width: 1000px;
     margin: 0 auto;
 }
 
-.timeline__item {
-    text-align: center;
+/* ─── Phone Column (sticky on desktop) ─── */
+.hiw-phone-col {
     position: relative;
-    padding: 0 var(--space-4);
 }
 
-.timeline__number {
-    width: 56px;
-    height: 56px;
-    background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-800));
+.hiw-phone-sticky {
+    position: sticky;
+    top: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-6);
+}
+
+/* Phone mockup */
+.hiw-phone {
+    width: 260px;
+    height: 530px;
+    background: linear-gradient(145deg, var(--guru-gray-900), var(--guru-black));
+    border-radius: 48px;
+    padding: 8px;
+    box-shadow:
+        0 50px 100px -30px rgba(124, 58, 237, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s,
+                transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+}
+
+.hiw-section--visible .hiw-phone {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.hiw-phone-inner {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(165deg, #1a1035, #0f0a1e);
+    border-radius: 42px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.hiw-phone-notch {
+    width: 100px;
+    height: 24px;
+    background: var(--guru-black);
+    border-radius: 0 0 16px 16px;
+    margin: 0 auto;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.hiw-phone-home {
+    width: 36%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    margin: auto auto 8px;
+    flex-shrink: 0;
+}
+
+.hiw-phone-screens {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Phone screen scenes */
+.hiw-phone-scene {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-5) var(--space-4);
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+}
+
+.hiw-phone-scene--active {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    pointer-events: auto;
+}
+
+.hiw-scene-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--guru-purple-400);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: var(--space-4);
+}
+
+/* Scene 1: Device selection */
+.hiw-scene-devices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    width: 100%;
+}
+
+.hiw-scene-device {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-xl);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.hiw-scene-device--selected {
+    background: rgba(124, 58, 237, 0.2);
+    border-color: var(--guru-purple-500);
     color: white;
+}
+
+.hiw-scene-device-icon {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.hiw-scene-device--selected .hiw-scene-device-icon {
+    opacity: 1;
+    color: var(--guru-purple-400);
+}
+
+.hiw-scene-check {
+    margin-left: auto;
+    width: 20px;
+    height: 20px;
+    background: var(--guru-purple-600);
     border-radius: var(--radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--font-size-lg);
-    font-weight: 800;
-    margin: 0 auto var(--space-5);
+    color: white;
+}
+
+.hiw-scene-issues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    justify-content: center;
+}
+
+.hiw-scene-issue {
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.hiw-scene-issue--selected {
+    background: rgba(124, 58, 237, 0.25);
+    border-color: var(--guru-purple-500);
+    color: var(--guru-purple-300);
+}
+
+/* Scene 2: Parts selection */
+.hiw-scene-parts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    width: 100%;
+}
+
+.hiw-scene-part {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-xl);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    font-weight: 500;
     position: relative;
-    z-index: 2;
-    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.25);
+    transition: all 0.3s ease;
 }
 
-.timeline__connector {
+.hiw-scene-part--selected {
+    background: rgba(124, 58, 237, 0.2);
+    border-color: var(--guru-purple-500);
+    color: white;
+}
+
+.hiw-scene-part-tier {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.hiw-scene-part-tier--eco {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22C55E;
+}
+
+.hiw-scene-part-tier--prem {
+    background: rgba(124, 58, 237, 0.2);
+    color: var(--guru-purple-400);
+}
+
+.hiw-scene-part-tier--gen {
+    background: rgba(245, 158, 11, 0.15);
+    color: #F59E0B;
+}
+
+.hiw-scene-part-price {
+    margin-left: auto;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.hiw-scene-recommended {
     position: absolute;
-    top: 28px;
-    left: calc(50% + 36px);
-    right: calc(-50% + 36px);
-    height: 2px;
-    background: linear-gradient(90deg, var(--guru-purple-300), var(--guru-purple-200));
-    z-index: 1;
+    top: -8px;
+    right: 10px;
+    padding: 2px 8px;
+    background: var(--guru-purple-600);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: var(--radius-full);
 }
 
-.timeline__item:last-child .timeline__connector {
-    display: none;
+/* Scene 3: Calendar */
+.hiw-scene-calendar {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: var(--radius-xl);
+    padding: var(--space-3);
 }
 
-.timeline__icon {
-    font-size: 2rem;
-    display: block;
+.hiw-scene-cal-header {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
     margin-bottom: var(--space-3);
 }
 
-.timeline__content {
-    padding-top: var(--space-2);
-}
-
-.timeline__title {
-    font-size: var(--font-size-base);
-    font-weight: 700;
-    color: var(--guru-black);
+.hiw-scene-cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
     margin-bottom: var(--space-2);
 }
 
-.timeline__desc {
-    font-size: var(--font-size-sm);
-    color: var(--guru-gray-500);
-    line-height: 1.6;
+.hiw-scene-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    text-align: center;
 }
 
+.hiw-scene-cal-day {
+    font-size: 11px;
+    padding: 4px 0;
+    border-radius: var(--radius-lg);
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.hiw-scene-cal-day--past {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.hiw-scene-cal-day--selected {
+    background: var(--guru-purple-600);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+}
+
+.hiw-scene-location {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-xl);
+    background: rgba(124, 58, 237, 0.15);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    color: var(--guru-purple-300);
+    font-size: 12px;
+    font-weight: 500;
+    width: 100%;
+}
+
+/* Scene 4: Repair progress */
+.hiw-scene-status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.hiw-scene-status-ring {
+    width: 100px;
+    height: 100px;
+    position: relative;
+}
+
+.hiw-scene-ring-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.hiw-scene-ring-progress {
+    animation: hiw-ring-spin 3s linear infinite;
+    transform-origin: center;
+}
+
+@keyframes hiw-ring-spin {
+    to { stroke-dashoffset: 0; }
+}
+
+.hiw-scene-status-pct {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 800;
+    color: white;
+}
+
+.hiw-scene-status-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--guru-purple-300);
+}
+
+.hiw-scene-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 100%;
+}
+
+.hiw-scene-check-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 8px 12px;
+    border-radius: var(--radius-lg);
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.hiw-scene-check-item--done {
+    color: #22C55E;
+}
+
+.hiw-scene-check-item--done svg {
+    flex-shrink: 0;
+}
+
+.hiw-scene-check-item--active {
+    color: var(--guru-purple-300);
+    background: rgba(124, 58, 237, 0.1);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.hiw-scene-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(124, 58, 237, 0.3);
+    border-top-color: var(--guru-purple-400);
+    border-radius: 50%;
+    animation: hiw-spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes hiw-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ─── Step indicator dots ─── */
+.hiw-phone-dots {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.hiw-phone-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--guru-gray-300);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hiw-phone-dot--active {
+    width: 28px;
+    background: var(--guru-purple-600);
+}
+
+/* ─── Steps Column ─── */
+.hiw-steps-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: var(--space-8) 0;
+}
+
+.hiw-step {
+    display: flex;
+    gap: var(--space-5);
+    padding: var(--space-8) 0;
+    opacity: 0;
+    transform: translateX(30px);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hiw-section--visible .hiw-step {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.hiw-section--visible .hiw-step:nth-child(1) { transition-delay: 0.3s; }
+.hiw-section--visible .hiw-step:nth-child(2) { transition-delay: 0.45s; }
+.hiw-section--visible .hiw-step:nth-child(3) { transition-delay: 0.6s; }
+.hiw-section--visible .hiw-step:nth-child(4) { transition-delay: 0.75s; }
+
+/* Step indicator (number + line) */
+.hiw-step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.hiw-step-num {
+    width: 48px;
+    height: 48px;
+    background: var(--guru-gray-100);
+    color: var(--guru-gray-400);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-base);
+    font-weight: 800;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.hiw-step--active .hiw-step-num {
+    background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-800));
+    color: white;
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+    transform: scale(1.1);
+}
+
+.hiw-step--done .hiw-step-num {
+    background: var(--guru-purple-600);
+    color: white;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+}
+
+.hiw-step-line {
+    width: 2px;
+    flex: 1;
+    min-height: 40px;
+    background: var(--guru-gray-200);
+    margin: var(--space-2) 0;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.hiw-step-line-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, var(--guru-purple-600), var(--guru-purple-400));
+    transform-origin: top;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Step content */
+.hiw-step-content {
+    padding-top: var(--space-3);
+}
+
+.hiw-step-title {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--guru-gray-400);
+    margin-bottom: var(--space-2);
+    transition: color 0.4s ease;
+}
+
+.hiw-step--active .hiw-step-title {
+    color: var(--guru-black);
+}
+
+.hiw-step--done .hiw-step-title {
+    color: var(--guru-gray-600);
+}
+
+.hiw-step-desc {
+    font-size: var(--font-size-base);
+    color: var(--guru-gray-400);
+    line-height: 1.7;
+    max-width: 360px;
+    transition: color 0.4s ease;
+}
+
+.hiw-step--active .hiw-step-desc {
+    color: var(--guru-gray-500);
+}
+
+/* Mobile phone inline (hidden on desktop) */
+.hiw-step-phone-mobile {
+    display: none;
+}
+
+/* CTA animation */
+.hiw-cta {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.9s;
+}
+
+.hiw-section--visible .hiw-cta {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ─── Mobile: show phones inline, hide sticky ─── */
 @media (max-width: 768px) {
-    .timeline {
+    .hiw-layout {
         grid-template-columns: 1fr;
-        gap: var(--space-8);
+        gap: 0;
     }
 
-    .timeline__connector {
+    .hiw-phone-col {
         display: none;
     }
 
-    .timeline__item {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: var(--space-4);
-        text-align: left;
+    .hiw-step-phone-mobile {
+        display: flex;
+        justify-content: center;
+        margin-top: var(--space-5);
     }
 
-    .timeline__number {
-        margin: 0;
-        width: 48px;
-        height: 48px;
-        grid-row: 1 / 3;
+    .hiw-phone--mini {
+        width: 220px;
+        height: 440px;
+        border-radius: 40px;
+        padding: 6px;
     }
 
-    .timeline__content {
-        padding-top: 0;
+    .hiw-phone--mini .hiw-phone-inner {
+        border-radius: 36px;
     }
 
-    .timeline__icon {
-        display: none;
+    .hiw-phone--mini .hiw-phone-notch {
+        width: 80px;
+        height: 20px;
+    }
+
+    /* Always visible on mobile since they're inline */
+    .hiw-phone--mini {
+        opacity: 1;
+        transform: none;
+    }
+
+    .hiw-steps-col {
+        padding: 0;
+    }
+
+    .hiw-step {
+        padding: var(--space-6) 0;
+    }
+
+    .hiw-step-title {
+        font-size: var(--font-size-lg);
+    }
+
+    .hiw-step-desc {
+        font-size: var(--font-size-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .hiw-phone--mini {
+        width: 190px;
+        height: 380px;
+        border-radius: 36px;
+    }
+
+    .hiw-phone--mini .hiw-phone-inner {
+        border-radius: 32px;
+    }
+
+    .hiw-step {
+        gap: var(--space-3);
+    }
+
+    .hiw-step-num {
+        width: 40px;
+        height: 40px;
+        font-size: var(--font-size-sm);
     }
 }
 

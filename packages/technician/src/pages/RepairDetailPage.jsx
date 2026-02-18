@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, SERVICE_FEE, TAX_RATE, getRepairStatusFlow } from '@shared/constants';
+import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, getPartsUrl, getDeviceRepairPrice, SERVICE_FEE, TAX_RATE, getRepairStatusFlow } from '@shared/constants';
 import { supabase } from '@shared/supabase';
 import RepairChat from '@shared/RepairChat';
 import TechNav from '../components/TechNav';
@@ -444,6 +444,7 @@ export default function RepairDetailPage() {
                                         ref={fileInputRef}
                                         type="file"
                                         accept="image/jpeg,image/heic,image/heif,.jpg,.jpeg,.heic,.heif"
+                                        capture="environment"
                                         onChange={handlePhotoUpload}
                                         style={{ display: 'none' }}
                                     />
@@ -690,7 +691,7 @@ export default function RepairDetailPage() {
                                         const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
                                         const tierId = tierObj[issueId] || 'premium';
                                         const tier = PARTS_TIERS.find((t) => t.id === tierId);
-                                        const price = SAMPLE_PRICING[issueId]?.[tierId] || 0;
+                                        const price = getDeviceRepairPrice(repair.device, issueId, tierId) ?? SAMPLE_PRICING[issueId]?.[tierId] ?? 0;
                                         return (
                                             <div key={issueId} className="pricing-breakdown__line">
                                                 <div className="pricing-breakdown__item">
@@ -735,6 +736,44 @@ export default function RepairDetailPage() {
                                     </div>
                                 </div>
                             </div>
+                            {/* Parts to Order */}
+                            {issues.some(issueId => {
+                                const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
+                                const tierId = tierObj[issueId] || 'premium';
+                                return getPartsUrl(repair.device, issueId, tierId, repair.device_color);
+                            }) && (
+                                <div className="repair-detail__section">
+                                    <h2 className="repair-detail__section-title">Parts to Order</h2>
+                                    <div className="parts-links">
+                                        {issues.map((issueId) => {
+                                            const type = REPAIR_TYPES.find((t) => t.id === issueId);
+                                            const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
+                                            const tierId = tierObj[issueId] || 'premium';
+                                            const tier = PARTS_TIERS.find((t) => t.id === tierId);
+                                            const partsUrl = getPartsUrl(repair.device, issueId, tierId, repair.device_color);
+                                            if (!partsUrl) return null;
+                                            return (
+                                                <a
+                                                    key={issueId}
+                                                    href={partsUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="parts-link"
+                                                >
+                                                    <div className="parts-link__info">
+                                                        <span className="parts-link__icon">{type?.icon}</span>
+                                                        <div>
+                                                            <div className="parts-link__name">{type?.name}</div>
+                                                            <div className="parts-link__tier" style={{ color: tier?.color }}>{tier?.name}</div>
+                                                        </div>
+                                                    </div>
+                                                    <span className="parts-link__arrow">Order →</span>
+                                                </a>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

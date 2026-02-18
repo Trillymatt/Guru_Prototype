@@ -27,7 +27,7 @@ function toDateKey(date) {
  * @param {Set<string>} [props.availableDates] - if provided, only these dates are selectable (ISO strings)
  * @param {Object<string, string[]>} [props.availableSlots] - map of date -> available slot ids
  */
-export default function GuruCalendar({ value, onChange, minDate, availableDates, availableSlots }) {
+export default function GuruCalendar({ value, onChange, minDate, availableDates, availableSlots, disableUnavailable = true }) {
     const selected = value ? new Date(value + 'T00:00:00') : null;
     const minDateObj = minDate ? new Date(minDate + 'T00:00:00') : null;
     const today = new Date();
@@ -86,8 +86,8 @@ export default function GuruCalendar({ value, onChange, minDate, availableDates,
         if (!date) return true;
         if (minDateObj && date < minDateObj) return true;
 
-        // If availableDates is provided, only those dates are selectable
-        if (availableDates && availableDates.size > 0) {
+        // If availableDates is provided and disabling is enabled, only those dates are selectable
+        if (disableUnavailable && availableDates && availableDates.size > 0) {
             return !availableDates.has(toDateKey(date));
         }
 

@@ -120,11 +120,101 @@
   color: var(--dark-purple-400);
 }
 
+/* ─── Right Section ────────────────────────────────────────────── */
+
+.tech-nav__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ─── Hamburger Button ─────────────────────────────────────────── */
+
+.tech-nav__hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  background: none;
+  border: 1px solid var(--dark-border-subtle);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tech-nav__hamburger:hover {
+  background: var(--dark-bg-hover);
+  border-color: var(--dark-border-medium);
+}
+
+.tech-nav__hamburger-line {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--dark-text-secondary);
+  border-radius: 1px;
+  transition: all 0.25s ease;
+  transform-origin: center;
+}
+
+.tech-nav__hamburger--open .tech-nav__hamburger-line:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.tech-nav__hamburger--open .tech-nav__hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.tech-nav__hamburger--open .tech-nav__hamburger-line:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ─── Mobile Dropdown Menu ─────────────────────────────────────── */
+
+.tech-nav__mobile-menu {
+  display: none;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--dark-border-subtle);
+}
+
+.tech-nav__mobile-link {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--dark-text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.tech-nav__mobile-link:hover {
+  background: var(--dark-bg-hover);
+  color: var(--dark-text-primary);
+}
+
+.tech-nav__mobile-link--active {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--dark-purple-400);
+}
+
 /* ─── Responsive Design ─────────────────────────────────────────── */
 
 @media (max-width: 768px) {
   .tech-nav__links {
     display: none;
+  }
+
+  .tech-nav__hamburger {
+    display: flex;
+  }
+
+  .tech-nav__mobile-menu {
+    display: flex;
   }
 
   .tech-nav__logo {

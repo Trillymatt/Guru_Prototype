@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 
@@ -33,6 +33,275 @@ function Reveal({ children, className = '', delay = 0 }) {
         >
             {children}
         </div>
+    );
+}
+
+/* ─── Phone Screen Illustrations for each step ──── */
+function PhoneScreenSelect({ active }) {
+    return (
+        <div className={`hiw-phone-scene ${active ? 'hiw-phone-scene--active' : ''}`}>
+            <div className="hiw-scene-label">Select Your Device</div>
+            <div className="hiw-scene-devices">
+                <div className="hiw-scene-device hiw-scene-device--selected">
+                    <div className="hiw-scene-device-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+                    </div>
+                    <span>iPhone 16 Pro</span>
+                    <div className="hiw-scene-check">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                </div>
+                <div className="hiw-scene-device">
+                    <div className="hiw-scene-device-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+                    </div>
+                    <span>iPhone 15</span>
+                </div>
+            </div>
+            <div className="hiw-scene-issues">
+                <div className="hiw-scene-issue hiw-scene-issue--selected">Cracked Screen</div>
+                <div className="hiw-scene-issue hiw-scene-issue--selected">Battery</div>
+                <div className="hiw-scene-issue">Charging Port</div>
+            </div>
+        </div>
+    );
+}
+
+function PhoneScreenParts({ active }) {
+    return (
+        <div className={`hiw-phone-scene ${active ? 'hiw-phone-scene--active' : ''}`}>
+            <div className="hiw-scene-label">Choose Quality</div>
+            <div className="hiw-scene-parts">
+                <div className="hiw-scene-part">
+                    <div className="hiw-scene-part-tier hiw-scene-part-tier--eco">$</div>
+                    <span>Economy</span>
+                    <span className="hiw-scene-part-price">$49</span>
+                </div>
+                <div className="hiw-scene-part hiw-scene-part--selected">
+                    <div className="hiw-scene-part-tier hiw-scene-part-tier--prem">$$</div>
+                    <span>Premium</span>
+                    <span className="hiw-scene-part-price">$89</span>
+                    <div className="hiw-scene-recommended">Recommended</div>
+                </div>
+                <div className="hiw-scene-part">
+                    <div className="hiw-scene-part-tier hiw-scene-part-tier--gen">$$$</div>
+                    <span>Genuine</span>
+                    <span className="hiw-scene-part-price">$149</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PhoneScreenSchedule({ active }) {
+    return (
+        <div className={`hiw-phone-scene ${active ? 'hiw-phone-scene--active' : ''}`}>
+            <div className="hiw-scene-label">Pick a Time</div>
+            <div className="hiw-scene-calendar">
+                <div className="hiw-scene-cal-header">February 2026</div>
+                <div className="hiw-scene-cal-days">
+                    <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                </div>
+                <div className="hiw-scene-cal-grid">
+                    {[...Array(28)].map((_, i) => (
+                        <span key={i} className={`hiw-scene-cal-day${i + 1 === 20 ? ' hiw-scene-cal-day--selected' : ''}${i + 1 < 17 ? ' hiw-scene-cal-day--past' : ''}`}>
+                            {i + 1}
+                        </span>
+                    ))}
+                </div>
+            </div>
+            <div className="hiw-scene-location">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>1234 Oak Lawn Ave, Dallas</span>
+            </div>
+        </div>
+    );
+}
+
+function PhoneScreenRepair({ active }) {
+    return (
+        <div className={`hiw-phone-scene ${active ? 'hiw-phone-scene--active' : ''}`}>
+            <div className="hiw-scene-label">Repair in Progress</div>
+            <div className="hiw-scene-status">
+                <div className="hiw-scene-status-ring">
+                    <svg viewBox="0 0 100 100" className="hiw-scene-ring-svg">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="6"/>
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#ringGrad)" strokeWidth="6" strokeLinecap="round" strokeDasharray="264" strokeDashoffset="66" className="hiw-scene-ring-progress"/>
+                        <defs><linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#a855f7"/><stop offset="100%" stopColor="#22c55e"/></linearGradient></defs>
+                    </svg>
+                    <div className="hiw-scene-status-pct">75%</div>
+                </div>
+                <div className="hiw-scene-status-text">Almost done!</div>
+            </div>
+            <div className="hiw-scene-checklist">
+                <div className="hiw-scene-check-item hiw-scene-check-item--done">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Screen replaced
+                </div>
+                <div className="hiw-scene-check-item hiw-scene-check-item--done">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Battery installed
+                </div>
+                <div className="hiw-scene-check-item hiw-scene-check-item--active">
+                    <div className="hiw-scene-spinner"></div>
+                    Testing device...
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── Animated How It Works Section ──── */
+const STEPS = [
+    {
+        num: '01',
+        title: "Tell us what's broken",
+        desc: 'Pick your iPhone model and select the issues — cracked screen, bad battery, or anything else.',
+        Screen: PhoneScreenSelect,
+    },
+    {
+        num: '02',
+        title: 'Choose your parts',
+        desc: 'Economy, Premium, or Genuine Apple — you pick the quality and price for each repair.',
+        Screen: PhoneScreenParts,
+    },
+    {
+        num: '03',
+        title: 'Pick a time & place',
+        desc: 'Schedule a slot at least 3 days out. We come to your home, office, or anywhere you need.',
+        Screen: PhoneScreenSchedule,
+    },
+    {
+        num: '04',
+        title: 'We fix it on the spot',
+        desc: 'Your technician arrives, repairs your device, and you sign off — all in under an hour.',
+        Screen: PhoneScreenRepair,
+    },
+];
+
+function HowItWorks() {
+    const sectionRef = useRef(null);
+    const [activeStep, setActiveStep] = useState(0);
+    const [sectionVisible, setSectionVisible] = useState(false);
+    const stepRefs = useRef([]);
+
+    // Observe when section enters viewport
+    useEffect(() => {
+        const el = sectionRef.current;
+        if (!el) return;
+        const io = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setSectionVisible(true);
+                    io.unobserve(el);
+                }
+            },
+            { threshold: 0.1 }
+        );
+        io.observe(el);
+        return () => io.disconnect();
+    }, []);
+
+    // Track which step is most visible
+    useEffect(() => {
+        const observers = [];
+        stepRefs.current.forEach((el, i) => {
+            if (!el) return;
+            const io = new IntersectionObserver(
+                ([entry]) => {
+                    if (entry.isIntersecting) {
+                        setActiveStep(i);
+                    }
+                },
+                { threshold: 0.5, rootMargin: '-20% 0px -20% 0px' }
+            );
+            io.observe(el);
+            observers.push(io);
+        });
+        return () => observers.forEach(io => io.disconnect());
+    }, []);
+
+    return (
+        <section
+            className={`hiw-section ${sectionVisible ? 'hiw-section--visible' : ''}`}
+            id="how-it-works"
+            ref={sectionRef}
+        >
+            <div className="guru-container">
+                <div className="hiw-header">
+                    <span className="section-label">4 Simple Steps</span>
+                    <h2 className="section-title">How Guru works</h2>
+                </div>
+
+                <div className="hiw-layout">
+                    {/* Phone mockup — sticky on desktop */}
+                    <div className="hiw-phone-col">
+                        <div className="hiw-phone-sticky">
+                            <div className="hiw-phone">
+                                <div className="hiw-phone-inner">
+                                    <div className="hiw-phone-notch"></div>
+                                    <div className="hiw-phone-screens">
+                                        {STEPS.map((step, i) => (
+                                            <step.Screen key={i} active={activeStep === i} />
+                                        ))}
+                                    </div>
+                                    <div className="hiw-phone-home"></div>
+                                </div>
+                            </div>
+                            {/* Step indicator dots */}
+                            <div className="hiw-phone-dots">
+                                {STEPS.map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={`hiw-phone-dot ${activeStep === i ? 'hiw-phone-dot--active' : ''}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Steps column */}
+                    <div className="hiw-steps-col">
+                        {STEPS.map((step, i) => (
+                            <div
+                                key={step.num}
+                                ref={el => stepRefs.current[i] = el}
+                                className={`hiw-step ${activeStep === i ? 'hiw-step--active' : ''} ${activeStep > i ? 'hiw-step--done' : ''}`}
+                            >
+                                <div className="hiw-step-indicator">
+                                    <div className="hiw-step-num">{step.num}</div>
+                                    {i < STEPS.length - 1 && <div className="hiw-step-line">
+                                        <div className="hiw-step-line-fill" style={{ transform: activeStep > i ? 'scaleY(1)' : 'scaleY(0)' }}></div>
+                                    </div>}
+                                </div>
+                                <div className="hiw-step-content">
+                                    <h3 className="hiw-step-title">{step.title}</h3>
+                                    <p className="hiw-step-desc">{step.desc}</p>
+                                    {/* Mobile-only: show phone screen inline */}
+                                    <div className="hiw-step-phone-mobile">
+                                        <div className="hiw-phone hiw-phone--mini">
+                                            <div className="hiw-phone-inner">
+                                                <div className="hiw-phone-notch"></div>
+                                                <div className="hiw-phone-screens">
+                                                    <step.Screen active={true} />
+                                                </div>
+                                                <div className="hiw-phone-home"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="hiw-cta" style={{ textAlign: 'center', marginTop: 48 }}>
+                    <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--lg">
+                        Start Your Repair →
+                    </Link>
+                </div>
+            </div>
+        </section>
     );
 }
 
@@ -103,64 +372,8 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ─── How It Works — Timeline ─────────────────────── */}
-            <section className="timeline-section" id="how-it-works">
-                <div className="guru-container">
-                    <Reveal>
-                        <div className="section-header">
-                            <span className="section-label">4 Simple Steps</span>
-                            <h2 className="section-title">How Guru works</h2>
-                        </div>
-                    </Reveal>
-                    <div className="timeline">
-                        {[
-                            {
-                                num: '01',
-                                title: 'Tell us what\'s broken',
-                                desc: 'Pick your iPhone model and select the issues — cracked screen, bad battery, or anything else.',
-                                icon: '📱',
-                            },
-                            {
-                                num: '02',
-                                title: 'Choose your parts',
-                                desc: 'Economy, Premium, or Genuine Apple — you pick the quality and price for each repair.',
-                                icon: '⚡',
-                            },
-                            {
-                                num: '03',
-                                title: 'Pick a time & place',
-                                desc: 'Schedule a slot at least 3 days out. We come to your home, office, or anywhere you need.',
-                                icon: '📍',
-                            },
-                            {
-                                num: '04',
-                                title: 'We fix it on the spot',
-                                desc: 'Your technician arrives, repairs your device, and you sign off — all in under an hour.',
-                                icon: '✨',
-                            },
-                        ].map((step, i) => (
-                            <Reveal key={step.num} delay={i * 120}>
-                                <div className="timeline__item">
-                                    <div className="timeline__number">{step.num}</div>
-                                    <div className="timeline__connector"></div>
-                                    <div className="timeline__content">
-                                        <span className="timeline__icon">{step.icon}</span>
-                                        <h3 className="timeline__title">{step.title}</h3>
-                                        <p className="timeline__desc">{step.desc}</p>
-                                    </div>
-                                </div>
-                            </Reveal>
-                        ))}
-                    </div>
-                    <Reveal delay={500}>
-                        <div style={{ textAlign: 'center', marginTop: 48 }}>
-                            <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--lg">
-                                Start Your Repair →
-                            </Link>
-                        </div>
-                    </Reveal>
-                </div>
-            </section>
+            {/* ─── How It Works — Animated ─────────────────────── */}
+            <HowItWorks />
 
             {/* ─── Features — Bento Grid ───────────────────────── */}
             <section className="bento-section" id="features">
