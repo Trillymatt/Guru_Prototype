@@ -1,0 +1,337 @@
+/* ═══════════════════════════════════════════════════════════════
+   Live Tracking Map — Shared Styles
+   Used by customer portal for Leaflet map and ETA display
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Map Wrapper ──────────────────────────────────────────── */
+
+.lt-wrapper {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    border: 1px solid var(--guru-gray-200);
+}
+
+.lt-map {
+    width: 100%;
+    height: 320px;
+}
+
+.lt-map--fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #EDE9FE, #F3E8FF);
+}
+
+.lt-fallback-text {
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-500);
+    font-weight: 600;
+}
+
+/* ─── Custom Markers ───────────────────────────────────────── */
+
+.lt-marker {
+    background: none !important;
+    border: none !important;
+}
+
+.lt-marker__inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+}
+
+.lt-marker__icon {
+    font-size: 1.75rem;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+    z-index: 2;
+    position: relative;
+}
+
+.lt-marker__ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--guru-purple-300);
+    background: rgba(124, 58, 237, 0.08);
+    z-index: 1;
+}
+
+.lt-marker__pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(124, 58, 237, 0.15);
+    z-index: 1;
+    animation: lt-pulse 2s ease-out infinite;
+}
+
+@keyframes lt-pulse {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
+}
+
+/* ─── Popup ────────────────────────────────────────────────── */
+
+.lt-popup-container .leaflet-popup-content-wrapper {
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--guru-gray-200);
+}
+
+.lt-popup-container .leaflet-popup-content {
+    margin: 10px 14px;
+    font-family: inherit;
+}
+
+.lt-popup {
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    color: var(--guru-gray-700);
+}
+
+.lt-popup strong {
+    color: var(--guru-gray-900);
+}
+
+/* ─── ETA Banner ───────────────────────────────────────────── */
+
+.lt-eta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    background: linear-gradient(135deg, var(--guru-purple-50), var(--guru-purple-100));
+    border: 1px solid var(--guru-purple-200);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-4);
+    position: relative;
+    overflow: hidden;
+}
+
+.lt-eta--arrived {
+    background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+    border-color: #6EE7B7;
+}
+
+.lt-eta__icon {
+    font-size: 1.75rem;
+    flex-shrink: 0;
+}
+
+.lt-eta__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.lt-eta__label {
+    font-size: var(--font-size-sm);
+    color: var(--guru-gray-600);
+    font-weight: 500;
+}
+
+.lt-eta__time {
+    font-size: var(--font-size-2xl);
+    font-weight: 800;
+    color: var(--guru-purple-700);
+}
+
+.lt-eta--arrived .lt-eta__time {
+    color: #065F46;
+}
+
+.lt-eta__detail {
+    font-size: var(--font-size-xs);
+    color: var(--guru-gray-500);
+    font-weight: 500;
+}
+
+.lt-eta__pulse {
+    position: absolute;
+    right: var(--space-5);
+    width: 12px;
+    height: 12px;
+    background: var(--guru-purple-500);
+    border-radius: 50%;
+    animation: lt-eta-pulse 2s infinite;
+}
+
+.lt-eta--arrived .lt-eta__pulse {
+    background: #10B981;
+}
+
+@keyframes lt-eta-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+.lt-eta__updated {
+    font-size: 10px;
+    color: var(--guru-gray-400);
+    text-align: right;
+    margin-top: var(--space-1);
+}
+
+/* ─── Location Sharing Banner (Technician Portal) ──────────── */
+
+.loc-share {
+    background: var(--dark-bg-card);
+    border: 1px solid var(--dark-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+}
+
+.loc-share__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.loc-share__icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.loc-share__title {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    color: var(--dark-text-primary);
+}
+
+.loc-share__desc {
+    font-size: var(--font-size-sm);
+    color: var(--dark-text-secondary);
+    line-height: 1.6;
+    margin-bottom: var(--space-4);
+}
+
+.loc-share__status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.loc-share__status--active {
+    background: rgba(34, 197, 94, 0.12);
+    color: #4ADE80;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.loc-share__status--error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #F87171;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.loc-share__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.loc-share__dot--active {
+    background: #4ADE80;
+    animation: loc-dot-pulse 2s infinite;
+}
+
+.loc-share__dot--error {
+    background: #F87171;
+}
+
+@keyframes loc-dot-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.loc-share__actions {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+}
+
+/* ─── Location Permission Modal (Technician) ───────────────── */
+
+.loc-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+    backdrop-filter: blur(4px);
+}
+
+.loc-modal {
+    background: var(--dark-bg-card);
+    border: 1px solid var(--dark-border-medium);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+.loc-modal__icon {
+    font-size: 3rem;
+    margin-bottom: var(--space-4);
+    line-height: 1;
+}
+
+.loc-modal__title {
+    font-size: var(--font-size-xl);
+    font-weight: 800;
+    color: var(--dark-text-primary);
+    margin: 0 0 var(--space-3);
+}
+
+.loc-modal__message {
+    font-size: var(--font-size-sm);
+    color: var(--dark-text-secondary);
+    line-height: 1.7;
+    margin: 0 0 var(--space-6);
+}
+
+.loc-modal__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.loc-modal__actions .guru-btn {
+    width: 100%;
+}
+
+@media (max-width: 480px) {
+    .lt-map {
+        height: 260px;
+    }
+
+    .loc-modal {
+        padding: var(--space-5) var(--space-4);
+    }
+}

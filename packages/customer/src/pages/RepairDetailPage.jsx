@@ -4,6 +4,9 @@ import Navbar from '../components/Navbar';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
 import RepairChat from '@shared/RepairChat';
+import { useTechLocationWatch } from '@shared/useTechLocationWatch';
+import { geocodeAddress } from '@shared/geocode';
+import LiveTrackingMap from '@shared/LiveTrackingMap';
 import {
     REPAIR_TYPES,
     REPAIR_STATUS,
@@ -16,8 +19,10 @@ import {
     getRepairStatusFlow,
 } from '@shared/constants';
 import GuruCalendar from '@shared/GuruCalendar';
+import 'leaflet/dist/leaflet.css';
 import '@shared/guru-calendar.css';
 import '@shared/repair-chat.css';
+import '@shared/live-tracking.css';
 import '../styles/repair-detail.css';
 
 const TIME_SLOT_LABELS = {
@@ -25,48 +30,6 @@ const TIME_SLOT_LABELS = {
     afternoon: { label: 'Afternoon', range: '12:00 PM – 4:00 PM' },
     evening: { label: 'Evening', range: '4:00 PM – 7:00 PM' },
 };
-
-// Simulated technician location that moves toward the customer
-function useSimulatedTechLocation(repair) {
-    const [techLocation, setTechLocation] = useState(null);
-    const [eta, setEta] = useState(null);
-
-    useEffect(() => {
-        if (repair?.status !== REPAIR_STATUS.EN_ROUTE) {
-            setTechLocation(null);
-            setEta(null);
-            return;
-        }
-
-        // Simulate tech starting ~3-5 miles away and approaching
-        const customerLat = 32.7767;
-        const customerLng = -96.7970;
-        const startOffset = 0.04 + Math.random() * 0.02; // ~3-5 miles
-        const angle = Math.random() * Math.PI * 2;
-
-        let progress = 0;
-        const startLat = customerLat + Math.cos(angle) * startOffset;
-        const startLng = customerLng + Math.sin(angle) * startOffset;
-
-        const interval = setInterval(() => {
-            progress = Math.min(progress + 0.02 + Math.random() * 0.01, 0.95);
-            const lat = startLat + (customerLat - startLat) * progress;
-            const lng = startLng + (customerLng - startLng) * progress;
-            const remaining = Math.max(1, Math.round((1 - progress) * 25));
-
-            setTechLocation({ lat, lng });
-            setEta(remaining);
-        }, 3000);
-
-        // Initial position
-        setTechLocation({ lat: startLat, lng: startLng });
-        setEta(Math.round(25 + Math.random() * 10));
-
-        return () => clearInterval(interval);
-    }, [repair?.status]);
-
-    return { techLocation, eta };
-}
 
 export default function RepairDetailPage() {
     const { id } = useParams();
@@ -80,8 +43,29 @@ export default function RepairDetailPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState('');
     const [customerName, setCustomerName] = useState('');
+    const [customerLocation, setCustomerLocation] = useState(null);
 
-    const { techLocation, eta } = useSimulatedTechLocation(repair);
+    // Track whether map should be active (en_route or arrived)
+    const isTrackingActive = repair?.status === REPAIR_STATUS.EN_ROUTE || repair?.status === REPAIR_STATUS.ARRIVED;
+
+    // Watch technician's live location via Supabase Realtime
+    const { techLocation, distance, eta, lastUpdated } = useTechLocationWatch({
+        repairId: id,
+        isActive: isTrackingActive,
+        customerLocation,
+    });
+
+    // Geocode the repair address to get customer lat/lng for the map
+    useEffect(() => {
+        if (!repair?.address) return;
+        let cancelled = false;
+        geocodeAddress(repair.address).then((coords) => {
+            if (!cancelled && coords) {
+                setCustomerLocation(coords);
+            }
+        });
+        return () => { cancelled = true; };
+    }, [repair?.address]);
 
     // Fetch the customer's display name for chat
     useEffect(() => {
@@ -302,91 +286,62 @@ export default function RepairDetailPage() {
                         senderName={customerName}
                     />
 
-                    {/* En Route Map Section */}
+                    {/* Live Tracking Map Section */}
                     {(isEnRoute || isArrived) && (
                         <div className="rd-map-section">
                             <h3 className="rd-section-title">
                                 {isEnRoute ? 'Technician En Route' : 'Technician Has Arrived'}
                             </h3>
-                            {isEnRoute && eta && (
-                                <div className="rd-eta-banner">
-                                    <div className="rd-eta-banner__icon">🚗</div>
-                                    <div className="rd-eta-banner__text">
-                                        <span className="rd-eta-banner__label">Estimated arrival</span>
-                                        <span className="rd-eta-banner__time">{eta} min</span>
+
+                            {/* ETA Banner */}
+                            {isEnRoute && (
+                                <div className="lt-eta">
+                                    <div className="lt-eta__icon">🚗</div>
+                                    <div className="lt-eta__text">
+                                        <span className="lt-eta__label">Estimated arrival</span>
+                                        {eta ? (
+                                            <span className="lt-eta__time">{eta} min</span>
+                                        ) : (
+                                            <span className="lt-eta__time">Calculating...</span>
+                                        )}
+                                        {distance !== null && (
+                                            <span className="lt-eta__detail">{distance} miles away</span>
+                                        )}
                                     </div>
-                                    <div className="rd-eta-banner__pulse"></div>
+                                    <div className="lt-eta__pulse"></div>
                                 </div>
                             )}
                             {isArrived && (
-                                <div className="rd-eta-banner rd-eta-banner--arrived">
-                                    <div className="rd-eta-banner__icon">📍</div>
-                                    <div className="rd-eta-banner__text">
-                                        <span className="rd-eta-banner__label">Your technician is here</span>
-                                        <span className="rd-eta-banner__time">Arrived</span>
+                                <div className="lt-eta lt-eta--arrived">
+                                    <div className="lt-eta__icon">📍</div>
+                                    <div className="lt-eta__text">
+                                        <span className="lt-eta__label">Your technician is here</span>
+                                        <span className="lt-eta__time">Arrived</span>
                                     </div>
+                                    <div className="lt-eta__pulse"></div>
                                 </div>
                             )}
-                            <div className="rd-map">
-                                <div className="rd-map__container">
-                                    {/* Simulated map with grid and markers */}
-                                    <div className="rd-map__grid">
-                                        {/* Road lines */}
-                                        <div className="rd-map__road rd-map__road--h1"></div>
-                                        <div className="rd-map__road rd-map__road--h2"></div>
-                                        <div className="rd-map__road rd-map__road--h3"></div>
-                                        <div className="rd-map__road rd-map__road--v1"></div>
-                                        <div className="rd-map__road rd-map__road--v2"></div>
-                                        <div className="rd-map__road rd-map__road--v3"></div>
-                                    </div>
 
-                                    {/* Customer pin - center */}
-                                    <div className="rd-map__pin rd-map__pin--customer" style={{ left: '50%', top: '50%' }}>
-                                        <div className="rd-map__pin-icon">🏠</div>
-                                        <div className="rd-map__pin-label">You</div>
-                                        <div className="rd-map__pin-ring"></div>
-                                    </div>
+                            {/* Live Leaflet Map */}
+                            <LiveTrackingMap
+                                customerLocation={customerLocation}
+                                techLocation={techLocation}
+                                eta={eta}
+                                distance={distance}
+                                isArrived={isArrived}
+                                customerAddress={repair.address}
+                            />
 
-                                    {/* Technician pin - animated position */}
-                                    {isEnRoute && techLocation && (
-                                        <div
-                                            className="rd-map__pin rd-map__pin--tech"
-                                            style={{
-                                                left: `${20 + (eta ? (1 - eta / 35) * 30 : 0)}%`,
-                                                top: `${25 + (eta ? (1 - eta / 35) * 25 : 0)}%`,
-                                                transition: 'left 2s ease, top 2s ease',
-                                            }}
-                                        >
-                                            <div className="rd-map__pin-icon">🚗</div>
-                                            <div className="rd-map__pin-label">Tech</div>
-                                            <div className="rd-map__pin-pulse"></div>
-                                        </div>
-                                    )}
-
-                                    {isArrived && (
-                                        <div className="rd-map__pin rd-map__pin--tech" style={{ left: '48%', top: '48%' }}>
-                                            <div className="rd-map__pin-icon">🔧</div>
-                                            <div className="rd-map__pin-label">Tech</div>
-                                        </div>
-                                    )}
-
-                                    {/* Dashed route line */}
-                                    {isEnRoute && (
-                                        <svg className="rd-map__route" viewBox="0 0 400 300" preserveAspectRatio="none">
-                                            <path
-                                                d={`M ${80 + (eta ? (1 - eta / 35) * 120 : 0)} ${75 + (eta ? (1 - eta / 35) * 75 : 0)} Q 160 180 200 150`}
-                                                stroke="var(--guru-purple-500)"
-                                                strokeWidth="3"
-                                                strokeDasharray="8 6"
-                                                fill="none"
-                                                opacity="0.7"
-                                            />
-                                        </svg>
-                                    )}
-
-                                    <div className="rd-map__watermark">Live Tracking</div>
+                            {lastUpdated && (
+                                <div className="lt-eta__updated">
+                                    Last updated: {lastUpdated.toLocaleTimeString('en-US', {
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        second: '2-digit',
+                                        hour12: true,
+                                    })}
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
