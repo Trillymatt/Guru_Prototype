@@ -2,9 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, getPartsUrl, getDeviceRepairPrice, SERVICE_FEE, TAX_RATE, getRepairStatusFlow, TIME_SLOTS } from '@shared/constants';
 import { supabase } from '@shared/supabase';
+import { useLocationBroadcast } from '@shared/useLocationBroadcast';
 import RepairChat from '@shared/RepairChat';
 import TechNav from '../components/TechNav';
 import '@shared/repair-chat.css';
+import '@shared/live-tracking.css';
 import '../styles/tech-repair-detail.css';
 
 const AGREEMENT_TEXT = `GURU MOBILE REPAIR AGREEMENT
@@ -45,6 +47,23 @@ export default function RepairDetailPage() {
     const [photoError, setPhotoError] = useState('');
     const [expandedPhoto, setExpandedPhoto] = useState(null);
     const fileInputRef = useRef(null);
+
+    // Location sharing state
+    const [locationModal, setLocationModal] = useState(false);
+    const isEnRoute = repair?.status === REPAIR_STATUS.EN_ROUTE;
+
+    const {
+        isSharing: isLocationSharing,
+        error: locationError,
+        position: techPosition,
+        permissionState: locationPermission,
+        requestPermission: requestLocationPermission,
+        stopSharing: stopLocationSharing,
+    } = useLocationBroadcast({
+        repairId: id,
+        technicianId: currentUserId,
+        isActive: isEnRoute && !locationModal,
+    });
 
     // Get current user id + name for chat
     useEffect(() => {
@@ -308,6 +327,16 @@ export default function RepairDetailPage() {
 
         if (!error) {
             setRepair(prev => ({ ...prev, ...updates }));
+
+            // Show location sharing prompt when moving to en_route
+            if (nextStatus === REPAIR_STATUS.EN_ROUTE) {
+                setLocationModal(true);
+            }
+
+            // Clean up location when moving past en_route
+            if (repair.status === REPAIR_STATUS.EN_ROUTE && nextStatus !== REPAIR_STATUS.EN_ROUTE) {
+                stopLocationSharing();
+            }
         }
 
         setUpdating(false);
@@ -389,6 +418,36 @@ export default function RepairDetailPage() {
                                 onClick={confirmAdvance}
                             >
                                 {confirmModal.isClaim ? 'Yes, Claim Job' : `Yes, Advance to "${confirmModal.nextLabel}"`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Location Permission Modal ──────────────────────────── */}
+            {locationModal && (
+                <div className="loc-modal-overlay" onClick={() => setLocationModal(false)}>
+                    <div className="loc-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="loc-modal__icon">📍</div>
+                        <h3 className="loc-modal__title">Share Your Location</h3>
+                        <p className="loc-modal__message">
+                            Share your live location so the customer can track your arrival in real time. This builds trust and helps them prepare for your visit.
+                        </p>
+                        <div className="loc-modal__actions">
+                            <button
+                                className="guru-btn guru-btn--primary"
+                                onClick={() => {
+                                    requestLocationPermission();
+                                    setLocationModal(false);
+                                }}
+                            >
+                                Share Location
+                            </button>
+                            <button
+                                className="guru-btn guru-btn--ghost"
+                                onClick={() => setLocationModal(false)}
+                            >
+                                Not Now
                             </button>
                         </div>
                     </div>
@@ -489,6 +548,68 @@ export default function RepairDetailPage() {
                             )}
                         </div>
                     </div>
+
+                    {/* ════════════════════════════════════════════════
+                        LOCATION — Live sharing status during en_route
+                        ════════════════════════════════════════════════ */}
+                    {isEnRoute && (
+                        <div className="loc-share">
+                            <div className="loc-share__header">
+                                <span className="loc-share__icon">📍</span>
+                                <span className="loc-share__title">Live Location Sharing</span>
+                            </div>
+                            {isLocationSharing ? (
+                                <>
+                                    <div className="loc-share__status loc-share__status--active">
+                                        <span className="loc-share__dot loc-share__dot--active"></span>
+                                        Sharing your location with the customer
+                                    </div>
+                                    {techPosition && (
+                                        <p className="loc-share__desc" style={{ marginTop: 8, marginBottom: 0 }}>
+                                            GPS accuracy: ~{Math.round(techPosition.accuracy || 0)}m
+                                        </p>
+                                    )}
+                                    <div className="loc-share__actions">
+                                        <button
+                                            className="guru-btn guru-btn--ghost guru-btn--sm"
+                                            onClick={stopLocationSharing}
+                                        >
+                                            Stop Sharing
+                                        </button>
+                                    </div>
+                                </>
+                            ) : locationError ? (
+                                <>
+                                    <div className="loc-share__status loc-share__status--error">
+                                        <span className="loc-share__dot loc-share__dot--error"></span>
+                                        {locationError}
+                                    </div>
+                                    <div className="loc-share__actions">
+                                        <button
+                                            className="guru-btn guru-btn--primary guru-btn--sm"
+                                            onClick={requestLocationPermission}
+                                        >
+                                            Try Again
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="loc-share__desc">
+                                        You haven't enabled location sharing yet. Share your location so the customer can track your arrival.
+                                    </p>
+                                    <div className="loc-share__actions">
+                                        <button
+                                            className="guru-btn guru-btn--primary guru-btn--sm"
+                                            onClick={requestLocationPermission}
+                                        >
+                                            Start Sharing
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
 
                     {/* ════════════════════════════════════════════════
                         INFO — Customer + Schedule (side by side)
