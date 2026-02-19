@@ -572,6 +572,139 @@
   }
 }
 
+/* ─── Middle Section (Parts + Chat) ────────────────────────────── */
+
+.repair-detail__middle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .repair-detail__middle {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Info Grid (Customer + Schedule side by side) ─────────────── */
+
+.repair-detail__grid--info {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 768px) {
+  .repair-detail__grid--info {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Payment Section ────────────────────────────────────────────── */
+
+.repair-detail__payment {
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  background: linear-gradient(135deg, var(--dark-bg-card) 0%, rgba(168, 85, 247, 0.04) 100%);
+}
+
+.repair-detail__payment .repair-detail__section-title {
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-sm);
+}
+
+/* ─── Confirmation Modal ────────────────────────────────────────── */
+
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  backdrop-filter: blur(4px);
+}
+
+.confirm-modal {
+  background: var(--dark-bg-card);
+  border: 1px solid var(--dark-border-medium);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+.confirm-modal__icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-4);
+  line-height: 1;
+}
+
+.confirm-modal__title {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  color: var(--dark-text-primary);
+  margin: 0 0 var(--space-4);
+}
+
+.confirm-modal__message {
+  font-size: var(--font-size-sm);
+  color: var(--dark-text-secondary);
+  line-height: 1.7;
+  margin: 0 0 var(--space-3);
+}
+
+.confirm-modal__next-status {
+  display: inline-block;
+  padding: var(--space-2) var(--space-5);
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--dark-purple-400);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  margin-bottom: var(--space-4);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.confirm-modal__warning {
+  font-size: var(--font-size-xs);
+  color: var(--dark-text-tertiary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-lg);
+}
+
+.confirm-modal__actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.confirm-modal__actions .guru-btn {
+  flex: 1;
+  max-width: 200px;
+}
+
+@media (max-width: 480px) {
+  .confirm-modal {
+    padding: var(--space-6);
+  }
+
+  .confirm-modal__actions {
+    flex-direction: column;
+  }
+
+  .confirm-modal__actions .guru-btn {
+    max-width: none;
+  }
+}
+
 /* ─── Parts to Order ────────────────────────────────────────────── */
 
 .parts-links {

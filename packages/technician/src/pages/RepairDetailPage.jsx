@@ -34,6 +34,9 @@ export default function RepairDetailPage() {
     const canvasRef = useRef(null);
     const sigPadRef = useRef(null);
 
+    // Confirmation modal state
+    const [confirmModal, setConfirmModal] = useState(null); // { nextStatus, nextLabel, isClaim }
+
     // Photo state
     const [photos, setPhotos] = useState([]);
     const [photosLoading, setPhotosLoading] = useState(true);
@@ -132,12 +135,11 @@ export default function RepairDetailPage() {
                 .order('created_at', { ascending: true });
 
             if (!error && data) {
-                // Generate signed URLs for each photo
                 const photosWithUrls = await Promise.all(
                     data.map(async (photo) => {
                         const { data: urlData } = await supabase.storage
                             .from('repair-photos')
-                            .createSignedUrl(photo.file_path, 3600); // 1 hour expiry
+                            .createSignedUrl(photo.file_path, 3600);
                         return { ...photo, signedUrl: urlData?.signedUrl || null };
                     })
                 );
@@ -154,7 +156,6 @@ export default function RepairDetailPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate file type
         const validTypes = ['image/jpeg', 'image/heic', 'image/heif'];
         const validExtensions = ['.jpg', '.jpeg', '.heic', '.heif'];
         const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
@@ -163,7 +164,6 @@ export default function RepairDetailPage() {
             return;
         }
 
-        // Validate file size (max 20MB)
         if (file.size > 20 * 1024 * 1024) {
             setPhotoError('File size must be under 20MB.');
             return;
@@ -180,14 +180,12 @@ export default function RepairDetailPage() {
             const fileExt = ext || '.jpg';
             const filePath = `repairs/${id}/${photoType}_${timestamp}${fileExt}`;
 
-            // Upload to Supabase Storage
             const { error: uploadError } = await supabase.storage
                 .from('repair-photos')
                 .upload(filePath, file, { contentType: file.type || 'image/jpeg' });
 
             if (uploadError) throw uploadError;
 
-            // Insert metadata record
             const { data: photoRecord, error: insertError } = await supabase
                 .from('repair_photos')
                 .insert({
@@ -203,7 +201,6 @@ export default function RepairDetailPage() {
 
             if (insertError) throw insertError;
 
-            // Get signed URL for the new photo
             const { data: urlData } = await supabase.storage
                 .from('repair-photos')
                 .createSignedUrl(filePath, 3600);
@@ -215,19 +212,16 @@ export default function RepairDetailPage() {
         }
 
         setUploading(false);
-        // Reset file input
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     // Delete photo handler
     const handlePhotoDelete = async (photo) => {
         try {
-            // Delete from storage
             await supabase.storage
                 .from('repair-photos')
                 .remove([photo.file_path]);
 
-            // Delete metadata record
             await supabase
                 .from('repair_photos')
                 .delete()
@@ -253,7 +247,6 @@ export default function RepairDetailPage() {
         if (sigPadRef.current && !sigPadRef.current.isEmpty()) {
             const signatureData = sigPadRef.current.toDataURL();
 
-            // Upload signature to Supabase storage and link path to repair
             try {
                 const blob = await (await fetch(signatureData)).blob();
                 const fileName = `signatures/${id}_${Date.now()}.png`;
@@ -262,7 +255,6 @@ export default function RepairDetailPage() {
                     .upload(fileName, blob, { contentType: 'image/png' });
 
                 if (!uploadError) {
-                    // Save the signature path on the repair record
                     await supabase
                         .from('repairs')
                         .update({ signature_path: fileName, updated_at: new Date().toISOString() })
@@ -281,23 +273,27 @@ export default function RepairDetailPage() {
     // Get the correct status flow for this repair
     const statusFlow = repair ? getRepairStatusFlow(repair.parts_in_stock) : REPAIR_STATUS_FLOW;
 
-    // Advance repair status in Supabase
-    const advanceStatus = async () => {
+    // Open confirmation modal before advancing status
+    const handleAdvanceClick = () => {
         if (!repair) return;
         const currentIndex = statusFlow.indexOf(repair.status);
         const nextIndex = currentIndex + 1;
-
         if (nextIndex >= statusFlow.length) return;
 
         const nextStatus = statusFlow[nextIndex];
         const nextLabel = REPAIR_STATUS_LABELS[nextStatus] || nextStatus;
+        const isClaim = repair.status === REPAIR_STATUS.PENDING;
 
-        const confirmed = window.confirm(`Advance status to "${nextLabel}"?`);
-        if (!confirmed) return;
+        setConfirmModal({ nextStatus, nextLabel, isClaim });
+    };
 
+    // Execute the status advance after confirmation
+    const confirmAdvance = async () => {
+        if (!confirmModal) return;
+        const { nextStatus } = confirmModal;
+        setConfirmModal(null);
         setUpdating(true);
 
-        // If claiming a pending job, also assign the technician
         const { data: { user } } = await supabase.auth.getUser();
         const updates = { status: nextStatus, updated_at: new Date().toISOString() };
 
@@ -349,13 +345,60 @@ export default function RepairDetailPage() {
     const customerEmail = repair.customers?.email || '—';
     const issues = Array.isArray(repair.issues) ? repair.issues : [];
 
+    const nextStatusLabel = repair.status !== REPAIR_STATUS.COMPLETE
+        ? REPAIR_STATUS_LABELS[statusFlow[currentStatusIndex + 1]] || 'Done'
+        : null;
+
     return (
         <>
-            {/* Technician Nav */}
             <TechNav />
+
+            {/* ── Confirmation Modal ─────────────────────────────── */}
+            {confirmModal && (
+                <div className="confirm-modal-overlay" onClick={() => setConfirmModal(null)}>
+                    <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="confirm-modal__icon">
+                            {confirmModal.isClaim ? '🔧' : '✅'}
+                        </div>
+                        <h3 className="confirm-modal__title">
+                            {confirmModal.isClaim ? 'Claim This Job?' : 'Advance Repair Status?'}
+                        </h3>
+                        <p className="confirm-modal__message">
+                            {confirmModal.isClaim
+                                ? `You are about to claim this repair and set it to "${confirmModal.nextLabel}". This will assign the job to you and notify the customer.`
+                                : `You are about to mark this phase as complete and advance to:`
+                            }
+                        </p>
+                        {!confirmModal.isClaim && (
+                            <div className="confirm-modal__next-status">
+                                {confirmModal.nextLabel}
+                            </div>
+                        )}
+                        <p className="confirm-modal__warning">
+                            This action will be visible to the customer. Make sure this phase is fully complete before continuing.
+                        </p>
+                        <div className="confirm-modal__actions">
+                            <button
+                                className="guru-btn guru-btn--ghost"
+                                onClick={() => setConfirmModal(null)}
+                            >
+                                Go Back
+                            </button>
+                            <button
+                                className="guru-btn guru-btn--primary"
+                                onClick={confirmAdvance}
+                            >
+                                {confirmModal.isClaim ? 'Yes, Claim Job' : `Yes, Advance to "${confirmModal.nextLabel}"`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="repair-detail">
                 <div className="guru-container">
+
+                    {/* ── Page Header ─────────────────────────────── */}
                     <div className="repair-detail__header">
                         <Link to="/queue" className="repair-detail__back">← Back to Queue</Link>
                         <span className={`guru-badge ${repair.status === REPAIR_STATUS.PENDING ? 'guru-badge--warning' :
@@ -366,430 +409,445 @@ export default function RepairDetailPage() {
                         </span>
                     </div>
 
+                    {/* ════════════════════════════════════════════════
+                        TOP — Repair Info + Status
+                        ════════════════════════════════════════════════ */}
                     <div className="repair-detail__grid">
-                        {/* Left Column */}
-                        <div>
-                            {/* Device & Issues */}
-                            <div className="repair-detail__section">
-                                <h2 className="repair-detail__section-title">Repair Details</h2>
-                                <div className="repair-detail__info-stack">
-                                    <div>
-                                        <span className="repair-detail__info-label">Device</span>
-                                        <div className="repair-detail__info-value">{repair.device}</div>
-                                    </div>
-                                    <div>
-                                        <span className="repair-detail__info-label">Issues</span>
-                                        <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                                            {issues.map((issue) => {
-                                                const type = REPAIR_TYPES.find((t) => t.id === issue);
-                                                return (
-                                                    <span key={issue} className="guru-badge guru-badge--purple">
-                                                        {type?.icon} {type?.name || issue}
-                                                    </span>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    {repair.notes && (
-                                        <div>
-                                            <span className="repair-detail__info-label">Notes</span>
-                                            <div className="repair-detail__info-value--sm" style={{ marginTop: 4, lineHeight: 1.6 }}>{repair.notes}</div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
 
-                            {/* Customer Info */}
-                            <div className="repair-detail__section">
-                                <h2 className="repair-detail__section-title">Customer Information</h2>
+                        {/* LEFT: Repair Details */}
+                        <div className="repair-detail__section">
+                            <h2 className="repair-detail__section-title">Repair Details</h2>
+                            <div className="repair-detail__info-stack">
                                 <div>
-                                    <div className="repair-detail__row">
-                                        <span className="repair-detail__row-label">Name</span>
-                                        <span className="repair-detail__row-value">{customerName}</span>
-                                    </div>
-                                    <div className="repair-detail__row">
-                                        <span className="repair-detail__row-label">Phone</span>
-                                        <span className="repair-detail__row-value">{customerPhone}</span>
-                                    </div>
-                                    <div className="repair-detail__row">
-                                        <span className="repair-detail__row-label">Email</span>
-                                        <span className="repair-detail__row-value">{customerEmail}</span>
-                                    </div>
-                                    <div className="repair-detail__row">
-                                        <span className="repair-detail__row-label">Location</span>
-                                        <a 
-                                            href={`http://maps.apple.com/?q=${encodeURIComponent(repair.address)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="repair-detail__row-value"
-                                            style={{ color: 'var(--guru-purple-600)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}
-                                        >
-                                            <span>{repair.address}</span>
-                                            <span style={{ fontSize: '0.875rem' }}>🗺️</span>
-                                        </a>
+                                    <span className="repair-detail__info-label">Device</span>
+                                    <div className="repair-detail__info-value">{repair.device}</div>
+                                </div>
+                                <div>
+                                    <span className="repair-detail__info-label">Repair Type</span>
+                                    <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                                        {issues.map((issue) => {
+                                            const type = REPAIR_TYPES.find((t) => t.id === issue);
+                                            return (
+                                                <span key={issue} className="guru-badge guru-badge--purple">
+                                                    {type?.icon} {type?.name || issue}
+                                                </span>
+                                            );
+                                        })}
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Repair Photos (Tech-Only) */}
-                            <div className="repair-detail__section">
-                                <h2 className="repair-detail__section-title">Repair Photos</h2>
-                                <p className="repair-photos__note">
-                                    For technician records only — not visible to customers.
-                                </p>
-
-                                {/* Upload Controls */}
-                                <div className="repair-photos__upload">
-                                    <div className="repair-photos__type-toggle">
-                                        <button
-                                            className={`repair-photos__type-btn ${photoType === 'before' ? 'repair-photos__type-btn--active' : ''}`}
-                                            onClick={() => setPhotoType('before')}
-                                        >
-                                            Before
-                                        </button>
-                                        <button
-                                            className={`repair-photos__type-btn ${photoType === 'after' ? 'repair-photos__type-btn--active' : ''}`}
-                                            onClick={() => setPhotoType('after')}
-                                        >
-                                            After
-                                        </button>
+                                {repair.notes && (
+                                    <div>
+                                        <span className="repair-detail__info-label">Notes</span>
+                                        <div className="repair-detail__info-value--sm" style={{ marginTop: 4, lineHeight: 1.6 }}>{repair.notes}</div>
                                     </div>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/heic,image/heif,.jpg,.jpeg,.heic,.heif"
-                                        capture="environment"
-                                        onChange={handlePhotoUpload}
-                                        style={{ display: 'none' }}
-                                    />
-                                    <button
-                                        className="guru-btn guru-btn--primary guru-btn--sm"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={uploading}
-                                    >
-                                        {uploading ? 'Uploading...' : `Upload ${photoType} photo`}
-                                    </button>
-                                </div>
-
-                                {photoError && (
-                                    <div className="repair-photos__error">{photoError}</div>
-                                )}
-
-                                {/* Before Photos */}
-                                {beforePhotos.length > 0 && (
-                                    <div className="repair-photos__group">
-                                        <h3 className="repair-photos__group-label">Before</h3>
-                                        <div className="repair-photos__grid">
-                                            {beforePhotos.map(photo => (
-                                                <div key={photo.id} className="repair-photos__item">
-                                                    {photo.signedUrl && !photo.content_type?.includes('heic') && !photo.content_type?.includes('heif') ? (
-                                                        <img
-                                                            src={photo.signedUrl}
-                                                            alt={photo.file_name || 'Before photo'}
-                                                            className="repair-photos__img"
-                                                            onClick={() => setExpandedPhoto(photo)}
-                                                        />
-                                                    ) : (
-                                                        <div className="repair-photos__heic-placeholder" onClick={() => {
-                                                            if (photo.signedUrl) window.open(photo.signedUrl, '_blank');
-                                                        }}>
-                                                            <span className="repair-photos__heic-icon">HEIC</span>
-                                                            <span className="repair-photos__heic-name">{photo.file_name}</span>
-                                                        </div>
-                                                    )}
-                                                    <button
-                                                        className="repair-photos__delete-btn"
-                                                        onClick={() => handlePhotoDelete(photo)}
-                                                        title="Delete photo"
-                                                    >
-                                                        x
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* After Photos */}
-                                {afterPhotos.length > 0 && (
-                                    <div className="repair-photos__group">
-                                        <h3 className="repair-photos__group-label">After</h3>
-                                        <div className="repair-photos__grid">
-                                            {afterPhotos.map(photo => (
-                                                <div key={photo.id} className="repair-photos__item">
-                                                    {photo.signedUrl && !photo.content_type?.includes('heic') && !photo.content_type?.includes('heif') ? (
-                                                        <img
-                                                            src={photo.signedUrl}
-                                                            alt={photo.file_name || 'After photo'}
-                                                            className="repair-photos__img"
-                                                            onClick={() => setExpandedPhoto(photo)}
-                                                        />
-                                                    ) : (
-                                                        <div className="repair-photos__heic-placeholder" onClick={() => {
-                                                            if (photo.signedUrl) window.open(photo.signedUrl, '_blank');
-                                                        }}>
-                                                            <span className="repair-photos__heic-icon">HEIC</span>
-                                                            <span className="repair-photos__heic-name">{photo.file_name}</span>
-                                                        </div>
-                                                    )}
-                                                    <button
-                                                        className="repair-photos__delete-btn"
-                                                        onClick={() => handlePhotoDelete(photo)}
-                                                        title="Delete photo"
-                                                    >
-                                                        x
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Empty state */}
-                                {photos.length === 0 && !photosLoading && (
-                                    <div className="repair-photos__empty">
-                                        No photos uploaded yet. Use the upload button above to add before/after photos.
-                                    </div>
-                                )}
-
-                                {photosLoading && (
-                                    <div className="repair-photos__empty">Loading photos...</div>
-                                )}
-                            </div>
-
-                            {/* Expanded Photo Modal */}
-                            {expandedPhoto && (
-                                <div className="repair-photos__modal" onClick={() => setExpandedPhoto(null)}>
-                                    <div className="repair-photos__modal-content" onClick={(e) => e.stopPropagation()}>
-                                        <img
-                                            src={expandedPhoto.signedUrl}
-                                            alt={expandedPhoto.file_name || 'Repair photo'}
-                                            className="repair-photos__modal-img"
-                                        />
-                                        <div className="repair-photos__modal-info">
-                                            <span className={`guru-badge ${expandedPhoto.photo_type === 'before' ? 'guru-badge--warning' : 'guru-badge--success'}`}>
-                                                {expandedPhoto.photo_type === 'before' ? 'Before' : 'After'}
-                                            </span>
-                                            <span className="repair-photos__modal-name">{expandedPhoto.file_name}</span>
-                                        </div>
-                                        <button
-                                            className="repair-photos__modal-close"
-                                            onClick={() => setExpandedPhoto(null)}
-                                        >
-                                            Close
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Signature / Legal Docs */}
-                            <div className="repair-detail__section">
-                                <h2 className="repair-detail__section-title">Legal Documentation</h2>
-                                {signed ? (
-                                    <div style={{ textAlign: 'center', padding: 24, color: 'var(--guru-success)' }}>
-                                        <div style={{ fontSize: '2rem', marginBottom: 8 }}>✓</div>
-                                        <div style={{ fontWeight: 700, fontSize: '1.125rem' }}>Customer has signed the agreement</div>
-                                        <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: 4 }}>
-                                            Signed at {new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                                        </div>
-                                    </div>
-                                ) : showSignature ? (
-                                    <>
-                                        <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: 16, maxHeight: 200, overflowY: 'auto', padding: 16, background: 'var(--bg-app)', borderRadius: 12 }}>
-                                            {AGREEMENT_TEXT}
-                                        </div>
-                                        <div className="signature-area">
-                                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
-                                                Please sign below
-                                            </p>
-                                            <canvas ref={canvasRef} style={{ width: '100%', height: 200, border: '1px solid var(--border-subtle)', borderRadius: 12, cursor: 'crosshair' }}></canvas>
-                                            <div className="signature-area__actions">
-                                                <button className="guru-btn guru-btn--ghost guru-btn--sm" onClick={clearSignature}>
-                                                    Clear
-                                                </button>
-                                                <button className="guru-btn guru-btn--secondary guru-btn--sm" onClick={() => setShowSignature(false)}>
-                                                    Cancel
-                                                </button>
-                                                <button className="guru-btn guru-btn--primary guru-btn--sm" onClick={saveSignature}>
-                                                    Save Signature
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <button className="guru-btn guru-btn--primary guru-btn--full" onClick={() => setShowSignature(true)}>
-                                        Open Repair Agreement for Signature
-                                    </button>
                                 )}
                             </div>
                         </div>
 
-                        {/* Right Column — Status & Actions */}
-                        <div>
-                            <div className="repair-detail__section">
-                                <h2 className="repair-detail__section-title">Repair Status</h2>
+                        {/* RIGHT: Repair Status Stepper + Next Button */}
+                        <div className="repair-detail__section">
+                            <h2 className="repair-detail__section-title">Repair Status</h2>
 
-                                {/* Inventory status indicator */}
-                                {repair.parts_in_stock === true && (
-                                    <div className="tech-inventory-badge tech-inventory-badge--in-stock">
-                                        ✓ Parts in stock — no ordering needed
-                                    </div>
-                                )}
-                                {repair.parts_in_stock === false && (
-                                    <div className="tech-inventory-badge tech-inventory-badge--order">
-                                        📦 Parts need to be ordered
-                                    </div>
-                                )}
-
-                                <div className="status-stepper">
-                                    {statusFlow.map((status, i) => {
-                                        const isDone = i < currentStatusIndex;
-                                        const isActive = i === currentStatusIndex;
-                                        return (
-                                            <div key={status} className={`status-step ${isDone ? 'status-step--done' : ''} ${isActive ? 'status-step--active' : ''}`}>
-                                                <div className="status-step__dot"></div>
-                                                <span className="status-step__label">{REPAIR_STATUS_LABELS[status]}</span>
-                                            </div>
-                                        );
-                                    })}
+                            {repair.parts_in_stock === true && (
+                                <div className="tech-inventory-badge tech-inventory-badge--in-stock">
+                                    ✓ Parts in stock — no ordering needed
                                 </div>
-                                {repair.status !== REPAIR_STATUS.COMPLETE && (
-                                    <button
-                                        className="guru-btn guru-btn--primary guru-btn--full"
-                                        style={{ marginTop: 24 }}
-                                        onClick={advanceStatus}
-                                        disabled={updating}
-                                    >
-                                        {updating
-                                            ? 'Updating...'
-                                            : repair.status === REPAIR_STATUS.PENDING
-                                                ? 'Claim This Job'
-                                                : `Advance to: ${REPAIR_STATUS_LABELS[statusFlow[currentStatusIndex + 1]] || 'Done'}`
-                                        }
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Chat with Customer */}
-                            {currentUserId && (
-                                <div className="repair-detail__section" style={{ padding: 0, overflow: 'hidden' }}>
-                                    <RepairChat
-                                        repairId={id}
-                                        userId={currentUserId}
-                                        senderRole="technician"
-                                        senderName={techName}
-                                    />
+                            )}
+                            {repair.parts_in_stock === false && (
+                                <div className="tech-inventory-badge tech-inventory-badge--order">
+                                    📦 Parts need to be ordered
                                 </div>
                             )}
 
-                            <div className="repair-detail__section">
-                                <h2 className="repair-detail__section-title">Schedule</h2>
-                                <div>
-                                    <div className="repair-detail__row">
-                                        <span className="repair-detail__row-label">Date</span>
-                                        <span className="repair-detail__row-value">{repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
-                                    </div>
-                                    <div className="repair-detail__row">
-                                        <span className="repair-detail__row-label">Time</span>
-                                        <span className="repair-detail__row-value">{repair.schedule_time ? (TIME_SLOTS.find(s => s.id === repair.schedule_time)?.label + ' (' + TIME_SLOTS.find(s => s.id === repair.schedule_time)?.range + ')') : '—'}</span>
-                                    </div>
-                                </div>
+                            <div className="status-stepper">
+                                {statusFlow.map((status, i) => {
+                                    const isDone = i < currentStatusIndex;
+                                    const isActive = i === currentStatusIndex;
+                                    return (
+                                        <div key={status} className={`status-step ${isDone ? 'status-step--done' : ''} ${isActive ? 'status-step--active' : ''}`}>
+                                            <div className="status-step__dot"></div>
+                                            <span className="status-step__label">{REPAIR_STATUS_LABELS[status]}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
+                            {repair.status !== REPAIR_STATUS.COMPLETE && (
+                                <button
+                                    className="guru-btn guru-btn--primary guru-btn--full"
+                                    style={{ marginTop: 24 }}
+                                    onClick={handleAdvanceClick}
+                                    disabled={updating}
+                                >
+                                    {updating
+                                        ? 'Updating...'
+                                        : repair.status === REPAIR_STATUS.PENDING
+                                            ? 'Claim This Job'
+                                            : `Next: ${nextStatusLabel}`
+                                    }
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ════════════════════════════════════════════════
+                        INFO — Customer + Schedule (side by side)
+                        ════════════════════════════════════════════════ */}
+                    <div className="repair-detail__grid repair-detail__grid--info">
+
+                        {/* Customer Info */}
+                        <div className="repair-detail__section">
+                            <h2 className="repair-detail__section-title">Customer Information</h2>
+                            <div>
+                                <div className="repair-detail__row">
+                                    <span className="repair-detail__row-label">Name</span>
+                                    <span className="repair-detail__row-value">{customerName}</span>
+                                </div>
+                                <div className="repair-detail__row">
+                                    <span className="repair-detail__row-label">Phone</span>
+                                    <span className="repair-detail__row-value">{customerPhone}</span>
+                                </div>
+                                <div className="repair-detail__row">
+                                    <span className="repair-detail__row-label">Email</span>
+                                    <span className="repair-detail__row-value">{customerEmail}</span>
+                                </div>
+                                <div className="repair-detail__row">
+                                    <span className="repair-detail__row-label">Location</span>
+                                    <a
+                                        href={`http://maps.apple.com/?q=${encodeURIComponent(repair.address)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="repair-detail__row-value"
+                                        style={{ color: 'var(--guru-purple-600)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}
+                                    >
+                                        <span>{repair.address}</span>
+                                        <span style={{ fontSize: '0.875rem' }}>🗺️</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Schedule */}
+                        <div className="repair-detail__section">
+                            <h2 className="repair-detail__section-title">Schedule</h2>
+                            <div>
+                                <div className="repair-detail__row">
+                                    <span className="repair-detail__row-label">Date</span>
+                                    <span className="repair-detail__row-value">{repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
+                                </div>
+                                <div className="repair-detail__row">
+                                    <span className="repair-detail__row-label">Time</span>
+                                    <span className="repair-detail__row-value">{repair.schedule_time ? (TIME_SLOTS.find(s => s.id === repair.schedule_time)?.label + ' (' + TIME_SLOTS.find(s => s.id === repair.schedule_time)?.range + ')') : '—'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ════════════════════════════════════════════════
+                        MIDDLE — Parts to Order + Chat
+                        ════════════════════════════════════════════════ */}
+                    <div className="repair-detail__middle">
+
+                        {/* Parts to Order */}
+                        {issues.some(issueId => {
+                            const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
+                            const tierId = tierObj[issueId] || 'premium';
+                            return getPartsUrl(repair.device, issueId, tierId, repair.device_color);
+                        }) && (
                             <div className="repair-detail__section">
-                                <h2 className="repair-detail__section-title">Pricing Breakdown</h2>
-                                <div className="pricing-breakdown">
-                                    {/* Individual repair line items */}
+                                <h2 className="repair-detail__section-title">Parts to Order</h2>
+                                <div className="parts-links">
                                     {issues.map((issueId) => {
                                         const type = REPAIR_TYPES.find((t) => t.id === issueId);
                                         const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
                                         const tierId = tierObj[issueId] || 'premium';
                                         const tier = PARTS_TIERS.find((t) => t.id === tierId);
-                                        const price = getDeviceRepairPrice(repair.device, issueId, tierId) ?? SAMPLE_PRICING[issueId]?.[tierId] ?? 0;
+                                        const partsUrl = getPartsUrl(repair.device, issueId, tierId, repair.device_color);
+                                        if (!partsUrl) return null;
                                         return (
-                                            <div key={issueId} className="pricing-breakdown__line">
-                                                <div className="pricing-breakdown__item">
-                                                    <span>{type?.icon} {type?.name}</span>
-                                                    <span className="pricing-breakdown__tier-tag" style={{ color: tier?.color }}>
-                                                        {tier?.name}
-                                                    </span>
+                                            <a
+                                                key={issueId}
+                                                href={partsUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="parts-link"
+                                            >
+                                                <div className="parts-link__info">
+                                                    <span className="parts-link__icon">{type?.icon}</span>
+                                                    <div>
+                                                        <div className="parts-link__name">{type?.name}</div>
+                                                        <div className="parts-link__tier" style={{ color: tier?.color }}>{tier?.name}</div>
+                                                    </div>
                                                 </div>
-                                                <span className="pricing-breakdown__amount">${price}</span>
-                                            </div>
+                                                <span className="parts-link__arrow">Order →</span>
+                                            </a>
                                         );
                                     })}
-                                    <div className="pricing-breakdown__line">
-                                        <span>🚗 On-site Service Fee</span>
-                                        <span className="pricing-breakdown__amount">${repair.service_fee || SERVICE_FEE}</span>
-                                    </div>
-
-                                    <div className="pricing-breakdown__divider"></div>
-
-                                    {/* Subtotal */}
-                                    <div className="pricing-breakdown__line">
-                                        <span className="pricing-breakdown__label">Subtotal</span>
-                                        <span className="pricing-breakdown__amount">${repair.total_estimate}</span>
-                                    </div>
-
-                                    {/* Tax */}
-                                    <div className="pricing-breakdown__line">
-                                        <span className="pricing-breakdown__label">Sales Tax (8.25%)</span>
-                                        <span className="pricing-breakdown__amount">
-                                            ${(repair.total_estimate * TAX_RATE).toFixed(2)}
-                                        </span>
-                                    </div>
-
-                                    <div className="pricing-breakdown__divider pricing-breakdown__divider--strong"></div>
-
-                                    {/* Grand Total */}
-                                    <div className="pricing-breakdown__total">
-                                        <span>Total Due</span>
-                                        <span className="pricing-breakdown__total-amount">
-                                            ${(repair.total_estimate * (1 + TAX_RATE)).toFixed(2)}
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
-                            {/* Parts to Order */}
-                            {issues.some(issueId => {
+                        )}
+
+                        {/* Chat with Customer */}
+                        {currentUserId && (
+                            <div className="repair-detail__section" style={{ padding: 0, overflow: 'hidden' }}>
+                                <RepairChat
+                                    repairId={id}
+                                    userId={currentUserId}
+                                    senderRole="technician"
+                                    senderName={techName}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ════════════════════════════════════════════════
+                        BOTTOM — Payment / Pricing
+                        ════════════════════════════════════════════════ */}
+                    <div className="repair-detail__section repair-detail__payment">
+                        <h2 className="repair-detail__section-title">
+                            <span style={{ marginRight: 8 }}>💳</span>Payment &amp; Pricing
+                        </h2>
+                        <div className="pricing-breakdown">
+                            {issues.map((issueId) => {
+                                const type = REPAIR_TYPES.find((t) => t.id === issueId);
                                 const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
                                 const tierId = tierObj[issueId] || 'premium';
-                                return getPartsUrl(repair.device, issueId, tierId, repair.device_color);
-                            }) && (
-                                <div className="repair-detail__section">
-                                    <h2 className="repair-detail__section-title">Parts to Order</h2>
-                                    <div className="parts-links">
-                                        {issues.map((issueId) => {
-                                            const type = REPAIR_TYPES.find((t) => t.id === issueId);
-                                            const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
-                                            const tierId = tierObj[issueId] || 'premium';
-                                            const tier = PARTS_TIERS.find((t) => t.id === tierId);
-                                            const partsUrl = getPartsUrl(repair.device, issueId, tierId, repair.device_color);
-                                            if (!partsUrl) return null;
-                                            return (
-                                                <a
-                                                    key={issueId}
-                                                    href={partsUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="parts-link"
-                                                >
-                                                    <div className="parts-link__info">
-                                                        <span className="parts-link__icon">{type?.icon}</span>
-                                                        <div>
-                                                            <div className="parts-link__name">{type?.name}</div>
-                                                            <div className="parts-link__tier" style={{ color: tier?.color }}>{tier?.name}</div>
-                                                        </div>
-                                                    </div>
-                                                    <span className="parts-link__arrow">Order →</span>
-                                                </a>
-                                            );
-                                        })}
+                                const tier = PARTS_TIERS.find((t) => t.id === tierId);
+                                const price = getDeviceRepairPrice(repair.device, issueId, tierId) ?? SAMPLE_PRICING[issueId]?.[tierId] ?? 0;
+                                return (
+                                    <div key={issueId} className="pricing-breakdown__line">
+                                        <div className="pricing-breakdown__item">
+                                            <span>{type?.icon} {type?.name}</span>
+                                            <span className="pricing-breakdown__tier-tag" style={{ color: tier?.color }}>
+                                                {tier?.name}
+                                            </span>
+                                        </div>
+                                        <span className="pricing-breakdown__amount">${price}</span>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })}
+                            <div className="pricing-breakdown__line">
+                                <span>🚗 On-site Service Fee</span>
+                                <span className="pricing-breakdown__amount">${repair.service_fee || SERVICE_FEE}</span>
+                            </div>
+
+                            <div className="pricing-breakdown__divider"></div>
+
+                            <div className="pricing-breakdown__line">
+                                <span className="pricing-breakdown__label">Subtotal</span>
+                                <span className="pricing-breakdown__amount">${repair.total_estimate}</span>
+                            </div>
+
+                            <div className="pricing-breakdown__line">
+                                <span className="pricing-breakdown__label">Sales Tax (8.25%)</span>
+                                <span className="pricing-breakdown__amount">
+                                    ${(repair.total_estimate * TAX_RATE).toFixed(2)}
+                                </span>
+                            </div>
+
+                            <div className="pricing-breakdown__divider pricing-breakdown__divider--strong"></div>
+
+                            <div className="pricing-breakdown__total">
+                                <span>Total Due</span>
+                                <span className="pricing-breakdown__total-amount">
+                                    ${(repair.total_estimate * (1 + TAX_RATE)).toFixed(2)}
+                                </span>
+                            </div>
                         </div>
                     </div>
+
+                    {/* ════════════════════════════════════════════════
+                        EXTRAS — Photos + Legal
+                        ════════════════════════════════════════════════ */}
+
+                    {/* Repair Photos */}
+                    <div className="repair-detail__section">
+                        <h2 className="repair-detail__section-title">Repair Photos</h2>
+                        <p className="repair-photos__note">
+                            For technician records only — not visible to customers.
+                        </p>
+
+                        <div className="repair-photos__upload">
+                            <div className="repair-photos__type-toggle">
+                                <button
+                                    className={`repair-photos__type-btn ${photoType === 'before' ? 'repair-photos__type-btn--active' : ''}`}
+                                    onClick={() => setPhotoType('before')}
+                                >
+                                    Before
+                                </button>
+                                <button
+                                    className={`repair-photos__type-btn ${photoType === 'after' ? 'repair-photos__type-btn--active' : ''}`}
+                                    onClick={() => setPhotoType('after')}
+                                >
+                                    After
+                                </button>
+                            </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/heic,image/heif,.jpg,.jpeg,.heic,.heif"
+                                capture="environment"
+                                onChange={handlePhotoUpload}
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                className="guru-btn guru-btn--primary guru-btn--sm"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                            >
+                                {uploading ? 'Uploading...' : `Upload ${photoType} photo`}
+                            </button>
+                        </div>
+
+                        {photoError && (
+                            <div className="repair-photos__error">{photoError}</div>
+                        )}
+
+                        {beforePhotos.length > 0 && (
+                            <div className="repair-photos__group">
+                                <h3 className="repair-photos__group-label">Before</h3>
+                                <div className="repair-photos__grid">
+                                    {beforePhotos.map(photo => (
+                                        <div key={photo.id} className="repair-photos__item">
+                                            {photo.signedUrl && !photo.content_type?.includes('heic') && !photo.content_type?.includes('heif') ? (
+                                                <img
+                                                    src={photo.signedUrl}
+                                                    alt={photo.file_name || 'Before photo'}
+                                                    className="repair-photos__img"
+                                                    onClick={() => setExpandedPhoto(photo)}
+                                                />
+                                            ) : (
+                                                <div className="repair-photos__heic-placeholder" onClick={() => {
+                                                    if (photo.signedUrl) window.open(photo.signedUrl, '_blank');
+                                                }}>
+                                                    <span className="repair-photos__heic-icon">HEIC</span>
+                                                    <span className="repair-photos__heic-name">{photo.file_name}</span>
+                                                </div>
+                                            )}
+                                            <button
+                                                className="repair-photos__delete-btn"
+                                                onClick={() => handlePhotoDelete(photo)}
+                                                title="Delete photo"
+                                            >
+                                                x
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {afterPhotos.length > 0 && (
+                            <div className="repair-photos__group">
+                                <h3 className="repair-photos__group-label">After</h3>
+                                <div className="repair-photos__grid">
+                                    {afterPhotos.map(photo => (
+                                        <div key={photo.id} className="repair-photos__item">
+                                            {photo.signedUrl && !photo.content_type?.includes('heic') && !photo.content_type?.includes('heif') ? (
+                                                <img
+                                                    src={photo.signedUrl}
+                                                    alt={photo.file_name || 'After photo'}
+                                                    className="repair-photos__img"
+                                                    onClick={() => setExpandedPhoto(photo)}
+                                                />
+                                            ) : (
+                                                <div className="repair-photos__heic-placeholder" onClick={() => {
+                                                    if (photo.signedUrl) window.open(photo.signedUrl, '_blank');
+                                                }}>
+                                                    <span className="repair-photos__heic-icon">HEIC</span>
+                                                    <span className="repair-photos__heic-name">{photo.file_name}</span>
+                                                </div>
+                                            )}
+                                            <button
+                                                className="repair-photos__delete-btn"
+                                                onClick={() => handlePhotoDelete(photo)}
+                                                title="Delete photo"
+                                            >
+                                                x
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {photos.length === 0 && !photosLoading && (
+                            <div className="repair-photos__empty">
+                                No photos uploaded yet. Use the upload button above to add before/after photos.
+                            </div>
+                        )}
+
+                        {photosLoading && (
+                            <div className="repair-photos__empty">Loading photos...</div>
+                        )}
+                    </div>
+
+                    {/* Expanded Photo Modal */}
+                    {expandedPhoto && (
+                        <div className="repair-photos__modal" onClick={() => setExpandedPhoto(null)}>
+                            <div className="repair-photos__modal-content" onClick={(e) => e.stopPropagation()}>
+                                <img
+                                    src={expandedPhoto.signedUrl}
+                                    alt={expandedPhoto.file_name || 'Repair photo'}
+                                    className="repair-photos__modal-img"
+                                />
+                                <div className="repair-photos__modal-info">
+                                    <span className={`guru-badge ${expandedPhoto.photo_type === 'before' ? 'guru-badge--warning' : 'guru-badge--success'}`}>
+                                        {expandedPhoto.photo_type === 'before' ? 'Before' : 'After'}
+                                    </span>
+                                    <span className="repair-photos__modal-name">{expandedPhoto.file_name}</span>
+                                </div>
+                                <button
+                                    className="repair-photos__modal-close"
+                                    onClick={() => setExpandedPhoto(null)}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Legal Documentation */}
+                    <div className="repair-detail__section">
+                        <h2 className="repair-detail__section-title">Legal Documentation</h2>
+                        {signed ? (
+                            <div style={{ textAlign: 'center', padding: 24, color: 'var(--guru-success)' }}>
+                                <div style={{ fontSize: '2rem', marginBottom: 8 }}>✓</div>
+                                <div style={{ fontWeight: 700, fontSize: '1.125rem' }}>Customer has signed the agreement</div>
+                                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                                    Signed at {new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                </div>
+                            </div>
+                        ) : showSignature ? (
+                            <>
+                                <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: 16, maxHeight: 200, overflowY: 'auto', padding: 16, background: 'var(--bg-app)', borderRadius: 12 }}>
+                                    {AGREEMENT_TEXT}
+                                </div>
+                                <div className="signature-area">
+                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+                                        Please sign below
+                                    </p>
+                                    <canvas ref={canvasRef} style={{ width: '100%', height: 200, border: '1px solid var(--border-subtle)', borderRadius: 12, cursor: 'crosshair' }}></canvas>
+                                    <div className="signature-area__actions">
+                                        <button className="guru-btn guru-btn--ghost guru-btn--sm" onClick={clearSignature}>
+                                            Clear
+                                        </button>
+                                        <button className="guru-btn guru-btn--secondary guru-btn--sm" onClick={() => setShowSignature(false)}>
+                                            Cancel
+                                        </button>
+                                        <button className="guru-btn guru-btn--primary guru-btn--sm" onClick={saveSignature}>
+                                            Save Signature
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <button className="guru-btn guru-btn--primary guru-btn--full" onClick={() => setShowSignature(true)}>
+                                Open Repair Agreement for Signature
+                            </button>
+                        )}
+                    </div>
+
                 </div>
             </div>
         </>
