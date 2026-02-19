@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { REPAIR_STATUS, REPAIR_STATUS_LABELS } from '@shared/constants';
+import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_TYPES } from '@shared/constants';
 import { supabase } from '@shared/supabase';
 import TechNav from '../components/TechNav';
 
@@ -172,6 +172,10 @@ export default function QueuePage() {
                         ) : filteredRepairs.map((repair) => {
                             const customerName = repair.customers?.full_name || 'Unknown Customer';
                             const issues = Array.isArray(repair.issues) ? repair.issues : [];
+                            const issueLabels = issues.map(id => {
+                                const type = REPAIR_TYPES.find(t => t.id === id);
+                                return type ? `${type.icon} ${type.name}` : id;
+                            });
                             return (
                                 <Link to={`/repair/${repair.id}`} key={repair.id} className="repair-card animate-fade-in-up" style={{ position: 'relative' }}>
                                     {unreadCounts[repair.id] > 0 && (
@@ -182,7 +186,7 @@ export default function QueuePage() {
                                     <div className={`repair-card__priority repair-card__priority--${repair.status}`}></div>
                                     <div className="repair-card__info">
                                         <div className="repair-card__device">{repair.device}</div>
-                                        <div className="repair-card__issues">{issues.join(' · ')}</div>
+                                        <div className="repair-card__issues">{issueLabels.join(' · ')}</div>
                                         <div className="repair-card__meta">
                                             <span>👤 {customerName}</span>
                                             <span>📅 {repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
