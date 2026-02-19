@@ -572,6 +572,15 @@
   }
 }
 
+@media (max-width: 380px) {
+  /* Very small phones: stack back link + badge vertically */
+  .repair-detail__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}
+
 /* ─── Middle Section (Parts + Chat) ────────────────────────────── */
 
 .repair-detail__middle {
@@ -688,12 +697,16 @@
 
 .confirm-modal__actions .guru-btn {
   flex: 1;
-  max-width: 200px;
+  max-width: 220px;
+  white-space: normal;  /* override base nowrap so long labels wrap */
+  line-height: 1.4;
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
 }
 
 @media (max-width: 480px) {
   .confirm-modal {
-    padding: var(--space-6);
+    padding: var(--space-5) var(--space-4);
   }
 
   .confirm-modal__actions {

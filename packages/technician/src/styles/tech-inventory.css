@@ -288,6 +288,8 @@
   font-weight: 600;
   color: var(--dark-text-secondary);
   text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
 }
 
 .inventory-repair-type-btn--active .inventory-repair-type-btn__name {
