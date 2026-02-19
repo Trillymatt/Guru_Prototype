@@ -2,6 +2,42 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 
+/* ─── Daily Bible Verse ─────────────────────────────────────── */
+const VERSES = [
+    { ref: 'Proverbs 3:5–6', text: 'Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight.' },
+    { ref: 'Philippians 4:13', text: 'I can do all this through him who gives me strength.' },
+    { ref: 'Jeremiah 29:11', text: '"For I know the plans I have for you," declares the Lord, "plans to prosper you and not to harm you, plans to give you hope and a future."' },
+    { ref: 'Matthew 5:16', text: 'In the same way, let your light shine before others, that they may see your good deeds and glorify your Father in heaven.' },
+    { ref: 'Colossians 3:23', text: 'Whatever you do, work at it with all your heart, as working for the Lord, not for human masters.' },
+    { ref: 'Isaiah 41:10', text: 'So do not fear, for I am with you; do not be dismayed, for I am your God. I will strengthen you and help you.' },
+    { ref: 'Romans 8:28', text: 'And we know that in all things God works for the good of those who love him, who have been called according to his purpose.' },
+    { ref: 'Psalm 46:1', text: 'God is our refuge and strength, an ever-present help in trouble.' },
+    { ref: '1 Corinthians 10:31', text: 'So whether you eat or drink or whatever you do, do it all for the glory of God.' },
+    { ref: 'Galatians 5:13', text: 'You, my brothers and sisters, were called to be free. But do not use your freedom to indulge the flesh; rather, serve one another humbly in love.' },
+    { ref: 'Micah 6:8', text: 'He has shown you, O mortal, what is good. And what does the Lord require of you? To act justly and to love mercy and to walk humbly with your God.' },
+    { ref: 'Joshua 1:9', text: 'Have I not commanded you? Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go.' },
+];
+
+function getDailyVerse() {
+    const start = new Date(new Date().getFullYear(), 0, 0);
+    const diff = new Date() - start;
+    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+    return VERSES[dayOfYear % VERSES.length];
+}
+
+function BibleVerse() {
+    const verse = getDailyVerse();
+    return (
+        <div className="bible-verse">
+            <div className="bible-verse__inner">
+                <div className="bible-verse__cross" aria-hidden="true">✝</div>
+                <p className="bible-verse__text">"{verse.text}"</p>
+                <span className="bible-verse__ref">— {verse.ref}</span>
+            </div>
+        </div>
+    );
+}
+
 /* ─── Intersection Observer hook for scroll-reveal ──── */
 function useReveal() {
     const ref = useRef(null);
@@ -323,6 +359,22 @@ export default function LandingPage() {
                             <span className="hero__badge-dot"></span>
                             Now serving Dallas–Fort Worth
                         </div>
+                        <div className="hero__trust-strip">
+                            <div className="hero__trust-item">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Apple Certified Technicians
+                            </div>
+                            <div className="hero__trust-sep" aria-hidden="true">·</div>
+                            <div className="hero__trust-item">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Former Apple Employees
+                            </div>
+                            <div className="hero__trust-sep" aria-hidden="true">·</div>
+                            <div className="hero__trust-item">
+                                <span className="hero__trust-cross">✝</span>
+                                Faith-Based Company
+                            </div>
+                        </div>
                         <h1 className="hero__title">
                             iPhone repair,{' '}
                             <span className="hero__title-highlight">delivered to you.</span>
@@ -447,6 +499,67 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* ─── Trust & Team ─────────────────────────────────── */}
+            <section className="trust-section">
+                <div className="guru-container">
+                    <Reveal>
+                        <div className="section-header">
+                            <span className="section-label">Who We Are</span>
+                            <h2 className="section-title">Built on expertise & faith</h2>
+                            <p className="section-desc">
+                                Guru was founded by former Apple professionals who believe great repair
+                                work starts with integrity — and that integrity starts with faith.
+                            </p>
+                        </div>
+                    </Reveal>
+
+                    <div className="trust-grid">
+                        <Reveal className="trust-card trust-card--apple" delay={0}>
+                            <div className="trust-card__icon-wrap">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                            </div>
+                            <h3 className="trust-card__title">Apple Certified Technicians</h3>
+                            <p className="trust-card__desc">
+                                Every Guru technician holds Apple certification — the same credentials
+                                recognized at Apple Stores and Authorized Service Providers. You get
+                                Genius Bar expertise at your door.
+                            </p>
+                            <div className="trust-card__badge">Apple Certified</div>
+                        </Reveal>
+
+                        <Reveal className="trust-card trust-card--experience" delay={100}>
+                            <div className="trust-card__icon-wrap">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                                </svg>
+                            </div>
+                            <h3 className="trust-card__title">Former Apple Employees</h3>
+                            <p className="trust-card__desc">
+                                Our team comes directly from Apple — including Genius Bar technicians
+                                and Apple Store specialists. This isn't just training. It's firsthand,
+                                professional experience from inside Apple.
+                            </p>
+                            <div className="trust-card__badge">Apple Alumni</div>
+                        </Reveal>
+
+                        <Reveal className="trust-card trust-card--faith" delay={200}>
+                            <div className="trust-card__icon-wrap trust-card__icon-wrap--faith">
+                                <span className="trust-card__cross-icon">✝</span>
+                            </div>
+                            <h3 className="trust-card__title">A Faith-Based Company</h3>
+                            <p className="trust-card__desc">
+                                Guru was founded on Christian values — honesty, servant leadership,
+                                and a commitment to treating every customer the way we'd want to be
+                                treated. Our faith drives the way we work.
+                            </p>
+                            <div className="trust-card__badge trust-card__badge--faith">Integrity First</div>
+                        </Reveal>
+                    </div>
+                </div>
+            </section>
+
             {/* ─── CTA ──────────────────────────────────────────── */}
             <section className="cta">
                 <div className="guru-container">
@@ -464,6 +577,9 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* ─── Daily Bible Verse ────────────────────────────── */}
+            <BibleVerse />
+
             {/* ─── Footer ───────────────────────────────────────── */}
             <footer className="footer">
                 <div className="guru-container">
@@ -478,32 +594,30 @@ export default function LandingPage() {
                         <div>
                             <h4 className="footer__col-title">Company</h4>
                             <ul className="footer__links">
-                                <li><a href="#">About Us</a></li>
-                                <li><a href="#">Careers</a></li>
-                                <li><a href="#">Blog</a></li>
+                                <li><a href="#features">About Us</a></li>
                                 <li><a href="http://localhost:5174" target="_blank" rel="noopener noreferrer">Technician Portal →</a></li>
                             </ul>
                         </div>
                         <div>
                             <h4 className="footer__col-title">Support</h4>
                             <ul className="footer__links">
-                                <li><a href="#">FAQ</a></li>
-                                <li><a href="#">Contact</a></li>
-                                <li><a href="#">Warranty</a></li>
+                                <li><Link to="/faq">FAQ</Link></li>
+                                <li><a href="mailto:support@gururepair.com">Contact</a></li>
+                                <li><Link to="/legal?section=warranty">Warranty</Link></li>
                             </ul>
                         </div>
                         <div>
                             <h4 className="footer__col-title">Legal</h4>
                             <ul className="footer__links">
-                                <li><a href="#">Terms of Service</a></li>
-                                <li><a href="#">Privacy Policy</a></li>
-                                <li><a href="#">Repair Agreement</a></li>
+                                <li><Link to="/legal">Terms of Service</Link></li>
+                                <li><Link to="/legal?section=privacy">Privacy Policy</Link></li>
+                                <li><Link to="/legal?section=repair">Repair Agreement</Link></li>
                             </ul>
                         </div>
                     </div>
                     <div className="footer__bottom">
                         <span>© 2026 Guru Mobile Repair Solutions. All rights reserved.</span>
-                        <span>Built with 💜 for better repairs.</span>
+                        <span>Built with faith, purpose, and care.</span>
                     </div>
                 </div>
             </footer>
