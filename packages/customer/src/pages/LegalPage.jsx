@@ -431,6 +431,7 @@ export default function LegalPage() {
                             <ul className="footer__links">
                                 <li><Link to="/faq">FAQ</Link></li>
                                 <li><a href="mailto:support@gururepair.com">Contact</a></li>
+                                <li><button className="footer__link-btn" onClick={() => setActiveSection('warranty')}>Warranty</button></li>
                             </ul>
                         </div>
                         <div>
@@ -438,13 +439,13 @@ export default function LegalPage() {
                             <ul className="footer__links">
                                 <li><button className="footer__link-btn" onClick={() => setActiveSection('terms')}>Terms of Service</button></li>
                                 <li><button className="footer__link-btn" onClick={() => setActiveSection('privacy')}>Privacy Policy</button></li>
-                                <li><button className="footer__link-btn" onClick={() => setActiveSection('warranty')}>Warranty</button></li>
+                                <li><button className="footer__link-btn" onClick={() => setActiveSection('repair')}>Repair Agreement</button></li>
                             </ul>
                         </div>
                     </div>
                     <div className="footer__bottom">
                         <span>© 2026 Guru Mobile Repair Solutions. All rights reserved.</span>
-                        <span>Built with care, faith, and purpose.</span>
+                        <span>Built with faith, purpose, and care.</span>
                     </div>
                 </div>
             </footer>

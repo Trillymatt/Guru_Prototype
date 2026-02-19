@@ -304,6 +304,7 @@ export default function FAQPage() {
                             <ul className="footer__links">
                                 <li><Link to="/faq">FAQ</Link></li>
                                 <li><a href="mailto:support@gururepair.com">Contact</a></li>
+                                <li><Link to="/legal?section=warranty">Warranty</Link></li>
                             </ul>
                         </div>
                         <div>
@@ -311,13 +312,13 @@ export default function FAQPage() {
                             <ul className="footer__links">
                                 <li><Link to="/legal">Terms of Service</Link></li>
                                 <li><Link to="/legal?section=privacy">Privacy Policy</Link></li>
-                                <li><Link to="/legal?section=warranty">Warranty</Link></li>
+                                <li><Link to="/legal?section=repair">Repair Agreement</Link></li>
                             </ul>
                         </div>
                     </div>
                     <div className="footer__bottom">
                         <span>© 2026 Guru Mobile Repair Solutions. All rights reserved.</span>
-                        <span>Built with care, faith, and purpose.</span>
+                        <span>Built with faith, purpose, and care.</span>
                     </div>
                 </div>
             </footer>
