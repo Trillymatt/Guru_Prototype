@@ -27,7 +27,7 @@ import '../styles/repair-quiz.css';
 
 const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
 
-const REPAIR_TYPES_ALWAYS_AVAILABLE = new Set(['screen', 'battery', 'camera-rear', 'camera-front']);
+const REPAIR_TYPES_ALWAYS_AVAILABLE = new Set(['screen', 'battery', 'charging', 'camera-rear', 'camera-front', 'speaker', 'water-damage', 'buttons']);
 const BACK_GLASS_SUPPORTED_DEVICE_IDS = new Set([
     'iphone-14',
     'iphone-14-plus',
@@ -173,6 +173,7 @@ export default function RepairQuiz() {
     const [scheduleTime, setScheduleTime] = useState('');
     const [scheduleAddress, setScheduleAddress] = useState('');
     const [serviceAreaError, setServiceAreaError] = useState(null);
+    const [repairNotes, setRepairNotes] = useState('');
     // Quality must be explicitly chosen by customer
 
     // Auth / Contact State
@@ -513,6 +514,7 @@ export default function RepairQuiz() {
                     status: 'pending',
                     parts_in_stock: allPartsInStock === true,
                     device_color: backGlassColor || null,
+                    notes: repairNotes.trim() || null,
                 });
 
                 if (repairError) {
@@ -570,6 +572,7 @@ export default function RepairQuiz() {
                 status: 'pending',
                 parts_in_stock: allPartsInStock === true,
                 device_color: backGlassColor || null,
+                notes: repairNotes.trim() || null,
             });
 
             if (repairError) {
@@ -953,6 +956,26 @@ export default function RepairQuiz() {
                                     </div>
 
                                     <div className="quiz__section">
+                                        <h3 className="quiz__section-title">Additional Notes</h3>
+                                        <p className="quiz__subtitle" style={{ marginBottom: 8 }}>
+                                            Anything else the technician should know? (Optional)
+                                        </p>
+                                        <textarea
+                                            className="guru-input"
+                                            style={{ width: '100%', minHeight: 80, resize: 'vertical', fontFamily: 'inherit', fontSize: 'var(--font-size-base)' }}
+                                            placeholder="e.g. The screen flickers when it gets warm. The power button sticks."
+                                            value={repairNotes}
+                                            onChange={(e) => setRepairNotes(e.target.value)}
+                                            maxLength={500}
+                                        />
+                                        {repairNotes.length > 400 && (
+                                            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>
+                                                {500 - repairNotes.length} characters remaining
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="quiz__section">
                                         <h3 className="quiz__section-title">Signed in account</h3>
                                         <p className="quiz__subtitle" style={{ marginBottom: 16 }}>
                                             Booking as <strong>{contact.email || user.email}</strong>.
@@ -1034,6 +1057,26 @@ export default function RepairQuiz() {
                                     </div>
 
                                     {/* Contact Form */}
+                                    <div className="quiz__section">
+                                        <h3 className="quiz__section-title">Additional Notes</h3>
+                                        <p className="quiz__subtitle" style={{ marginBottom: 8 }}>
+                                            Anything else the technician should know? (Optional)
+                                        </p>
+                                        <textarea
+                                            className="guru-input"
+                                            style={{ width: '100%', minHeight: 80, resize: 'vertical', fontFamily: 'inherit', fontSize: 'var(--font-size-base)' }}
+                                            placeholder="e.g. The screen flickers when it gets warm. The power button sticks."
+                                            value={repairNotes}
+                                            onChange={(e) => setRepairNotes(e.target.value)}
+                                            maxLength={500}
+                                        />
+                                        {repairNotes.length > 400 && (
+                                            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>
+                                                {500 - repairNotes.length} characters remaining
+                                            </p>
+                                        )}
+                                    </div>
+
                                     <div className="quiz__section">
                                         <h3 className="quiz__section-title">Your contact details</h3>
                                         <form onSubmit={handleSendOtp}>

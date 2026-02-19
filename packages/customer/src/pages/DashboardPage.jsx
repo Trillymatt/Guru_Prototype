@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
-import { REPAIR_TYPES, REPAIR_STATUS_LABELS } from '@shared/constants';
+import { REPAIR_TYPES, REPAIR_STATUS_LABELS, TIME_SLOTS } from '@shared/constants';
 
 export default function DashboardPage() {
     const { user } = useAuth();
@@ -181,7 +181,7 @@ export default function DashboardPage() {
                                             </div>
                                             <div className="dash-card__row">
                                                 <span>Time</span>
-                                                <span>{repair.schedule_time || '—'}</span>
+                                                <span>{repair.schedule_time ? (TIME_SLOTS.find(s => s.id === repair.schedule_time)?.label || repair.schedule_time) : '—'}</span>
                                             </div>
                                             <div className="dash-card__row">
                                                 <span>Address</span>

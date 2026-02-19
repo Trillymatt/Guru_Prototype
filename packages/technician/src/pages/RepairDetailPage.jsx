@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, getPartsUrl, getDeviceRepairPrice, SERVICE_FEE, TAX_RATE, getRepairStatusFlow } from '@shared/constants';
+import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, getPartsUrl, getDeviceRepairPrice, SERVICE_FEE, TAX_RATE, getRepairStatusFlow, TIME_SLOTS } from '@shared/constants';
 import { supabase } from '@shared/supabase';
 import RepairChat from '@shared/RepairChat';
 import TechNav from '../components/TechNav';
@@ -253,13 +253,22 @@ export default function RepairDetailPage() {
         if (sigPadRef.current && !sigPadRef.current.isEmpty()) {
             const signatureData = sigPadRef.current.toDataURL();
 
-            // Upload signature to Supabase storage (if bucket exists)
+            // Upload signature to Supabase storage and link path to repair
             try {
                 const blob = await (await fetch(signatureData)).blob();
                 const fileName = `signatures/${id}_${Date.now()}.png`;
-                await supabase.storage
+                const { error: uploadError } = await supabase.storage
                     .from('repair-photos')
                     .upload(fileName, blob, { contentType: 'image/png' });
+
+                if (!uploadError) {
+                    // Save the signature path on the repair record
+                    await supabase
+                        .from('repairs')
+                        .update({ signature_path: fileName, updated_at: new Date().toISOString() })
+                        .eq('id', id);
+                    setRepair(prev => ({ ...prev, signature_path: fileName }));
+                }
             } catch (err) {
                 console.log('Signature storage skipped (bucket may not exist):', err.message);
             }
@@ -281,6 +290,11 @@ export default function RepairDetailPage() {
         if (nextIndex >= statusFlow.length) return;
 
         const nextStatus = statusFlow[nextIndex];
+        const nextLabel = REPAIR_STATUS_LABELS[nextStatus] || nextStatus;
+
+        const confirmed = window.confirm(`Advance status to "${nextLabel}"?`);
+        if (!confirmed) return;
+
         setUpdating(true);
 
         // If claiming a pending job, also assign the technician
@@ -677,7 +691,7 @@ export default function RepairDetailPage() {
                                     </div>
                                     <div className="repair-detail__row">
                                         <span className="repair-detail__row-label">Time</span>
-                                        <span className="repair-detail__row-value">{repair.schedule_time}</span>
+                                        <span className="repair-detail__row-value">{repair.schedule_time ? (TIME_SLOTS.find(s => s.id === repair.schedule_time)?.label + ' (' + TIME_SLOTS.find(s => s.id === repair.schedule_time)?.range + ')') : '—'}</span>
                                     </div>
                                 </div>
                             </div>
