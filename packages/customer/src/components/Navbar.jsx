@@ -55,6 +55,7 @@ export default function Navbar() {
                             <a href="#features" className="navbar__link" onClick={closeMenu}>Features</a>
                         </>
                     )}
+                    <Link to="/faq" className="navbar__link" onClick={closeMenu}>Support</Link>
                     <Link to="/repair" className="navbar__link" onClick={closeMenu}>Start Repair</Link>
                     <div className="navbar__mobile-actions">
                         {isLoggedIn ? (

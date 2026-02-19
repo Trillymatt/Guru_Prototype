@@ -1943,3 +1943,261 @@ body {
         padding: var(--space-6);
     }
 }
+
+/* ─── Hero Trust Strip ───────────────────────────────────── */
+
+.hero__trust-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.hero__trust-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.hero__trust-item svg {
+    color: #34d399;
+    flex-shrink: 0;
+}
+
+.hero__trust-cross {
+    font-size: 14px;
+    line-height: 1;
+    color: #fbbf24;
+}
+
+.hero__trust-sep {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: var(--font-size-lg);
+    font-weight: 300;
+    line-height: 1;
+}
+
+@media (max-width: 480px) {
+    .hero__trust-sep {
+        display: none;
+    }
+
+    .hero__trust-strip {
+        gap: var(--space-2);
+    }
+}
+
+/* ─── Section Desc ────────────────────────────────────────── */
+
+.section-desc {
+    font-size: var(--font-size-lg);
+    color: var(--guru-gray-500);
+    max-width: 580px;
+    margin: var(--space-3) auto 0;
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* ─── Trust Section ──────────────────────────────────────── */
+
+.trust-section {
+    padding: var(--space-20) 0;
+    background: var(--guru-white);
+}
+
+.trust-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+    margin-top: var(--space-12);
+}
+
+.trust-card {
+    background: var(--guru-white);
+    border: 1px solid var(--guru-gray-200);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    transition: box-shadow var(--transition-base), transform var(--transition-base), border-color var(--transition-base);
+}
+
+.trust-card:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-3px);
+}
+
+.trust-card--apple {
+    border-top: 3px solid #6366f1;
+}
+
+.trust-card--experience {
+    border-top: 3px solid var(--guru-purple-600);
+}
+
+.trust-card--faith {
+    border-top: 3px solid #f59e0b;
+    background: linear-gradient(160deg, #fffbeb 0%, var(--guru-white) 60%);
+}
+
+.trust-card__icon-wrap {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-xl);
+    background: var(--guru-purple-100);
+    color: var(--guru-purple-700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-2);
+}
+
+.trust-card--apple .trust-card__icon-wrap {
+    background: #eef2ff;
+    color: #4f46e5;
+}
+
+.trust-card__icon-wrap--faith {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.trust-card__cross-icon {
+    font-size: 24px;
+    line-height: 1;
+    color: #d97706;
+}
+
+.trust-card__title {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--guru-black);
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+
+.trust-card__desc {
+    font-size: var(--font-size-base);
+    color: var(--guru-gray-500);
+    line-height: 1.7;
+    flex: 1;
+    margin: 0;
+}
+
+.trust-card__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    background: var(--guru-purple-100);
+    color: var(--guru-purple-700);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    width: fit-content;
+    margin-top: auto;
+}
+
+.trust-card--apple .trust-card__badge {
+    background: #eef2ff;
+    color: #4338ca;
+}
+
+.trust-card__badge--faith {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+@media (max-width: 900px) {
+    .trust-grid {
+        grid-template-columns: 1fr;
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+/* ─── Bible Verse Banner ──────────────────────────────────── */
+
+.bible-verse {
+    background: linear-gradient(135deg, #1c1033 0%, #2d1b5e 50%, #1c1033 100%);
+    padding: var(--space-12) 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.bible-verse::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 60% 80% at 50% 50%, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.bible-verse__inner {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 var(--space-10);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.bible-verse__cross {
+    font-size: 28px;
+    color: #fbbf24;
+    opacity: 0.9;
+    line-height: 1;
+}
+
+.bible-verse__text {
+    font-size: clamp(var(--font-size-base), 2vw, var(--font-size-xl));
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.88);
+    line-height: 1.7;
+    margin: 0;
+}
+
+.bible-verse__ref {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: #fbbf24;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+@media (max-width: 480px) {
+    .bible-verse__inner {
+        padding: 0 var(--space-6);
+    }
+}
+
+/* ─── Footer button (for <button> elements acting as links) ─── */
+
+.footer__links .footer__link-btn {
+    color: var(--guru-gray-400);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    transition: color var(--transition-fast);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: inherit;
+}
+
+.footer__links .footer__link-btn:hover {
+    color: var(--guru-purple-400);
+}
