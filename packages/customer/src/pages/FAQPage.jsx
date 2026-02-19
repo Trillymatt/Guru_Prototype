@@ -152,7 +152,7 @@ export default function FAQPage() {
 
     return (
         <>
-            <Navbar />
+            <Navbar darkHero />
 
             {/* ─── Hero ─────────────────────────────────────────── */}
             <section className="faq-hero">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@shared/AuthProvider';
 
-export default function Navbar() {
+export default function Navbar({ darkHero = false }) {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const { user, loading, signOut } = useAuth();
@@ -34,7 +34,7 @@ export default function Navbar() {
     const isLoggedIn = !loading && user;
 
     return (
-        <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
+        <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${darkHero && !scrolled ? 'navbar--on-dark' : ''}`}>
             <div className="guru-container navbar__inner">
                 <Link to="/" className="navbar__logo" onClick={closeMenu}>
                     <div className="navbar__logo-icon">G</div>
