@@ -102,6 +102,37 @@ body {
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+/* Dark-hero pages: white logo/links until scrolled */
+.navbar--on-dark .navbar__logo,
+.navbar--on-dark .navbar__logo-name {
+    color: white;
+}
+
+.navbar--on-dark .navbar__logo-tagline {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.navbar--on-dark .navbar__logo-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.navbar--on-dark .navbar__link {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.navbar--on-dark .navbar__link:hover {
+    color: white;
+}
+
+.navbar--on-dark .navbar__link::after {
+    background: white;
+}
+
+.navbar--on-dark .navbar__mobile-toggle span {
+    background: white;
+}
+
 .navbar__inner {
     display: flex;
     align-items: center;
@@ -1961,22 +1992,22 @@ body {
     gap: var(--space-2);
     font-size: var(--font-size-sm);
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.85);
+    color: var(--guru-gray-700);
 }
 
 .hero__trust-item svg {
-    color: #34d399;
+    color: #16a34a;
     flex-shrink: 0;
 }
 
 .hero__trust-cross {
     font-size: 14px;
     line-height: 1;
-    color: #fbbf24;
+    color: #d97706;
 }
 
 .hero__trust-sep {
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--guru-gray-300);
     font-size: var(--font-size-lg);
     font-weight: 300;
     line-height: 1;
