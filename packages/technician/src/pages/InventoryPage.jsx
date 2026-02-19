@@ -76,6 +76,7 @@ export default function InventoryPage() {
         setFormTier('');
         setFormQuantity(0);
         setFormError('');
+        setActiveGen('');
     };
 
     const openAddForm = () => {
@@ -109,7 +110,6 @@ export default function InventoryPage() {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (editingId) {
-            // Update existing
             const { error } = await supabase
                 .from('parts_inventory')
                 .update({
@@ -124,7 +124,6 @@ export default function InventoryPage() {
                 return;
             }
         } else {
-            // Upsert (in case duplicate device+repair_type+tier)
             const { error } = await supabase
                 .from('parts_inventory')
                 .upsert({
@@ -145,7 +144,6 @@ export default function InventoryPage() {
         setSaving(false);
         resetForm();
 
-        // Refetch after save (realtime will also catch it, but immediate feedback is better)
         const { data } = await supabase
             .from('parts_inventory')
             .select('*')
@@ -154,6 +152,8 @@ export default function InventoryPage() {
     };
 
     const handleDelete = async (itemId) => {
+        const confirmed = window.confirm('Remove this part from inventory?');
+        if (!confirmed) return;
         const { error } = await supabase
             .from('parts_inventory')
             .delete()
@@ -199,7 +199,6 @@ export default function InventoryPage() {
 
     const sortedGens = [...DEVICE_GENERATIONS].reverse();
 
-    // Get devices filtered by active generation (for the form)
     const formDeviceOptions = activeGen
         ? getDevicesByGeneration(activeGen)
         : DEVICES;
@@ -209,11 +208,13 @@ export default function InventoryPage() {
             <TechNav />
             <div className="inventory-page">
                 <div className="guru-container">
+
+                    {/* ── Header ──────────────────────────────────── */}
                     <div className="inventory-header">
                         <div>
                             <h1 className="inventory-header__title">Parts Inventory</h1>
                             <p className="inventory-header__subtitle">
-                                Shared across all technicians. Changes are live.
+                                Shared across all technicians · Changes are live
                             </p>
                         </div>
                         <button
@@ -224,7 +225,7 @@ export default function InventoryPage() {
                         </button>
                     </div>
 
-                    {/* Stats */}
+                    {/* ── Stats ───────────────────────────────────── */}
                     <div className="inventory-stats">
                         <div className="inventory-stat">
                             <span className="inventory-stat__value">{totalItems}</span>
@@ -240,7 +241,7 @@ export default function InventoryPage() {
                         </div>
                     </div>
 
-                    {/* Filters */}
+                    {/* ── Filters ─────────────────────────────────── */}
                     <div className="inventory-filters">
                         <select
                             className="inventory-filter-select"
@@ -262,21 +263,39 @@ export default function InventoryPage() {
                                 <option key={t.id} value={t.id}>{t.icon} {t.name}</option>
                             ))}
                         </select>
+                        {(filterDevice || filterRepairType) && (
+                            <button
+                                className="guru-btn guru-btn--ghost guru-btn--sm"
+                                onClick={() => { setFilterDevice(''); setFilterRepairType(''); }}
+                            >
+                                Clear filters
+                            </button>
+                        )}
                     </div>
 
-                    {/* Add/Edit Form Modal */}
+                    {/* ── Add/Edit Form Modal ──────────────────────── */}
                     {showForm && (
                         <div className="inventory-form-overlay" onClick={() => resetForm()}>
                             <div className="inventory-form" onClick={(e) => e.stopPropagation()}>
-                                <h3 className="inventory-form__title">
-                                    {editingId ? 'Edit Part Quantity' : 'Add Part to Inventory'}
-                                </h3>
+
+                                <div className="inventory-form__header">
+                                    <h3 className="inventory-form__title">
+                                        {editingId ? 'Edit Part Quantity' : 'Add Part to Inventory'}
+                                    </h3>
+                                    <button
+                                        className="inventory-form__close"
+                                        onClick={resetForm}
+                                        aria-label="Close"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
 
                                 {!editingId && (
                                     <>
                                         {/* Device generation tabs */}
                                         <div className="inventory-form__field">
-                                            <label className="inventory-form__label">Device Generation</label>
+                                            <label className="inventory-form__label">Generation</label>
                                             <div className="inventory-gen-tabs">
                                                 {sortedGens.map(gen => (
                                                     <button
@@ -296,7 +315,7 @@ export default function InventoryPage() {
                                         <div className="inventory-form__field">
                                             <label className="inventory-form__label">Device</label>
                                             <select
-                                                className="inventory-filter-select"
+                                                className="inventory-filter-select inventory-filter-select--full"
                                                 value={formDevice}
                                                 onChange={(e) => setFormDevice(e.target.value)}
                                             >
@@ -309,16 +328,18 @@ export default function InventoryPage() {
 
                                         <div className="inventory-form__field">
                                             <label className="inventory-form__label">Repair Type</label>
-                                            <select
-                                                className="inventory-filter-select"
-                                                value={formRepairType}
-                                                onChange={(e) => setFormRepairType(e.target.value)}
-                                            >
-                                                <option value="">Select repair type...</option>
+                                            <div className="inventory-repair-type-grid">
                                                 {REPAIR_TYPES.filter(t => t.id !== 'software').map(t => (
-                                                    <option key={t.id} value={t.id}>{t.icon} {t.name}</option>
+                                                    <button
+                                                        key={t.id}
+                                                        className={`inventory-repair-type-btn ${formRepairType === t.id ? 'inventory-repair-type-btn--active' : ''}`}
+                                                        onClick={() => setFormRepairType(t.id)}
+                                                    >
+                                                        <span className="inventory-repair-type-btn__icon">{t.icon}</span>
+                                                        <span className="inventory-repair-type-btn__name">{t.name}</span>
+                                                    </button>
                                                 ))}
-                                            </select>
+                                            </div>
                                         </div>
 
                                         <div className="inventory-form__field">
@@ -343,11 +364,13 @@ export default function InventoryPage() {
 
                                 {editingId && (
                                     <div className="inventory-form__edit-info">
-                                        <span>{formDevice}</span>
-                                        <span>{REPAIR_TYPES.find(t => t.id === formRepairType)?.name || formRepairType}</span>
-                                        <span className="inventory-tier-tag" style={{ color: PARTS_TIERS.find(t => t.id === formTier)?.color }}>
-                                            {PARTS_TIERS.find(t => t.id === formTier)?.name}
-                                        </span>
+                                        <div className="inventory-form__edit-device">{formDevice}</div>
+                                        <div className="inventory-form__edit-meta">
+                                            <span>{REPAIR_TYPES.find(t => t.id === formRepairType)?.icon} {REPAIR_TYPES.find(t => t.id === formRepairType)?.name || formRepairType}</span>
+                                            <span className="inventory-tier-tag" style={{ color: PARTS_TIERS.find(t => t.id === formTier)?.color }}>
+                                                {PARTS_TIERS.find(t => t.id === formTier)?.name}
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
 
@@ -358,7 +381,7 @@ export default function InventoryPage() {
                                             className="inventory-qty-btn"
                                             onClick={() => setFormQuantity(Math.max(0, formQuantity - 1))}
                                         >
-                                            -
+                                            −
                                         </button>
                                         <input
                                             type="number"
@@ -396,98 +419,109 @@ export default function InventoryPage() {
                         </div>
                     )}
 
-                    {/* Inventory Table */}
+                    {/* ── Inventory Cards ──────────────────────────── */}
                     {loading ? (
-                        <div className="inventory-loading">Loading inventory...</div>
+                        <div className="inventory-loading">
+                            <div className="inventory-loading__icon">⏳</div>
+                            <div>Loading inventory...</div>
+                        </div>
                     ) : filteredInventory.length === 0 ? (
                         <div className="inventory-empty">
                             <div className="inventory-empty__icon">📦</div>
                             <h3>No parts in inventory</h3>
-                            <p>Add parts to track your stock levels. Customers will see part availability in real-time.</p>
+                            <p>
+                                {filterDevice || filterRepairType
+                                    ? 'No parts match the current filters. Try clearing them.'
+                                    : 'Add parts to track your stock levels. Customers will see part availability in real-time.'
+                                }
+                            </p>
+                            {(filterDevice || filterRepairType) && (
+                                <button
+                                    className="guru-btn guru-btn--ghost guru-btn--sm"
+                                    style={{ marginTop: 16 }}
+                                    onClick={() => { setFilterDevice(''); setFilterRepairType(''); }}
+                                >
+                                    Clear filters
+                                </button>
+                            )}
                         </div>
                     ) : (
-                        <div className="inventory-table-wrapper">
-                            <table className="inventory-table">
-                                <thead>
-                                    <tr>
-                                        <th>Device</th>
-                                        <th>Repair Type</th>
-                                        <th>Tier</th>
-                                        <th>Qty</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredInventory.map(item => {
-                                        const repairType = REPAIR_TYPES.find(t => t.id === item.repair_type);
-                                        const tier = PARTS_TIERS.find(t => t.id === item.parts_tier);
-                                        const isOutOfStock = item.quantity === 0;
-                                        const isLowStock = item.quantity > 0 && item.quantity <= 2;
+                        <div className="inventory-card-grid">
+                            {filteredInventory.map(item => {
+                                const repairType = REPAIR_TYPES.find(t => t.id === item.repair_type);
+                                const tier = PARTS_TIERS.find(t => t.id === item.parts_tier);
+                                const isOutOfStock = item.quantity === 0;
+                                const isLowStock = item.quantity > 0 && item.quantity <= 2;
 
-                                        return (
-                                            <tr key={item.id} className={isOutOfStock ? 'inventory-row--out' : ''}>
-                                                <td className="inventory-cell--device">{item.device}</td>
-                                                <td>
-                                                    <span className="inventory-repair-name">
-                                                        {repairType?.icon} {repairType?.name || item.repair_type}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span className="inventory-tier-tag" style={{ color: tier?.color }}>
-                                                        {tier?.name || item.parts_tier}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div className="inventory-qty-controls">
-                                                        <button
-                                                            className="inventory-qty-sm-btn"
-                                                            onClick={() => handleQuickQuantityChange(item, -1)}
-                                                            disabled={item.quantity === 0}
-                                                        >
-                                                            -
-                                                        </button>
-                                                        <span className="inventory-qty-display">{item.quantity}</span>
-                                                        <button
-                                                            className="inventory-qty-sm-btn"
-                                                            onClick={() => handleQuickQuantityChange(item, 1)}
-                                                        >
-                                                            +
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    {isOutOfStock ? (
-                                                        <span className="inventory-status inventory-status--out">Out of Stock</span>
-                                                    ) : isLowStock ? (
-                                                        <span className="inventory-status inventory-status--low">Low Stock</span>
-                                                    ) : (
-                                                        <span className="inventory-status inventory-status--in">In Stock</span>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    <div className="inventory-actions">
-                                                        <button
-                                                            className="inventory-action-btn"
-                                                            onClick={() => openEditForm(item)}
-                                                            title="Edit quantity"
-                                                        >
-                                                            ✏️
-                                                        </button>
-                                                        <button
-                                                            className="inventory-action-btn inventory-action-btn--delete"
-                                                            onClick={() => handleDelete(item.id)}
-                                                            title="Remove from inventory"
-                                                        >
-                                                            🗑️
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className={`inventory-card ${isOutOfStock ? 'inventory-card--out' : isLowStock ? 'inventory-card--low' : 'inventory-card--in'}`}
+                                    >
+                                        {/* Stock status bar */}
+                                        <div className={`inventory-card__bar ${isOutOfStock ? 'inventory-card__bar--out' : isLowStock ? 'inventory-card__bar--low' : 'inventory-card__bar--in'}`} />
+
+                                        <div className="inventory-card__body">
+                                            {/* Device name */}
+                                            <div className="inventory-card__device">{item.device}</div>
+
+                                            {/* Repair type + tier */}
+                                            <div className="inventory-card__meta">
+                                                <span className="inventory-card__repair">
+                                                    {repairType?.icon} {repairType?.name || item.repair_type}
+                                                </span>
+                                                <span
+                                                    className="inventory-card__tier"
+                                                    style={{ color: tier?.color }}
+                                                >
+                                                    {tier?.name || item.parts_tier}
+                                                </span>
+                                            </div>
+
+                                            {/* Quantity controls */}
+                                            <div className="inventory-card__qty-row">
+                                                <div className="inventory-qty-controls">
+                                                    <button
+                                                        className="inventory-qty-sm-btn"
+                                                        onClick={() => handleQuickQuantityChange(item, -1)}
+                                                        disabled={item.quantity === 0}
+                                                    >
+                                                        −
+                                                    </button>
+                                                    <span className="inventory-qty-display">{item.quantity}</span>
+                                                    <button
+                                                        className="inventory-qty-sm-btn"
+                                                        onClick={() => handleQuickQuantityChange(item, 1)}
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                                <span className={`inventory-status ${isOutOfStock ? 'inventory-status--out' : isLowStock ? 'inventory-status--low' : 'inventory-status--in'}`}>
+                                                    {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
+                                                </span>
+                                            </div>
+
+                                            {/* Card actions */}
+                                            <div className="inventory-card__actions">
+                                                <button
+                                                    className="inventory-card__action-btn"
+                                                    onClick={() => openEditForm(item)}
+                                                    title="Edit quantity"
+                                                >
+                                                    Edit Qty
+                                                </button>
+                                                <button
+                                                    className="inventory-card__action-btn inventory-card__action-btn--delete"
+                                                    onClick={() => handleDelete(item.id)}
+                                                    title="Remove from inventory"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

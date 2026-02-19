@@ -120,9 +120,17 @@ export default function QueuePage() {
         };
     }, []);
 
+    // Sort repairs by schedule_date ascending (closest date first), nulls at end
+    const sortedRepairs = [...repairs].sort((a, b) => {
+        if (!a.schedule_date && !b.schedule_date) return 0;
+        if (!a.schedule_date) return 1;
+        if (!b.schedule_date) return -1;
+        return new Date(a.schedule_date) - new Date(b.schedule_date);
+    });
+
     const filteredRepairs = filter === 'all'
-        ? repairs
-        : repairs.filter((r) => r.status === filter);
+        ? sortedRepairs
+        : sortedRepairs.filter((r) => r.status === filter);
 
     return (
         <>
