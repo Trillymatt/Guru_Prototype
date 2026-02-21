@@ -27,7 +27,7 @@ import '../styles/repair-quiz.css';
 
 const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
 
-const REPAIR_TYPES_ALWAYS_AVAILABLE = new Set(['screen', 'battery', 'charging', 'camera-rear', 'camera-front', 'speaker', 'water-damage', 'buttons']);
+const REPAIR_TYPES_ALWAYS_AVAILABLE = new Set(['screen', 'battery', 'camera-rear', 'camera-front']);
 const BACK_GLASS_SUPPORTED_DEVICE_IDS = new Set([
     'iphone-14',
     'iphone-14-plus',

@@ -46,7 +46,7 @@ const FAQ_CATEGORIES = [
         faqs: [
             {
                 q: 'What types of repairs do you perform?',
-                a: 'We repair: Cracked screens, battery replacement, charging port, back glass, cameras (front and rear), speaker, microphone, water damage assessment, buttons (home, volume, side), and software/performance issues. All repairs are completed on-site at your location.'
+                a: 'We repair: Cracked screens, battery replacement, back glass, and cameras (front and rear). All repairs are completed on-site at your location.'
             },
             {
                 q: 'How long does a repair take?',

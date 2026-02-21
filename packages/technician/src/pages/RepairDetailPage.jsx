@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, getPartsUrl, getDeviceRepairPrice, SERVICE_FEE, LABOR_FEE, TAX_RATE, TIP_PRESETS, getRepairStatusFlow, TIME_SLOTS } from '@shared/constants';
 import { supabase } from '@shared/supabase';
 import { useLocationBroadcast } from '@shared/useLocationBroadcast';
@@ -25,11 +25,13 @@ I agree to these terms and authorize the repair to proceed.`;
 
 export default function RepairDetailPage() {
     const { id } = useParams();
-    const navigate = useNavigate();
     const [repair, setRepair] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [showSignature, setShowSignature] = useState(false);
-    const [signed, setSigned] = useState(false);
+    // Intake signature (captured when tech arrives, before repair starts)
+    const [showIntakeSignature, setShowIntakeSignature] = useState(false);
+    const [intakeSigned, setIntakeSigned] = useState(false);
+    // Completion signature (captured after payment, inside the payment modal)
+    const [completionSigned, setCompletionSigned] = useState(false);
     const [updating, setUpdating] = useState(false);
     const [currentUserId, setCurrentUserId] = useState(null);
     const [techName, setTechName] = useState('');
@@ -52,6 +54,7 @@ export default function RepairDetailPage() {
     const [tipAmount, setTipAmount] = useState(0);
     const [customTip, setCustomTip] = useState('');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [paymentModalStep, setPaymentModalStep] = useState('tip'); // 'tip' | 'payment' | 'signature'
     const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'stripe'
     const [paymentProcessing, setPaymentProcessing] = useState(false);
     const [paymentError, setPaymentError] = useState('');
@@ -71,7 +74,7 @@ export default function RepairDetailPage() {
         isSharing: isLocationSharing,
         error: locationError,
         position: techPosition,
-        permissionState: locationPermission,
+
         requestPermission: requestLocationPermission,
         stopSharing: stopLocationSharing,
     } = useLocationBroadcast({
@@ -118,6 +121,8 @@ export default function RepairDetailPage() {
             }
 
             setRepair(data);
+            setIntakeSigned(!!data.signature_path);
+            setCompletionSigned(!!data.completion_signature_path);
             setLoading(false);
         };
 
@@ -141,10 +146,16 @@ export default function RepairDetailPage() {
         };
     }, [id]);
 
-    // Initialize signature pad
+    // Initialize signature pad — shared canvas for intake and completion signatures
     useEffect(() => {
-        if (showSignature && canvasRef.current && !sigPadRef.current) {
+        const needsSig = showIntakeSignature || (showPaymentModal && paymentModalStep === 'signature');
+        if (!needsSig) {
+            sigPadRef.current = null;
+            return;
+        }
+        if (canvasRef.current && !sigPadRef.current) {
             import('signature_pad').then(({ default: SignaturePad }) => {
+                if (!canvasRef.current) return;
                 sigPadRef.current = new SignaturePad(canvasRef.current, {
                     backgroundColor: 'rgb(255, 255, 255)',
                     penColor: 'rgb(10, 10, 10)',
@@ -156,7 +167,7 @@ export default function RepairDetailPage() {
                 canvas.getContext('2d').scale(ratio, ratio);
             });
         }
-    }, [showSignature]);
+    }, [showIntakeSignature, showPaymentModal, paymentModalStep]);
 
     // Fetch repair photos
     useEffect(() => {
@@ -279,31 +290,71 @@ export default function RepairDetailPage() {
         }
     };
 
-    const saveSignature = async () => {
-        if (sigPadRef.current && !sigPadRef.current.isEmpty()) {
-            const signatureData = sigPadRef.current.toDataURL();
-
-            try {
-                const blob = await (await fetch(signatureData)).blob();
-                const fileName = `signatures/${id}_${Date.now()}.png`;
-                const { error: uploadError } = await supabase.storage
-                    .from('repair-photos')
-                    .upload(fileName, blob, { contentType: 'image/png' });
-
-                if (!uploadError) {
-                    await supabase
-                        .from('repairs')
-                        .update({ signature_path: fileName, updated_at: new Date().toISOString() })
-                        .eq('id', id);
-                    setRepair(prev => ({ ...prev, signature_path: fileName }));
-                }
-            } catch (err) {
-                console.log('Signature storage skipped (bucket may not exist):', err.message);
+    const saveIntakeSignature = async () => {
+        if (!sigPadRef.current || sigPadRef.current.isEmpty()) return;
+        const signatureData = sigPadRef.current.toDataURL();
+        try {
+            const blob = await (await fetch(signatureData)).blob();
+            const fileName = `signatures/${id}_intake_${Date.now()}.png`;
+            const { error: uploadError } = await supabase.storage
+                .from('repair-photos')
+                .upload(fileName, blob, { contentType: 'image/png' });
+            if (!uploadError) {
+                await supabase
+                    .from('repairs')
+                    .update({ signature_path: fileName, updated_at: new Date().toISOString() })
+                    .eq('id', id);
+                setRepair(prev => ({ ...prev, signature_path: fileName }));
             }
-
-            setSigned(true);
-            setShowSignature(false);
+        } catch (err) {
+            console.log('Intake signature storage skipped:', err.message);
         }
+        setIntakeSigned(true);
+        setShowIntakeSignature(false);
+    };
+
+    const saveCompletionSignature = async () => {
+        if (!sigPadRef.current || sigPadRef.current.isEmpty()) return;
+        const signatureData = sigPadRef.current.toDataURL();
+        try {
+            const blob = await (await fetch(signatureData)).blob();
+            const fileName = `signatures/${id}_completion_${Date.now()}.png`;
+            const { error: uploadError } = await supabase.storage
+                .from('repair-photos')
+                .upload(fileName, blob, { contentType: 'image/png' });
+            if (!uploadError) {
+                await supabase
+                    .from('repairs')
+                    .update({ completion_signature_path: fileName, updated_at: new Date().toISOString() })
+                    .eq('id', id);
+                setRepair(prev => ({ ...prev, completion_signature_path: fileName }));
+            }
+        } catch (err) {
+            console.log('Completion signature storage skipped:', err.message);
+        }
+        setCompletionSigned(true);
+        await finalizeRepair();
+    };
+
+    const closePaymentModal = () => {
+        setShowPaymentModal(false);
+        setPaymentModalStep('tip');
+        setPaymentMethod(null);
+        setStripePhase('idle');
+        setStripeClientSecret(null);
+        setStripeInstance(null);
+        setStripeElements(null);
+        setPaymentError('');
+    };
+
+    // Called after payment + completion signature — marks the repair as complete
+    const finalizeRepair = async () => {
+        setUpdating(true);
+        const updates = { status: REPAIR_STATUS.COMPLETE, updated_at: new Date().toISOString() };
+        const { error } = await supabase.from('repairs').update(updates).eq('id', repair.id);
+        if (!error) setRepair(prev => ({ ...prev, ...updates }));
+        setUpdating(false);
+        closePaymentModal();
     };
 
     // Get the correct status flow for this repair
@@ -317,9 +368,22 @@ export default function RepairDetailPage() {
         if (nextIndex >= statusFlow.length) return;
 
         const nextStatus = statusFlow[nextIndex];
+
+        // Completing a repair → trigger payment + signature flow instead of a simple confirm
+        if (nextStatus === REPAIR_STATUS.COMPLETE) {
+            setPaymentModalStep('tip');
+            setPaymentMethod(null);
+            setPaymentError('');
+            setStripePhase('idle');
+            setStripeClientSecret(null);
+            setStripeInstance(null);
+            setStripeElements(null);
+            setShowPaymentModal(true);
+            return;
+        }
+
         const nextLabel = REPAIR_STATUS_LABELS[nextStatus] || nextStatus;
         const isClaim = repair.status === REPAIR_STATUS.PENDING;
-
         setConfirmModal({ nextStatus, nextLabel, isClaim });
     };
 
@@ -344,6 +408,11 @@ export default function RepairDetailPage() {
 
         if (!error) {
             setRepair(prev => ({ ...prev, ...updates }));
+
+            // Auto-show intake signature when tech arrives
+            if (nextStatus === REPAIR_STATUS.ARRIVED) {
+                setShowIntakeSignature(true);
+            }
 
             // Show location sharing prompt when moving to en_route
             if (nextStatus === REPAIR_STATUS.EN_ROUTE) {
@@ -393,7 +462,9 @@ export default function RepairDetailPage() {
         setTipAmount(sanitized ? parseFloat(sanitized) || 0 : 0);
     };
 
+    // Used by inline "Pay with Cash/Card" buttons (fallback when repair already complete)
     const openPaymentModal = (method) => {
+        setPaymentModalStep('payment');
         setPaymentMethod(method);
         setPaymentError('');
         setStripePhase('idle');
@@ -407,7 +478,6 @@ export default function RepairDetailPage() {
         setPaymentProcessing(true);
         setPaymentError('');
         try {
-            const { grandTotal } = computeTotal();
             const { error } = await supabase
                 .from('repairs')
                 .update({
@@ -427,7 +497,8 @@ export default function RepairDetailPage() {
                 tip_amount: tipAmount,
                 paid_at: new Date().toISOString(),
             }));
-            setShowPaymentModal(false);
+            // Advance to completion signature step
+            setPaymentModalStep('signature');
         } catch (err) {
             console.error('Cash payment error:', err);
             setPaymentError(err.message || 'Failed to record cash payment.');
@@ -443,16 +514,23 @@ export default function RepairDetailPage() {
         try {
             const { grandTotal } = computeTotal();
 
-            const { data: fnData, error: fnError } = await supabase.functions.invoke('create-payment-intent', {
-                body: {
-                    repair_id: repair.id,
-                    amount: grandTotal,
-                    tip_amount: tipAmount,
-                },
-            });
-
-            if (fnError) throw fnError;
-            if (fnData?.error) throw new Error(fnData.error);
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-payment-intent`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`,
+                        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                    },
+                    body: JSON.stringify({ repair_id: repair.id, amount: grandTotal, tip_amount: tipAmount }),
+                }
+            );
+            const fnData = await response.json();
+            if (!response.ok) {
+                throw new Error(fnData.details || fnData.error || `Payment service error (${response.status})`);
+            }
 
             const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
             if (!stripePublicKey) throw new Error('Stripe public key not configured. Add VITE_STRIPE_PUBLIC_KEY to your .env file.');
@@ -500,7 +578,6 @@ export default function RepairDetailPage() {
         const redirectStatus = urlParams.get('redirect_status');
 
         if (paymentIntent && redirectStatus === 'succeeded') {
-            // Mark payment as completed
             supabase
                 .from('repairs')
                 .update({
@@ -516,10 +593,12 @@ export default function RepairDetailPage() {
                             payment_status: 'completed',
                             paid_at: new Date().toISOString(),
                         }) : prev);
+                        // Show completion signature after Stripe redirect
+                        setPaymentModalStep('signature');
+                        setShowPaymentModal(true);
                     }
                 });
 
-            // Clean URL params
             window.history.replaceState({}, '', window.location.pathname);
         }
     }, [id]);
@@ -870,8 +949,8 @@ export default function RepairDetailPage() {
                         ════════════════════════════════════════════════ */}
                     <div className="repair-detail__middle">
 
-                        {/* Parts to Order */}
-                        {issues.some(issueId => {
+                        {/* Parts to Order — only visible while parts are being ordered */}
+                        {repair.status === REPAIR_STATUS.PARTS_ORDERED && issues.some(issueId => {
                             const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
                             const tierId = tierObj[issueId] || 'premium';
                             return getPartsUrl(repair.device, issueId, tierId, repair.device_color);
@@ -1088,125 +1167,208 @@ export default function RepairDetailPage() {
                         )}
                     </div>
 
-                    {/* ── Payment Confirmation Modal ─────────────────────── */}
+                    {/* ── Payment Wizard Modal (tip → method → signature) ── */}
                     {showPaymentModal && (
                         <div
                             className="confirm-modal-overlay"
                             onClick={() => {
-                                if (paymentProcessing || stripePhase === 'loading' || stripePhase === 'confirming') return;
-                                setShowPaymentModal(false);
-                                setStripePhase('idle');
-                                setStripeClientSecret(null);
-                                setStripeInstance(null);
-                                setStripeElements(null);
-                                setPaymentError('');
+                                // Cannot dismiss during processing or on the final signature step
+                                if (paymentProcessing || stripePhase === 'loading' || stripePhase === 'confirming' || paymentModalStep === 'signature') return;
+                                closePaymentModal();
                             }}
                         >
                             <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
-                                <div className="confirm-modal__icon">
-                                    {paymentMethod === 'cash' ? '💵' : '💳'}
-                                </div>
-                                <h3 className="confirm-modal__title">
-                                    {paymentMethod === 'cash'
-                                        ? 'Confirm Cash Payment'
-                                        : stripePhase === 'card_entry' || stripePhase === 'confirming'
-                                            ? 'Enter Card Details'
-                                            : 'Process Card Payment'
-                                    }
-                                </h3>
 
-                                {/* Description — only on initial confirmation screen */}
-                                {(paymentMethod === 'cash' || stripePhase === 'idle') && (
-                                    <p className="confirm-modal__message">
-                                        {paymentMethod === 'cash'
-                                            ? 'Confirm that you have collected the cash payment from the customer.'
-                                            : 'The customer will enter their card details via Stripe\'s secure form.'
-                                        }
-                                    </p>
-                                )}
-
-                                {/* Amount summary — cash always, stripe only on idle phase */}
-                                {(paymentMethod === 'cash' || stripePhase === 'idle') && (() => {
+                                {/* ── Step 1: Tip selection ── */}
+                                {paymentModalStep === 'tip' && (() => {
                                     const { grandTotal } = computeTotal();
                                     return (
-                                        <div className="payment-modal__summary">
-                                            <div className="payment-modal__row">
-                                                <span>Repair Total</span>
-                                                <span>${grandTotal.toFixed(2)}</span>
-                                            </div>
-                                            {tipAmount > 0 && (
+                                        <>
+                                            <div className="confirm-modal__icon">💳</div>
+                                            <h3 className="confirm-modal__title">Collect Payment</h3>
+                                            <p className="confirm-modal__message">Hand the device to the customer to add a tip.</p>
+                                            <div className="payment-modal__summary">
                                                 <div className="payment-modal__row">
-                                                    <span>Tip</span>
-                                                    <span>${tipAmount.toFixed(2)}</span>
+                                                    <span>Repair Total</span>
+                                                    <span>${grandTotal.toFixed(2)}</span>
                                                 </div>
-                                            )}
-                                            <div className="payment-modal__row payment-modal__row--total">
-                                                <span>Amount to Collect</span>
-                                                <span>${(grandTotal + tipAmount).toFixed(2)}</span>
+                                                {tipAmount > 0 && (
+                                                    <div className="payment-modal__row">
+                                                        <span>Tip</span>
+                                                        <span>${tipAmount.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                <div className="payment-modal__row payment-modal__row--total">
+                                                    <span>Total</span>
+                                                    <span>${(grandTotal + tipAmount).toFixed(2)}</span>
+                                                </div>
                                             </div>
-                                        </div>
+                                            <div className="tip-section" style={{ marginBottom: 0 }}>
+                                                <span className="tip-section__label">Add a Tip</span>
+                                                <div className="tip-section__presets">
+                                                    {TIP_PRESETS.map((preset) => (
+                                                        <button
+                                                            key={preset.value}
+                                                            className={`tip-section__btn ${tipAmount === preset.value && !customTip ? 'tip-section__btn--active' : ''}`}
+                                                            onClick={() => { setTipAmount(preset.value); setCustomTip(''); }}
+                                                        >
+                                                            {preset.label}
+                                                        </button>
+                                                    ))}
+                                                    <div className="tip-section__custom">
+                                                        <span className="tip-section__custom-prefix">$</span>
+                                                        <input
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            placeholder="Other"
+                                                            value={customTip}
+                                                            onChange={handleCustomTipChange}
+                                                            className="tip-section__custom-input"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="confirm-modal__actions">
+                                                <button className="guru-btn guru-btn--ghost" onClick={closePaymentModal}>Cancel</button>
+                                                <button className="guru-btn guru-btn--primary" onClick={() => setPaymentModalStep('payment')}>
+                                                    Continue →
+                                                </button>
+                                            </div>
+                                        </>
                                     );
                                 })()}
 
-                                {/* Stripe PaymentElement container — rendered while loading so ref is ready */}
-                                {paymentMethod === 'stripe' && stripePhase !== 'idle' && (
-                                    <div className="stripe-payment-element-wrapper">
-                                        {stripePhase === 'loading' && (
-                                            <div className="stripe-loading">Loading secure payment form...</div>
-                                        )}
-                                        <div
-                                            ref={stripeElementRef}
-                                            style={{ display: stripePhase === 'loading' ? 'none' : 'block', marginTop: 8 }}
+                                {/* ── Step 2a: Method selection ── */}
+                                {paymentModalStep === 'payment' && paymentMethod === null && (() => {
+                                    const { grandTotal } = computeTotal();
+                                    return (
+                                        <>
+                                            <div className="confirm-modal__icon">💳</div>
+                                            <h3 className="confirm-modal__title">How would you like to pay?</h3>
+                                            <div className="payment-modal__summary">
+                                                <div className="payment-modal__row payment-modal__row--total">
+                                                    <span>Amount Due</span>
+                                                    <span>${(grandTotal + tipAmount).toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="payment-actions">
+                                                <button className="payment-actions__btn payment-actions__btn--cash" onClick={() => setPaymentMethod('cash')}>
+                                                    <span className="payment-actions__icon">💵</span>
+                                                    <span>Cash</span>
+                                                </button>
+                                                <button className="payment-actions__btn payment-actions__btn--card" onClick={() => setPaymentMethod('stripe')}>
+                                                    <span className="payment-actions__icon">💳</span>
+                                                    <span>Card</span>
+                                                </button>
+                                            </div>
+                                            <div className="confirm-modal__actions">
+                                                <button className="guru-btn guru-btn--ghost" onClick={() => setPaymentModalStep('tip')}>← Back</button>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+
+                                {/* ── Step 2b: Cash confirmation ── */}
+                                {paymentModalStep === 'payment' && paymentMethod === 'cash' && (() => {
+                                    const { grandTotal } = computeTotal();
+                                    return (
+                                        <>
+                                            <div className="confirm-modal__icon">💵</div>
+                                            <h3 className="confirm-modal__title">Confirm Cash Payment</h3>
+                                            <p className="confirm-modal__message">Confirm that you have collected the cash from the customer.</p>
+                                            <div className="payment-modal__summary">
+                                                <div className="payment-modal__row">
+                                                    <span>Repair Total</span>
+                                                    <span>${grandTotal.toFixed(2)}</span>
+                                                </div>
+                                                {tipAmount > 0 && (
+                                                    <div className="payment-modal__row">
+                                                        <span>Tip</span>
+                                                        <span>${tipAmount.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                <div className="payment-modal__row payment-modal__row--total">
+                                                    <span>Cash Collected</span>
+                                                    <span>${(grandTotal + tipAmount).toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                            {paymentError && <div className="payment-modal__error">{paymentError}</div>}
+                                            <div className="confirm-modal__actions">
+                                                <button className="guru-btn guru-btn--ghost" onClick={() => setPaymentMethod(null)} disabled={paymentProcessing}>← Back</button>
+                                                <button className="guru-btn guru-btn--primary" onClick={handleCashPayment} disabled={paymentProcessing}>
+                                                    {paymentProcessing ? 'Processing...' : 'Confirm Cash Received'}
+                                                </button>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+
+                                {/* ── Step 2c: Card (Stripe) ── */}
+                                {paymentModalStep === 'payment' && paymentMethod === 'stripe' && (() => {
+                                    const { grandTotal } = computeTotal();
+                                    return (
+                                        <>
+                                            <div className="confirm-modal__icon">💳</div>
+                                            <h3 className="confirm-modal__title">
+                                                {stripePhase === 'card_entry' || stripePhase === 'confirming' ? 'Enter Card Details' : 'Process Card Payment'}
+                                            </h3>
+                                            {stripePhase === 'idle' && (
+                                                <>
+                                                    <p className="confirm-modal__message">The customer will enter their card details via Stripe's secure form.</p>
+                                                    <div className="payment-modal__summary">
+                                                        <div className="payment-modal__row payment-modal__row--total">
+                                                            <span>Amount</span>
+                                                            <span>${(grandTotal + tipAmount).toFixed(2)}</span>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                            <div className="stripe-payment-element-wrapper">
+                                                {stripePhase === 'loading' && (
+                                                    <div className="stripe-loading">Loading secure payment form...</div>
+                                                )}
+                                                <div ref={stripeElementRef} style={{ display: stripePhase === 'loading' ? 'none' : 'block', marginTop: 8 }} />
+                                            </div>
+                                            {paymentError && <div className="payment-modal__error">{paymentError}</div>}
+                                            <div className="confirm-modal__actions">
+                                                <button
+                                                    className="guru-btn guru-btn--ghost"
+                                                    onClick={() => { setPaymentMethod(null); setStripePhase('idle'); setStripeClientSecret(null); setStripeInstance(null); setStripeElements(null); }}
+                                                    disabled={stripePhase === 'loading' || stripePhase === 'confirming'}
+                                                >
+                                                    ← Back
+                                                </button>
+                                                <button
+                                                    className="guru-btn guru-btn--primary"
+                                                    onClick={stripePhase === 'card_entry' ? confirmStripePayment : handleStripePayment}
+                                                    disabled={paymentProcessing || stripePhase === 'loading' || stripePhase === 'confirming'}
+                                                >
+                                                    {stripePhase === 'idle' ? 'Proceed to Card' : stripePhase === 'loading' ? 'Loading...' : stripePhase === 'card_entry' ? 'Pay Now' : 'Processing...'}
+                                                </button>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+
+                                {/* ── Step 3: Completion signature ── */}
+                                {paymentModalStep === 'signature' && (
+                                    <>
+                                        <div className="confirm-modal__icon">✅</div>
+                                        <h3 className="confirm-modal__title">Repair Complete!</h3>
+                                        <p className="confirm-modal__message">Please sign below to confirm the repair is done and payment has been received.</p>
+                                        <canvas
+                                            ref={canvasRef}
+                                            style={{ width: '100%', height: 160, border: '2px solid var(--border-subtle)', borderRadius: 12, cursor: 'crosshair', background: '#fff', display: 'block' }}
                                         />
-                                    </div>
+                                        <div className="confirm-modal__actions" style={{ marginTop: 12 }}>
+                                            <button className="guru-btn guru-btn--ghost" onClick={clearSignature}>Clear</button>
+                                            <button className="guru-btn guru-btn--primary" onClick={saveCompletionSignature}>
+                                                {updating ? 'Saving...' : 'Sign & Complete'}
+                                            </button>
+                                        </div>
+                                    </>
                                 )}
 
-                                {paymentError && (
-                                    <div className="payment-modal__error">{paymentError}</div>
-                                )}
-
-                                <div className="confirm-modal__actions">
-                                    <button
-                                        className="guru-btn guru-btn--ghost"
-                                        onClick={() => {
-                                            setShowPaymentModal(false);
-                                            setStripePhase('idle');
-                                            setStripeClientSecret(null);
-                                            setStripeInstance(null);
-                                            setStripeElements(null);
-                                            setPaymentError('');
-                                        }}
-                                        disabled={stripePhase === 'loading' || stripePhase === 'confirming'}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="guru-btn guru-btn--primary"
-                                        onClick={
-                                            paymentMethod === 'cash'
-                                                ? handleCashPayment
-                                                : stripePhase === 'card_entry'
-                                                    ? confirmStripePayment
-                                                    : handleStripePayment
-                                        }
-                                        disabled={
-                                            paymentProcessing ||
-                                            stripePhase === 'loading' ||
-                                            stripePhase === 'confirming'
-                                        }
-                                    >
-                                        {paymentMethod === 'cash'
-                                            ? (paymentProcessing ? 'Processing...' : 'Confirm Cash Received')
-                                            : stripePhase === 'idle'
-                                                ? 'Proceed to Card Payment'
-                                                : stripePhase === 'loading'
-                                                    ? 'Loading...'
-                                                    : stripePhase === 'card_entry'
-                                                        ? 'Pay Now'
-                                                        : 'Processing...'
-                                        }
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     )}
@@ -1215,8 +1377,8 @@ export default function RepairDetailPage() {
                         EXTRAS — Photos + Legal
                         ════════════════════════════════════════════════ */}
 
-                    {/* Repair Photos */}
-                    <div className="repair-detail__section">
+                    {/* Repair Photos — visible once repair is in progress */}
+                    {statusFlow.indexOf(repair.status) >= statusFlow.indexOf(REPAIR_STATUS.IN_PROGRESS) && <div className="repair-detail__section">
                         <h2 className="repair-detail__section-title">Repair Photos</h2>
                         <p className="repair-photos__note">
                             For technician records only — not visible to customers.
@@ -1335,7 +1497,7 @@ export default function RepairDetailPage() {
                         {photosLoading && (
                             <div className="repair-photos__empty">Loading photos...</div>
                         )}
-                    </div>
+                    </div>}
 
                     {/* Expanded Photo Modal */}
                     {expandedPhoto && (
@@ -1362,49 +1524,78 @@ export default function RepairDetailPage() {
                         </div>
                     )}
 
-                    {/* Legal Documentation */}
-                    <div className="repair-detail__section">
-                        <h2 className="repair-detail__section-title">Legal Documentation</h2>
-                        {signed ? (
-                            <div style={{ textAlign: 'center', padding: 24, color: 'var(--guru-success)' }}>
-                                <div style={{ fontSize: '2rem', marginBottom: 8 }}>✓</div>
-                                <div style={{ fontWeight: 700, fontSize: '1.125rem' }}>Customer has signed the agreement</div>
-                                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: 4 }}>
-                                    Signed at {new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                                </div>
-                            </div>
-                        ) : showSignature ? (
-                            <>
-                                <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: 16, maxHeight: 200, overflowY: 'auto', padding: 16, background: 'var(--bg-app)', borderRadius: 12 }}>
-                                    {AGREEMENT_TEXT}
-                                </div>
-                                <div className="signature-area">
-                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
-                                        Please sign below
-                                    </p>
-                                    <canvas ref={canvasRef} style={{ width: '100%', height: 200, border: '1px solid var(--border-subtle)', borderRadius: 12, cursor: 'crosshair' }}></canvas>
-                                    <div className="signature-area__actions">
-                                        <button className="guru-btn guru-btn--ghost guru-btn--sm" onClick={clearSignature}>
-                                            Clear
-                                        </button>
-                                        <button className="guru-btn guru-btn--secondary guru-btn--sm" onClick={() => setShowSignature(false)}>
-                                            Cancel
-                                        </button>
-                                        <button className="guru-btn guru-btn--primary guru-btn--sm" onClick={saveSignature}>
-                                            Save Signature
-                                        </button>
+                    {/* Intake Authorization — appears when tech arrives, stays as confirmation */}
+                    {statusFlow.indexOf(repair.status) >= statusFlow.indexOf(REPAIR_STATUS.ARRIVED) && (
+                        <div className="repair-detail__section">
+                            <h2 className="repair-detail__section-title">Customer Authorization</h2>
+                            {(intakeSigned || repair.signature_path) ? (
+                                <div style={{ textAlign: 'center', padding: 24, color: 'var(--dark-success)' }}>
+                                    <div style={{ fontSize: '2rem', marginBottom: 8 }}>✓</div>
+                                    <div style={{ fontWeight: 700, fontSize: '1.125rem' }}>Intake signature collected</div>
+                                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                                        Customer authorized the repair before work began.
                                     </div>
                                 </div>
-                            </>
-                        ) : (
-                            <button className="guru-btn guru-btn--primary guru-btn--full" onClick={() => setShowSignature(true)}>
-                                Open Repair Agreement for Signature
-                            </button>
-                        )}
-                    </div>
+                            ) : (
+                                <>
+                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                                        Get the customer's signature to authorize the repair before you begin work.
+                                    </p>
+                                    <button className="guru-btn guru-btn--primary guru-btn--full" onClick={() => setShowIntakeSignature(true)}>
+                                        Get Customer Authorization
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Completion Authorization — shown after repair is complete */}
+                    {repair.status === REPAIR_STATUS.COMPLETE && (
+                        <div className="repair-detail__section">
+                            <h2 className="repair-detail__section-title">Completion Authorization</h2>
+                            {(completionSigned || repair.completion_signature_path) ? (
+                                <div style={{ textAlign: 'center', padding: 24, color: 'var(--dark-success)' }}>
+                                    <div style={{ fontSize: '2rem', marginBottom: 8 }}>✓</div>
+                                    <div style={{ fontWeight: 700, fontSize: '1.125rem' }}>Completion signature collected</div>
+                                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                                        Customer confirmed the repair and payment.
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>
+                                    <div style={{ fontSize: '0.875rem' }}>Completion signature not yet collected.</div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                 </div>
             </div>
+
+            {/* ── Intake Signature Modal ─────────────────────────────── */}
+            {showIntakeSignature && (
+                <div className="confirm-modal-overlay" onClick={() => setShowIntakeSignature(false)}>
+                    <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="confirm-modal__icon">📋</div>
+                        <h3 className="confirm-modal__title">Customer Authorization</h3>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: 16, maxHeight: 180, overflowY: 'auto', padding: 12, background: 'var(--bg-app)', borderRadius: 12, textAlign: 'left' }}>
+                            {AGREEMENT_TEXT}
+                        </div>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
+                            Please sign below to authorize the repair
+                        </p>
+                        <canvas
+                            ref={canvasRef}
+                            style={{ width: '100%', height: 160, border: '2px solid var(--border-subtle)', borderRadius: 12, cursor: 'crosshair', background: '#fff', display: 'block' }}
+                        />
+                        <div className="confirm-modal__actions" style={{ marginTop: 12 }}>
+                            <button className="guru-btn guru-btn--ghost" onClick={clearSignature}>Clear</button>
+                            <button className="guru-btn guru-btn--ghost" onClick={() => setShowIntakeSignature(false)}>Cancel</button>
+                            <button className="guru-btn guru-btn--primary" onClick={saveIntakeSignature}>Save Signature</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

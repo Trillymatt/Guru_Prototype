@@ -44,7 +44,7 @@ GURU_BASELINE.md       # Source of truth documentation for business rules
 - **Frontend:** React 19, React Router 7, Vite 6.1
 - **Styling:** Vanilla CSS with CSS custom properties (Apple-inspired design system in `theme.css`)
 - **Backend:** Supabase (PostgreSQL, Auth, Realtime, Edge Functions)
-- **Auth:** Supabase Auth — email/password, Google, Apple (customer); email/password only (technician)
+- **Auth:** Supabase Auth — email OTP (magic code via email) for customers; email/password for technicians
 - **Maps:** Leaflet.js (free, no API key)
 - **Signatures:** signature_pad v5.0 (technician portal only)
 - **Email:** Resend via Supabase Edge Functions

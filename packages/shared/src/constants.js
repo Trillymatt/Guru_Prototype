@@ -6,7 +6,6 @@
 // ─── iPhone Device Catalog ───────────────────────────────────────────────────
 
 export const DEVICES = [
-    { id: 'iphone-11', name: 'iPhone 11', year: 2019, generation: '11' },
     { id: 'iphone-11-pro', name: 'iPhone 11 Pro', year: 2019, generation: '11' },
     { id: 'iphone-11-pro-max', name: 'iPhone 11 Pro Max', year: 2019, generation: '11' },
     { id: 'iphone-se-2nd', name: 'iPhone SE (2nd gen)', year: 2020, generation: 'SE' },
@@ -48,14 +47,9 @@ export const getDevicesByGeneration = (gen) => DEVICES.filter(d => d.generation 
 export const REPAIR_TYPES = [
     { id: 'screen', name: 'Screen Replacement', icon: '📱', description: 'Cracked, shattered, or unresponsive display' },
     { id: 'battery', name: 'Battery Replacement', icon: '🔋', description: 'Poor battery life or swollen battery' },
-    { id: 'charging', name: 'Charging Port', icon: '🔌', description: 'Won\'t charge or loose connection' },
     { id: 'back-glass', name: 'Back Glass', icon: '🪟', description: 'Cracked or shattered back panel' },
     { id: 'camera-rear', name: 'Rear Camera', icon: '📸', description: 'Blurry, cracked, or non-functional rear camera' },
     { id: 'camera-front', name: 'Front Camera', icon: '🤳', description: 'Blurry or non-functional front camera / Face ID' },
-    { id: 'speaker', name: 'Speaker / Microphone', icon: '🔊', description: 'Low volume, distorted, or no sound' },
-    { id: 'water-damage', name: 'Water Damage', icon: '💧', description: 'Liquid exposure diagnosis and repair' },
-    { id: 'buttons', name: 'Button Repair', icon: '⏏️', description: 'Power, volume, or mute switch issues' },
-    { id: 'software', name: 'Software Issues', icon: '⚙️', description: 'Restore, update, or performance problems' },
 ];
 
 // ─── Parts Tiers ─────────────────────────────────────────────────────────────
@@ -989,12 +983,7 @@ export const TAX_RATE = 0.0825; // 8.25% Texas sales tax
 export const SAMPLE_PRICING = {
     screen: { economy: 49, premium: 89, genuine: 179 },
     battery: { economy: 29, premium: 49, genuine: 89 },
-    charging: { economy: 39, premium: 59, genuine: 99 },
     'back-glass': { economy: 39, premium: 69, genuine: 149 },
     'camera-rear': { economy: 49, premium: 79, genuine: 159 },
     'camera-front': { economy: 39, premium: 69, genuine: 129 },
-    speaker: { economy: 29, premium: 49, genuine: 79 },
-    'water-damage': { economy: 59, premium: 99, genuine: 149 },
-    buttons: { economy: 29, premium: 49, genuine: 79 },
-    software: { economy: 0, premium: 0, genuine: 0 },
 };
