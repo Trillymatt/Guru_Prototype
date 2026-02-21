@@ -244,6 +244,7 @@ export default function RepairDetailPage() {
 
     // Delete photo handler
     const handlePhotoDelete = async (photo) => {
+        if (!window.confirm('Delete this photo? This cannot be undone.')) return;
         try {
             await supabase.storage
                 .from('repair-photos')
@@ -258,6 +259,7 @@ export default function RepairDetailPage() {
             if (expandedPhoto?.id === photo.id) setExpandedPhoto(null);
         } catch (err) {
             console.error('Photo delete failed:', err);
+            setPhotoError('Failed to delete photo. Please try again.');
         }
     };
 
@@ -375,8 +377,13 @@ export default function RepairDetailPage() {
 
     const handleCustomTipChange = (e) => {
         const val = e.target.value.replace(/[^0-9.]/g, '');
-        setCustomTip(val);
-        setTipAmount(val ? parseFloat(val) || 0 : 0);
+        // Prevent multiple decimal points
+        const parts = val.split('.');
+        const sanitized = parts.length > 2
+            ? parts[0] + '.' + parts.slice(1).join('')
+            : val;
+        setCustomTip(sanitized);
+        setTipAmount(sanitized ? parseFloat(sanitized) || 0 : 0);
     };
 
     const openPaymentModal = (method) => {
