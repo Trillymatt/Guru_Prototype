@@ -966,6 +966,20 @@ export function getPartsUrl(deviceName, repairTypeId, tierId, deviceColor) {
 
 export const SERVICE_FEE = 29;
 
+// ─── Labor Fee ───────────────────────────────────────────────────────────────
+
+export const LABOR_FEE = 10;
+
+// ─── Tip Presets ─────────────────────────────────────────────────────────────
+
+export const TIP_PRESETS = [
+    { label: 'No Tip', value: 0 },
+    { label: '$5', value: 5 },
+    { label: '$10', value: 10 },
+    { label: '$15', value: 15 },
+    { label: '$20', value: 20 },
+];
+
 // ─── Tax Rate (Texas) ───────────────────────────────────────────────────────
 
 export const TAX_RATE = 0.0825; // 8.25% Texas sales tax
