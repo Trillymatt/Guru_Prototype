@@ -44,8 +44,34 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Validate repair_id is a valid UUID
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(repair_id)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid repair_id format" }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // Validate amount is a positive number
+    const parsedAmount = Number(amount);
+    const parsedTip = Number(tip_amount || 0);
+    if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000) {
+      return new Response(
+        JSON.stringify({ error: "Invalid amount: must be between $0.01 and $10,000" }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    if (isNaN(parsedTip) || parsedTip < 0 || parsedTip > 1000) {
+      return new Response(
+        JSON.stringify({ error: "Invalid tip_amount: must be between $0 and $1,000" }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     // Total in cents for Stripe (amount already includes tax, add tip)
-    const totalCents = Math.round((Number(amount) + Number(tip_amount || 0)) * 100);
+    const totalCents = Math.round((parsedAmount + parsedTip) * 100);
 
     if (totalCents < 50) {
       return new Response(

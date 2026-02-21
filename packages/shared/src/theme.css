@@ -178,6 +178,11 @@ body {
 .guru-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
+}
+
+.guru-btn--full {
+  width: 100%;
 }
 
 /* Button Variants */

@@ -10,16 +10,24 @@ export default function TechNav() {
 
     useEffect(() => {
         const fetchTechName = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
 
-            const { data: tech } = await supabase
-                .from('technicians')
-                .select('full_name')
-                .eq('id', user.id)
-                .single();
+                const { data: tech, error } = await supabase
+                    .from('technicians')
+                    .select('full_name')
+                    .eq('id', user.id)
+                    .single();
 
-            if (tech) setTechName(tech.full_name);
+                if (error) {
+                    console.error('Failed to fetch technician name:', error.message);
+                    return;
+                }
+                if (tech?.full_name) setTechName(tech.full_name);
+            } catch (err) {
+                console.error('TechNav fetch error:', err.message);
+            }
         };
         fetchTechName();
     }, []);

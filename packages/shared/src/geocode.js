@@ -6,15 +6,20 @@
  * @returns {Promise<{ lat: number, lng: number }|null>}
  */
 export async function geocodeAddress(address) {
-    if (!address) return null;
+    if (!address || typeof address !== 'string') return null;
+
+    // Limit address length to prevent abuse
+    const trimmed = address.trim().slice(0, 300);
+    if (trimmed.length < 3) return null;
 
     try {
         const response = await fetch(
             `https://nominatim.openstreetmap.org/search?` +
-            `format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=us`,
+            `format=json&q=${encodeURIComponent(trimmed)}&limit=1&countrycodes=us`,
             {
                 headers: {
                     'Accept': 'application/json',
+                    'User-Agent': 'GuruMobileRepair/1.0',
                 },
             }
         );

@@ -253,6 +253,7 @@ export default function SchedulePage() {
                                                         key={slot.id}
                                                         className={`schedule-slot-btn ${active ? 'schedule-slot-btn--active' : ''}`}
                                                         onClick={() => toggleSlot(slot.id)}
+                                                        disabled={saving}
                                                     >
                                                         <div className="schedule-slot-btn__check">
                                                             {active ? '\u2713' : ''}

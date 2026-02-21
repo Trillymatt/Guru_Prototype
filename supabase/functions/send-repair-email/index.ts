@@ -542,6 +542,43 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // ── Validate email_type is a known type ──
+    const validEmailTypes = [
+      "repair_confirmed",
+      "day_of_reminder",
+      "tech_en_route",
+      "tech_arrived",
+      "repair_complete",
+      "review_request",
+    ];
+    if (!validEmailTypes.includes(email_type)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid email_type: ${email_type}` }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // ── Validate email format ──
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(customer_email) || customer_email.length > 254) {
+      return new Response(
+        JSON.stringify({ error: "Invalid customer_email format" }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // ── Validate repair_id format if provided ──
+    if (repair_id) {
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(repair_id)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid repair_id format" }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+    }
+
     // ── Generate the email ──
     const email = generateEmail(email_type, payload);
     if (!email) {

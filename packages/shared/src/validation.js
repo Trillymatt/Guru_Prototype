@@ -27,21 +27,27 @@ export function formatPhoneE164(phone) {
         return `+${digits}`;
     }
 
-    // Return as-is with + prefix if we can't determine format
-    return `+${digits}`;
+    // Return null for unrecognized formats instead of guessing
+    return null;
 }
 
 /**
- * Basic phone validation — must result in at least 10 digits
+ * Phone validation — must be 10 or 11 digits (US numbers).
+ * Rejects numbers that are too short or too long.
  */
 export function isValidPhone(phone) {
+    if (!phone) return false;
     const digits = phone.replace(/\D/g, '');
-    return digits.length >= 10;
+    // US: 10 digits, or 11 starting with 1
+    if (digits.length === 10) return true;
+    if (digits.length === 11 && digits.startsWith('1')) return true;
+    return false;
 }
 
 /**
- * Basic email validation
+ * Email validation — requires valid format with 2+ char TLD.
  */
 export function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!email || email.length > 254) return false;
+    return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
 }
