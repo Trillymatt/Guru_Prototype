@@ -56,6 +56,13 @@ export default function RepairDetailPage() {
     const [paymentProcessing, setPaymentProcessing] = useState(false);
     const [paymentError, setPaymentError] = useState('');
 
+    // Stripe multi-step state
+    const [stripePhase, setStripePhase] = useState('idle'); // 'idle' | 'loading' | 'card_entry' | 'confirming'
+    const [stripeClientSecret, setStripeClientSecret] = useState(null);
+    const [stripeInstance, setStripeInstance] = useState(null);
+    const [stripeElements, setStripeElements] = useState(null);
+    const stripeElementRef = useRef(null);
+
     // Location sharing state
     const [locationModal, setLocationModal] = useState(false);
     const isEnRoute = repair?.status === REPAIR_STATUS.EN_ROUTE;
@@ -382,6 +389,10 @@ export default function RepairDetailPage() {
     const openPaymentModal = (method) => {
         setPaymentMethod(method);
         setPaymentError('');
+        setStripePhase('idle');
+        setStripeClientSecret(null);
+        setStripeInstance(null);
+        setStripeElements(null);
         setShowPaymentModal(true);
     };
 
@@ -417,13 +428,14 @@ export default function RepairDetailPage() {
         setPaymentProcessing(false);
     };
 
+    // Step 1: Create PaymentIntent + load Stripe.js → triggers PaymentElement mount via useEffect
     const handleStripePayment = async () => {
         setPaymentProcessing(true);
         setPaymentError('');
+        setStripePhase('loading');
         try {
             const { grandTotal } = computeTotal();
 
-            // Call the Edge Function to create a PaymentIntent
             const { data: fnData, error: fnError } = await supabase.functions.invoke('create-payment-intent', {
                 body: {
                     repair_id: repair.id,
@@ -435,7 +447,6 @@ export default function RepairDetailPage() {
             if (fnError) throw fnError;
             if (fnData?.error) throw new Error(fnData.error);
 
-            // Load Stripe.js and confirm payment
             const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
             if (!stripePublicKey) throw new Error('Stripe public key not configured. Add VITE_STRIPE_PUBLIC_KEY to your .env file.');
 
@@ -443,26 +454,36 @@ export default function RepairDetailPage() {
             const stripe = await loadStripe(stripePublicKey);
             if (!stripe) throw new Error('Failed to load Stripe.');
 
-            const { error: confirmError } = await stripe.confirmPayment({
-                clientSecret: fnData.clientSecret,
-                confirmParams: {
-                    return_url: window.location.href,
-                },
-            });
-
-            if (confirmError) {
-                // If user cancels or card fails, the error shows here
-                if (confirmError.type !== 'card_error' && confirmError.type !== 'validation_error') {
-                    throw confirmError;
-                }
-                setPaymentError(confirmError.message);
-            }
-            // On success, Stripe redirects to return_url with payment_intent in query params
+            // Setting these triggers the useEffect that mounts the PaymentElement
+            setStripeInstance(stripe);
+            setStripeClientSecret(fnData.clientSecret);
+            // paymentProcessing cleared in the useEffect after element mounts
         } catch (err) {
-            console.error('Stripe payment error:', err);
-            setPaymentError(err.message || 'Failed to process card payment.');
+            console.error('Stripe setup error:', err);
+            setPaymentError(err.message || 'Failed to initialize card payment.');
+            setStripePhase('idle');
+            setPaymentProcessing(false);
         }
-        setPaymentProcessing(false);
+    };
+
+    // Step 2: Confirm payment using the mounted Stripe Elements instance
+    const confirmStripePayment = async () => {
+        if (!stripeInstance || !stripeElements) return;
+        setStripePhase('confirming');
+        setPaymentError('');
+
+        const { error: confirmError } = await stripeInstance.confirmPayment({
+            elements: stripeElements,
+            confirmParams: {
+                return_url: window.location.href.split('?')[0],
+            },
+        });
+
+        if (confirmError) {
+            setPaymentError(confirmError.message);
+            setStripePhase('card_entry');
+        }
+        // On success Stripe redirects — existing useEffect handles the redirect callback
     };
 
     // Check for Stripe redirect success on page load
@@ -495,6 +516,25 @@ export default function RepairDetailPage() {
             window.history.replaceState({}, '', window.location.pathname);
         }
     }, [id]);
+
+    // Mount Stripe PaymentElement once stripe instance + clientSecret are ready
+    useEffect(() => {
+        if (!stripeClientSecret || !stripeInstance || !stripeElementRef.current) return;
+
+        const elements = stripeInstance.elements({
+            clientSecret: stripeClientSecret,
+            appearance: { theme: 'night' },
+        });
+        const paymentElement = elements.create('payment');
+        paymentElement.mount(stripeElementRef.current);
+        setStripeElements(elements);
+        setStripePhase('card_entry');
+        setPaymentProcessing(false);
+
+        return () => {
+            paymentElement.unmount();
+        };
+    }, [stripeClientSecret, stripeInstance]);
 
     if (loading) {
         return (
@@ -1043,22 +1083,43 @@ export default function RepairDetailPage() {
 
                     {/* ── Payment Confirmation Modal ─────────────────────── */}
                     {showPaymentModal && (
-                        <div className="confirm-modal-overlay" onClick={() => !paymentProcessing && setShowPaymentModal(false)}>
+                        <div
+                            className="confirm-modal-overlay"
+                            onClick={() => {
+                                if (paymentProcessing || stripePhase === 'loading' || stripePhase === 'confirming') return;
+                                setShowPaymentModal(false);
+                                setStripePhase('idle');
+                                setStripeClientSecret(null);
+                                setStripeInstance(null);
+                                setStripeElements(null);
+                                setPaymentError('');
+                            }}
+                        >
                             <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
                                 <div className="confirm-modal__icon">
                                     {paymentMethod === 'cash' ? '💵' : '💳'}
                                 </div>
                                 <h3 className="confirm-modal__title">
-                                    {paymentMethod === 'cash' ? 'Confirm Cash Payment' : 'Process Card Payment'}
-                                </h3>
-                                <p className="confirm-modal__message">
                                     {paymentMethod === 'cash'
-                                        ? 'Confirm that you have collected the cash payment from the customer.'
-                                        : 'The customer will be prompted to enter their card details via Stripe.'
+                                        ? 'Confirm Cash Payment'
+                                        : stripePhase === 'card_entry' || stripePhase === 'confirming'
+                                            ? 'Enter Card Details'
+                                            : 'Process Card Payment'
                                     }
-                                </p>
+                                </h3>
 
-                                {(() => {
+                                {/* Description — only on initial confirmation screen */}
+                                {(paymentMethod === 'cash' || stripePhase === 'idle') && (
+                                    <p className="confirm-modal__message">
+                                        {paymentMethod === 'cash'
+                                            ? 'Confirm that you have collected the cash payment from the customer.'
+                                            : 'The customer will enter their card details via Stripe\'s secure form.'
+                                        }
+                                    </p>
+                                )}
+
+                                {/* Amount summary — cash always, stripe only on idle phase */}
+                                {(paymentMethod === 'cash' || stripePhase === 'idle') && (() => {
                                     const { grandTotal } = computeTotal();
                                     return (
                                         <div className="payment-modal__summary">
@@ -1080,6 +1141,19 @@ export default function RepairDetailPage() {
                                     );
                                 })()}
 
+                                {/* Stripe PaymentElement container — rendered while loading so ref is ready */}
+                                {paymentMethod === 'stripe' && stripePhase !== 'idle' && (
+                                    <div className="stripe-payment-element-wrapper">
+                                        {stripePhase === 'loading' && (
+                                            <div className="stripe-loading">Loading secure payment form...</div>
+                                        )}
+                                        <div
+                                            ref={stripeElementRef}
+                                            style={{ display: stripePhase === 'loading' ? 'none' : 'block', marginTop: 8 }}
+                                        />
+                                    </div>
+                                )}
+
                                 {paymentError && (
                                     <div className="payment-modal__error">{paymentError}</div>
                                 )}
@@ -1087,21 +1161,42 @@ export default function RepairDetailPage() {
                                 <div className="confirm-modal__actions">
                                     <button
                                         className="guru-btn guru-btn--ghost"
-                                        onClick={() => setShowPaymentModal(false)}
-                                        disabled={paymentProcessing}
+                                        onClick={() => {
+                                            setShowPaymentModal(false);
+                                            setStripePhase('idle');
+                                            setStripeClientSecret(null);
+                                            setStripeInstance(null);
+                                            setStripeElements(null);
+                                            setPaymentError('');
+                                        }}
+                                        disabled={stripePhase === 'loading' || stripePhase === 'confirming'}
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         className="guru-btn guru-btn--primary"
-                                        onClick={paymentMethod === 'cash' ? handleCashPayment : handleStripePayment}
-                                        disabled={paymentProcessing}
+                                        onClick={
+                                            paymentMethod === 'cash'
+                                                ? handleCashPayment
+                                                : stripePhase === 'card_entry'
+                                                    ? confirmStripePayment
+                                                    : handleStripePayment
+                                        }
+                                        disabled={
+                                            paymentProcessing ||
+                                            stripePhase === 'loading' ||
+                                            stripePhase === 'confirming'
+                                        }
                                     >
-                                        {paymentProcessing
-                                            ? 'Processing...'
-                                            : paymentMethod === 'cash'
-                                                ? 'Confirm Cash Received'
-                                                : 'Proceed to Card Payment'
+                                        {paymentMethod === 'cash'
+                                            ? (paymentProcessing ? 'Processing...' : 'Confirm Cash Received')
+                                            : stripePhase === 'idle'
+                                                ? 'Proceed to Card Payment'
+                                                : stripePhase === 'loading'
+                                                    ? 'Loading...'
+                                                    : stripePhase === 'card_entry'
+                                                        ? 'Pay Now'
+                                                        : 'Processing...'
                                         }
                                     </button>
                                 </div>
