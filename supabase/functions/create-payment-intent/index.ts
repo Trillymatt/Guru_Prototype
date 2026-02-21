@@ -2,12 +2,26 @@
 // GURU MOBILE REPAIR SOLUTIONS — Stripe Payment Intent Edge Function
 // Creates a Stripe PaymentIntent for card-based repair payments.
 //
-// SETUP:
-//   1. Create a Stripe account at https://stripe.com
-//   2. Set secrets:
-//        supabase secrets set STRIPE_SECRET_KEY=sk_live_xxxxxxxxx
-//   3. Deploy:
+// SETUP (one-time, before first card payment):
+//   1. Create a Stripe account at https://dashboard.stripe.com
+//
+//   2. Set the secret key as a Supabase secret:
+//        supabase secrets set STRIPE_SECRET_KEY=sk_test_xxxxxxxxx   # test mode
+//        supabase secrets set STRIPE_SECRET_KEY=sk_live_xxxxxxxxx   # production
+//
+//   3. Add the public key to packages/technician/.env:
+//        VITE_STRIPE_PUBLIC_KEY=pk_test_xxxxxxxxx   # must match the secret key mode
+//
+//   4. Run the payment migration against your Supabase project:
+//        supabase db push  (or apply supabase/migrations/payment_tipping.sql manually)
+//
+//   5. Deploy this Edge Function:
 //        supabase functions deploy create-payment-intent
+//
+// KEYS:
+//   - Use pk_test_ / sk_test_ for development and testing (no real charges)
+//   - Use pk_live_ / sk_live_ for production (real charges)
+//   - The public key goes in the technician .env; the secret key is a Supabase secret only
 // ============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";

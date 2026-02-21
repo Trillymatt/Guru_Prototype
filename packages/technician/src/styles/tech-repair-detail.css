@@ -924,6 +924,20 @@
   text-align: left;
 }
 
+/* ─── Stripe PaymentElement wrapper ────────────────────────────── */
+
+.stripe-payment-element-wrapper {
+  width: 100%;
+  margin-bottom: var(--space-4);
+}
+
+.stripe-loading {
+  font-size: var(--font-size-sm);
+  color: var(--dark-text-secondary);
+  text-align: center;
+  padding: var(--space-6) 0;
+}
+
 /* ─── Parts to Order ────────────────────────────────────────────── */
 
 .parts-links {
