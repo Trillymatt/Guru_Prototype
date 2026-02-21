@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
@@ -93,12 +93,9 @@ export default function ProfilePage() {
             <Navbar />
             <div className="dashboard">
                 <div className="guru-container guru-container--narrow">
-                    <button
-                        className="profile-back"
-                        onClick={() => navigate('/dashboard')}
-                    >
+                    <Link to="/dashboard" className="profile-back">
                         ← Back to Dashboard
-                    </button>
+                    </Link>
 
                     <div className="profile-card animate-scale-in">
                         <div className="profile-avatar">{initials}</div>

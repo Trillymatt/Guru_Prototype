@@ -106,14 +106,25 @@ export default function RepairChat({ repairId, userId, senderRole, senderName })
                     { repair_id: repairId, user_id: userId, last_read_at: new Date().toISOString() },
                     { onConflict: 'repair_id,user_id' }
                 )
-                .then(() => {});
+                .then(({ error }) => {
+                    if (error) console.error('Failed to update chat_last_read:', error.message);
+                });
         }
     }, [isOpen, repairId, userId]);
+
+    const sanitizeText = (text) => {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;');
+    };
 
     const handleSend = async (e) => {
         e.preventDefault();
         const body = newMsg.trim();
-        if (!body || sending) return;
+        if (!body || sending || body.length > 1000) return;
 
         setSending(true);
         setNewMsg('');

@@ -171,16 +171,20 @@ export default function LoginPage() {
 
                             <div className="login-card__footer">
                                 <span>Didn't receive a code?{' '}</span>
-                                <button className="login-card__switch" onClick={async () => {
-                                    setCode(['', '', '', '', '', '']);
-                                    setAuthError('');
-                                    setSending(true);
-                                    const payload = { email: contact };
-                                    const { error } = await supabase.auth.signInWithOtp(payload);
-                                    if (error) setAuthError(error.message);
-                                    setSending(false);
-                                }}>
-                                    Resend
+                                <button
+                                    className="login-card__switch"
+                                    disabled={sending}
+                                    onClick={async () => {
+                                        setCode(['', '', '', '', '', '']);
+                                        setAuthError('');
+                                        setSending(true);
+                                        const payload = { email: contact };
+                                        const { error } = await supabase.auth.signInWithOtp(payload);
+                                        if (error) setAuthError(error.message);
+                                        setSending(false);
+                                    }}
+                                >
+                                    {sending ? 'Sending...' : 'Resend'}
                                 </button>
                                 <span className="login-card__separator">·</span>
                                 <button className="login-card__switch" onClick={() => { setStep(1); setCode(['', '', '', '', '', '']); }}>

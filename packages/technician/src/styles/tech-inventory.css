@@ -372,6 +372,12 @@
   background: rgba(168, 85, 247, 0.1);
 }
 
+.inventory-qty-sm-btn:focus-visible {
+  border-color: var(--dark-purple-500);
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+  outline: none;
+}
+
 .inventory-qty-sm-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;

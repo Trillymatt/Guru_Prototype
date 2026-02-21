@@ -59,11 +59,15 @@ export default function RepairDetailPage() {
     useEffect(() => {
         if (!repair?.address) return;
         let cancelled = false;
-        geocodeAddress(repair.address).then((coords) => {
-            if (!cancelled && coords) {
-                setCustomerLocation(coords);
-            }
-        });
+        geocodeAddress(repair.address)
+            .then((coords) => {
+                if (!cancelled && coords) {
+                    setCustomerLocation(coords);
+                }
+            })
+            .catch((err) => {
+                console.error('Geocoding failed for address:', err.message);
+            });
         return () => { cancelled = true; };
     }, [repair?.address]);
 

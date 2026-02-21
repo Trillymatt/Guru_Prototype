@@ -122,6 +122,12 @@
   background: var(--dark-bg-hover);
 }
 
+.schedule-slot-btn:focus-visible {
+  border-color: var(--dark-purple-500);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
+  outline: none;
+}
+
 .schedule-slot-btn--active {
   border-color: var(--dark-purple-500);
   background: rgba(168, 85, 247, 0.1);

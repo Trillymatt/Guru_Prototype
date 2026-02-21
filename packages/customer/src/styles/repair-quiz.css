@@ -169,6 +169,12 @@
     transform: translateY(-2px);
 }
 
+.quiz__device-card:focus-visible {
+    border-color: var(--guru-purple-500);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+    outline: none;
+}
+
 .quiz__device-card--selected {
     border-color: var(--guru-purple-500);
     background: var(--guru-purple-50);
@@ -215,6 +221,12 @@
 .quiz__issue-card:hover {
     border-color: var(--guru-purple-300);
     box-shadow: var(--shadow-sm);
+}
+
+.quiz__issue-card:focus-visible {
+    border-color: var(--guru-purple-500);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+    outline: none;
 }
 
 .quiz__issue-card--selected {
