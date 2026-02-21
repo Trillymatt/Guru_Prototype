@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, getPartsUrl, getDeviceRepairPrice, SERVICE_FEE, TAX_RATE, getRepairStatusFlow, TIME_SLOTS } from '@shared/constants';
+import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, PARTS_TIERS, SAMPLE_PRICING, getPartsUrl, getDeviceRepairPrice, SERVICE_FEE, LABOR_FEE, TAX_RATE, TIP_PRESETS, getRepairStatusFlow, TIME_SLOTS } from '@shared/constants';
 import { supabase } from '@shared/supabase';
 import { useLocationBroadcast } from '@shared/useLocationBroadcast';
 import RepairChat from '@shared/RepairChat';
@@ -47,6 +47,14 @@ export default function RepairDetailPage() {
     const [photoError, setPhotoError] = useState('');
     const [expandedPhoto, setExpandedPhoto] = useState(null);
     const fileInputRef = useRef(null);
+
+    // Payment state
+    const [tipAmount, setTipAmount] = useState(0);
+    const [customTip, setCustomTip] = useState('');
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'stripe'
+    const [paymentProcessing, setPaymentProcessing] = useState(false);
+    const [paymentError, setPaymentError] = useState('');
 
     // Location sharing state
     const [locationModal, setLocationModal] = useState(false);
@@ -341,6 +349,152 @@ export default function RepairDetailPage() {
 
         setUpdating(false);
     };
+
+    // ── Payment helpers ──────────────────────────────────────────────
+    const computeTotal = () => {
+        if (!repair) return { partsTotal: 0, subtotal: 0, tax: 0, grandTotal: 0 };
+        const issues = Array.isArray(repair.issues) ? repair.issues : [];
+        const partsTotal = issues.reduce((sum, issueId) => {
+            const tierObj = typeof repair.parts_tier === 'object' ? repair.parts_tier : {};
+            const tierId = tierObj[issueId] || 'premium';
+            const price = getDeviceRepairPrice(repair.device, issueId, tierId) ?? SAMPLE_PRICING[issueId]?.[tierId] ?? 0;
+            return sum + price;
+        }, 0);
+        const serviceFee = Number(repair.service_fee) || SERVICE_FEE;
+        const laborFee = Number(repair.labor_fee) || LABOR_FEE;
+        const subtotal = partsTotal + serviceFee + laborFee;
+        const tax = subtotal * TAX_RATE;
+        const grandTotal = subtotal + tax;
+        return { partsTotal, serviceFee, laborFee, subtotal, tax, grandTotal };
+    };
+
+    const handleTipSelect = (value) => {
+        setTipAmount(value);
+        setCustomTip('');
+    };
+
+    const handleCustomTipChange = (e) => {
+        const val = e.target.value.replace(/[^0-9.]/g, '');
+        setCustomTip(val);
+        setTipAmount(val ? parseFloat(val) || 0 : 0);
+    };
+
+    const openPaymentModal = (method) => {
+        setPaymentMethod(method);
+        setPaymentError('');
+        setShowPaymentModal(true);
+    };
+
+    const handleCashPayment = async () => {
+        setPaymentProcessing(true);
+        setPaymentError('');
+        try {
+            const { grandTotal } = computeTotal();
+            const { error } = await supabase
+                .from('repairs')
+                .update({
+                    payment_method: 'cash',
+                    payment_status: 'completed',
+                    tip_amount: tipAmount,
+                    paid_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', repair.id);
+
+            if (error) throw error;
+            setRepair(prev => ({
+                ...prev,
+                payment_method: 'cash',
+                payment_status: 'completed',
+                tip_amount: tipAmount,
+                paid_at: new Date().toISOString(),
+            }));
+            setShowPaymentModal(false);
+        } catch (err) {
+            console.error('Cash payment error:', err);
+            setPaymentError(err.message || 'Failed to record cash payment.');
+        }
+        setPaymentProcessing(false);
+    };
+
+    const handleStripePayment = async () => {
+        setPaymentProcessing(true);
+        setPaymentError('');
+        try {
+            const { grandTotal } = computeTotal();
+
+            // Call the Edge Function to create a PaymentIntent
+            const { data: fnData, error: fnError } = await supabase.functions.invoke('create-payment-intent', {
+                body: {
+                    repair_id: repair.id,
+                    amount: grandTotal,
+                    tip_amount: tipAmount,
+                },
+            });
+
+            if (fnError) throw fnError;
+            if (fnData?.error) throw new Error(fnData.error);
+
+            // Load Stripe.js and confirm payment
+            const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+            if (!stripePublicKey) throw new Error('Stripe public key not configured. Add VITE_STRIPE_PUBLIC_KEY to your .env file.');
+
+            const { loadStripe } = await import('https://esm.sh/@stripe/stripe-js@2');
+            const stripe = await loadStripe(stripePublicKey);
+            if (!stripe) throw new Error('Failed to load Stripe.');
+
+            const { error: confirmError } = await stripe.confirmPayment({
+                clientSecret: fnData.clientSecret,
+                confirmParams: {
+                    return_url: window.location.href,
+                },
+            });
+
+            if (confirmError) {
+                // If user cancels or card fails, the error shows here
+                if (confirmError.type !== 'card_error' && confirmError.type !== 'validation_error') {
+                    throw confirmError;
+                }
+                setPaymentError(confirmError.message);
+            }
+            // On success, Stripe redirects to return_url with payment_intent in query params
+        } catch (err) {
+            console.error('Stripe payment error:', err);
+            setPaymentError(err.message || 'Failed to process card payment.');
+        }
+        setPaymentProcessing(false);
+    };
+
+    // Check for Stripe redirect success on page load
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentIntent = urlParams.get('payment_intent');
+        const redirectStatus = urlParams.get('redirect_status');
+
+        if (paymentIntent && redirectStatus === 'succeeded') {
+            // Mark payment as completed
+            supabase
+                .from('repairs')
+                .update({
+                    payment_status: 'completed',
+                    paid_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', id)
+                .then(({ error }) => {
+                    if (!error) {
+                        setRepair(prev => prev ? ({
+                            ...prev,
+                            payment_status: 'completed',
+                            paid_at: new Date().toISOString(),
+                        }) : prev);
+                    }
+                });
+
+            // Clean URL params
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, [id]);
 
     if (loading) {
         return (
@@ -728,6 +882,24 @@ export default function RepairDetailPage() {
                         <h2 className="repair-detail__section-title">
                             <span style={{ marginRight: 8 }}>💳</span>Payment &amp; Pricing
                         </h2>
+
+                        {/* Payment status badge */}
+                        {repair.payment_status === 'completed' && (
+                            <div className="payment-status-badge payment-status-badge--paid">
+                                <span>✓</span> Paid {repair.payment_method === 'cash' ? 'in Cash' : 'via Card'}
+                                {repair.paid_at && (
+                                    <span className="payment-status-badge__date">
+                                        {' '}— {new Date(repair.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(repair.paid_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                        {repair.payment_status === 'pending' && (
+                            <div className="payment-status-badge payment-status-badge--pending">
+                                <span>⏳</span> Payment Pending
+                            </div>
+                        )}
+
                         <div className="pricing-breakdown">
                             {issues.map((issueId) => {
                                 const type = REPAIR_TYPES.find((t) => t.id === issueId);
@@ -751,31 +923,191 @@ export default function RepairDetailPage() {
                                 <span>🚗 On-site Service Fee</span>
                                 <span className="pricing-breakdown__amount">${repair.service_fee || SERVICE_FEE}</span>
                             </div>
+                            <div className="pricing-breakdown__line">
+                                <span>🔧 Labor</span>
+                                <span className="pricing-breakdown__amount">${repair.labor_fee || LABOR_FEE}</span>
+                            </div>
 
                             <div className="pricing-breakdown__divider"></div>
 
-                            <div className="pricing-breakdown__line">
-                                <span className="pricing-breakdown__label">Subtotal</span>
-                                <span className="pricing-breakdown__amount">${repair.total_estimate}</span>
+                            {(() => {
+                                const { subtotal, tax, grandTotal } = computeTotal();
+                                return (
+                                    <>
+                                        <div className="pricing-breakdown__line">
+                                            <span className="pricing-breakdown__label">Subtotal</span>
+                                            <span className="pricing-breakdown__amount">${subtotal.toFixed(2)}</span>
+                                        </div>
+                                        <div className="pricing-breakdown__line">
+                                            <span className="pricing-breakdown__label">Sales Tax (8.25%)</span>
+                                            <span className="pricing-breakdown__amount">${tax.toFixed(2)}</span>
+                                        </div>
+                                        <div className="pricing-breakdown__divider pricing-breakdown__divider--strong"></div>
+                                        <div className="pricing-breakdown__total">
+                                            <span>Total Due</span>
+                                            <span className="pricing-breakdown__total-amount">
+                                                ${grandTotal.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </>
+                                );
+                            })()}
+
+                            {/* Tip Section */}
+                            {repair.payment_status !== 'completed' && (
+                                <>
+                                    <div className="pricing-breakdown__divider"></div>
+                                    <div className="tip-section">
+                                        <span className="tip-section__label">Add a Tip</span>
+                                        <div className="tip-section__presets">
+                                            {TIP_PRESETS.map((preset) => (
+                                                <button
+                                                    key={preset.value}
+                                                    className={`tip-section__btn ${tipAmount === preset.value && !customTip ? 'tip-section__btn--active' : ''}`}
+                                                    onClick={() => handleTipSelect(preset.value)}
+                                                >
+                                                    {preset.label}
+                                                </button>
+                                            ))}
+                                            <div className="tip-section__custom">
+                                                <span className="tip-section__custom-prefix">$</span>
+                                                <input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    placeholder="Other"
+                                                    value={customTip}
+                                                    onChange={handleCustomTipChange}
+                                                    className="tip-section__custom-input"
+                                                />
+                                            </div>
+                                        </div>
+                                        {tipAmount > 0 && (
+                                            <div className="pricing-breakdown__line" style={{ marginTop: 8 }}>
+                                                <span className="pricing-breakdown__label" style={{ color: 'var(--dark-success)' }}>Tip</span>
+                                                <span className="pricing-breakdown__amount" style={{ color: 'var(--dark-success)' }}>
+                                                    ${tipAmount.toFixed(2)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Show recorded tip for completed payments */}
+                            {repair.payment_status === 'completed' && repair.tip_amount > 0 && (
+                                <div className="pricing-breakdown__line" style={{ marginTop: 4 }}>
+                                    <span className="pricing-breakdown__label" style={{ color: 'var(--dark-success)' }}>Tip</span>
+                                    <span className="pricing-breakdown__amount" style={{ color: 'var(--dark-success)' }}>
+                                        ${Number(repair.tip_amount).toFixed(2)}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Grand Total with Tip */}
+                            {tipAmount > 0 && repair.payment_status !== 'completed' && (() => {
+                                const { grandTotal } = computeTotal();
+                                return (
+                                    <>
+                                        <div className="pricing-breakdown__divider pricing-breakdown__divider--strong"></div>
+                                        <div className="pricing-breakdown__total">
+                                            <span>Total with Tip</span>
+                                            <span className="pricing-breakdown__total-amount">
+                                                ${(grandTotal + tipAmount).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </>
+                                );
+                            })()}
+                        </div>
+
+                        {/* Collect Payment Buttons */}
+                        {repair.payment_status !== 'completed' && (
+                            <div className="payment-actions">
+                                <button
+                                    className="payment-actions__btn payment-actions__btn--cash"
+                                    onClick={() => openPaymentModal('cash')}
+                                >
+                                    <span className="payment-actions__icon">💵</span>
+                                    <span>Pay with Cash</span>
+                                </button>
+                                <button
+                                    className="payment-actions__btn payment-actions__btn--card"
+                                    onClick={() => openPaymentModal('stripe')}
+                                >
+                                    <span className="payment-actions__icon">💳</span>
+                                    <span>Pay with Card</span>
+                                </button>
                             </div>
+                        )}
+                    </div>
 
-                            <div className="pricing-breakdown__line">
-                                <span className="pricing-breakdown__label">Sales Tax (8.25%)</span>
-                                <span className="pricing-breakdown__amount">
-                                    ${(repair.total_estimate * TAX_RATE).toFixed(2)}
-                                </span>
-                            </div>
+                    {/* ── Payment Confirmation Modal ─────────────────────── */}
+                    {showPaymentModal && (
+                        <div className="confirm-modal-overlay" onClick={() => !paymentProcessing && setShowPaymentModal(false)}>
+                            <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+                                <div className="confirm-modal__icon">
+                                    {paymentMethod === 'cash' ? '💵' : '💳'}
+                                </div>
+                                <h3 className="confirm-modal__title">
+                                    {paymentMethod === 'cash' ? 'Confirm Cash Payment' : 'Process Card Payment'}
+                                </h3>
+                                <p className="confirm-modal__message">
+                                    {paymentMethod === 'cash'
+                                        ? 'Confirm that you have collected the cash payment from the customer.'
+                                        : 'The customer will be prompted to enter their card details via Stripe.'
+                                    }
+                                </p>
 
-                            <div className="pricing-breakdown__divider pricing-breakdown__divider--strong"></div>
+                                {(() => {
+                                    const { grandTotal } = computeTotal();
+                                    return (
+                                        <div className="payment-modal__summary">
+                                            <div className="payment-modal__row">
+                                                <span>Repair Total</span>
+                                                <span>${grandTotal.toFixed(2)}</span>
+                                            </div>
+                                            {tipAmount > 0 && (
+                                                <div className="payment-modal__row">
+                                                    <span>Tip</span>
+                                                    <span>${tipAmount.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            <div className="payment-modal__row payment-modal__row--total">
+                                                <span>Amount to Collect</span>
+                                                <span>${(grandTotal + tipAmount).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
 
-                            <div className="pricing-breakdown__total">
-                                <span>Total Due</span>
-                                <span className="pricing-breakdown__total-amount">
-                                    ${(repair.total_estimate * (1 + TAX_RATE)).toFixed(2)}
-                                </span>
+                                {paymentError && (
+                                    <div className="payment-modal__error">{paymentError}</div>
+                                )}
+
+                                <div className="confirm-modal__actions">
+                                    <button
+                                        className="guru-btn guru-btn--ghost"
+                                        onClick={() => setShowPaymentModal(false)}
+                                        disabled={paymentProcessing}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="guru-btn guru-btn--primary"
+                                        onClick={paymentMethod === 'cash' ? handleCashPayment : handleStripePayment}
+                                        disabled={paymentProcessing}
+                                    >
+                                        {paymentProcessing
+                                            ? 'Processing...'
+                                            : paymentMethod === 'cash'
+                                                ? 'Confirm Cash Received'
+                                                : 'Proceed to Card Payment'
+                                        }
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* ════════════════════════════════════════════════
                         EXTRAS — Photos + Legal
