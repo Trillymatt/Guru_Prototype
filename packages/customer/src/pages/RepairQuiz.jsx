@@ -14,6 +14,7 @@ import {
     getAvailableTiersForRepair,
     getDeviceRepairPrice,
     SERVICE_FEE,
+    LABOR_FEE,
     TIME_SLOTS,
     SCHEDULING_LEAD_DAYS,
     SCHEDULING_WINDOW_DAYS,
@@ -401,7 +402,7 @@ export default function RepairQuiz() {
 
     const calculateTotal = () => {
         const partsTotal = selectedIssues.reduce((sum, id) => sum + getIssuePrice(id), 0);
-        return partsTotal + SERVICE_FEE;
+        return partsTotal + SERVICE_FEE + LABOR_FEE;
     };
 
     const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
@@ -933,6 +934,10 @@ export default function RepairQuiz() {
                                                 );
                                             })}
                                             <div className="quiz__quote-line">
+                                                <span>🔧 Labor</span>
+                                                <span className="quiz__quote-value">${LABOR_FEE}</span>
+                                            </div>
+                                            <div className="quiz__quote-line">
                                                 <span>🚗 On-site Service Fee</span>
                                                 <span className="quiz__quote-value">${SERVICE_FEE}</span>
                                             </div>
@@ -1033,6 +1038,10 @@ export default function RepairQuiz() {
                                                     </div>
                                                 );
                                             })}
+                                            <div className="quiz__quote-line">
+                                                <span>🔧 Labor</span>
+                                                <span className="quiz__quote-value">${LABOR_FEE}</span>
+                                            </div>
                                             <div className="quiz__quote-line">
                                                 <span>🚗 On-site Service Fee</span>
                                                 <span className="quiz__quote-value">${SERVICE_FEE}</span>
@@ -1230,7 +1239,7 @@ export default function RepairQuiz() {
                                 <div className="quiz__price-footer-label">
                                     Estimated Total
                                     <span className="quiz__price-footer-items">
-                                        {selectedIssues.length} repair{selectedIssues.length > 1 ? 's' : ''} + service fee
+                                        {selectedIssues.length} repair{selectedIssues.length > 1 ? 's' : ''} + labor + service fee
                                     </span>
                                 </div>
                                 <div className="quiz__price-footer-amount">${calculateTotal()}</div>

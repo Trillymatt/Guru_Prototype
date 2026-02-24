@@ -72,7 +72,7 @@ const FAQ_CATEGORIES = [
     },
     {
         id: 'parts',
-        label: 'Parts & Warranty',
+        label: 'Parts & Policy',
         icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -85,15 +85,11 @@ const FAQ_CATEGORIES = [
             },
             {
                 q: 'Do you offer a warranty on repairs?',
-                a: 'Yes. All repairs come with a warranty against defects in parts and workmanship. Economy parts carry a 30-day warranty. Premium parts carry a 90-day warranty. Genuine Apple parts carry a 180-day warranty. Warranty covers manufacturing defects — it does not cover accidental damage after the repair.'
-            },
-            {
-                q: 'What if a replacement part is defective after the repair?',
-                a: 'Contact us immediately. If the issue is covered under your part\'s warranty period, we will source a replacement part and schedule a follow-up repair at no additional cost to you. Your technician will assess the situation and make it right.'
+                a: 'No. All repairs are provided as-is and do not include any warranty on parts or labor. Once a repair is completed and signed off, no further claims can be made. Please review our full Warranty Policy on the legal page for details.'
             },
             {
                 q: 'Will the repair void my Apple warranty?',
-                a: 'Third-party repairs can affect Apple\'s limited hardware warranty. However, under the Magnuson-Moss Warranty Act, manufacturers cannot void a warranty solely because a third party performed repairs. We use Genuine Apple (OEM) parts for customers who want to stay closest to Apple\'s standards. We recommend checking your current warranty status with Apple before proceeding if this is a concern.'
+                a: 'Third-party repairs can affect Apple\'s limited hardware warranty. We use Genuine Apple (OEM) parts for customers who want to stay closest to Apple\'s standards. We recommend checking your current warranty status with Apple before proceeding if this is a concern.'
             },
         ],
     },
@@ -241,7 +237,7 @@ export default function FAQPage() {
                             </div>
                             <h3 className="support-card__title">Email Us</h3>
                             <p className="support-card__desc">
-                                Best for questions about existing repairs, billing, or warranty claims.
+                                Best for questions about existing repairs, billing, or policies.
                             </p>
                             <a href="mailto:support@gururepair.com" className="support-card__link">
                                 support@gururepair.com

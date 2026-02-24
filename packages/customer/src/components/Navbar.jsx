@@ -51,8 +51,8 @@ export default function Navbar({ darkHero = false }) {
                     )}
                     {!isLoggedIn && (
                         <>
-                            <a href="#how-it-works" className="navbar__link" onClick={closeMenu}>How It Works</a>
-                            <a href="#features" className="navbar__link" onClick={closeMenu}>Features</a>
+                            <a href="/#how-it-works" className="navbar__link" onClick={closeMenu}>How It Works</a>
+                            <a href="/#features" className="navbar__link" onClick={closeMenu}>Features</a>
                         </>
                     )}
                     <Link to="/faq" className="navbar__link" onClick={closeMenu}>Support</Link>

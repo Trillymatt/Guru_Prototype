@@ -924,6 +924,161 @@
   text-align: left;
 }
 
+/* ─── Tip Modal Grid ────────────────────────────────────────────── */
+
+.tip-modal__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.tip-modal__btn {
+  padding: var(--space-4) var(--space-3);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--dark-text-primary);
+  background: var(--dark-bg-base);
+  border: 2px solid var(--dark-border-subtle);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.tip-modal__btn:hover {
+  border-color: var(--dark-purple-400);
+  background: rgba(168, 85, 247, 0.08);
+  color: var(--dark-purple-400);
+}
+
+.tip-modal__btn--notip {
+  color: var(--dark-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+.tip-modal__btn--notip:hover {
+  border-color: var(--dark-border-medium);
+  background: var(--dark-bg-hover);
+  color: var(--dark-text-primary);
+}
+
+/* ─── Cash Change Calculator ────────────────────────────────────── */
+
+.cash-change {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.cash-change__label {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--dark-text-secondary);
+  text-align: left;
+}
+
+.cash-change__input-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--dark-bg-base);
+  border: 2px solid var(--dark-border-medium);
+  border-radius: var(--radius-xl);
+  padding: 0 var(--space-4);
+  transition: border-color var(--transition-fast);
+}
+
+.cash-change__input-wrap:focus-within {
+  border-color: var(--dark-purple-400);
+}
+
+.cash-change__prefix {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--dark-text-tertiary);
+  margin-right: var(--space-2);
+}
+
+.cash-change__input {
+  flex: 1;
+  padding: var(--space-3) 0;
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  font-family: inherit;
+  color: var(--dark-text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+  letter-spacing: -0.01em;
+}
+
+.cash-change__input::placeholder {
+  color: var(--dark-text-tertiary);
+}
+
+.cash-change__result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+}
+
+.cash-change__result--ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ADE80;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.cash-change__result--err {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--dark-error);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  justify-content: center;
+}
+
+/* ─── Stripe Modal — mobile bottom sheet ───────────────────────── */
+
+/* On desktop the stripe modal behaves like a normal centered modal.
+   On mobile it becomes a bottom sheet: full width, slides up from
+   the bottom, scrollable so the full Stripe form is reachable. */
+
+.confirm-modal-overlay--stripe {
+  padding: 0;
+  align-items: flex-end;
+}
+
+.confirm-modal--stripe {
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  padding: var(--space-6) var(--space-5) calc(var(--space-8) + env(safe-area-inset-bottom));
+  max-width: 100%;
+}
+
+/* Restore centered desktop layout at wider viewports */
+@media (min-width: 600px) {
+  .confirm-modal-overlay--stripe {
+    padding: var(--space-6);
+    align-items: center;
+  }
+
+  .confirm-modal--stripe {
+    border-radius: var(--radius-2xl);
+    max-width: 480px;
+    max-height: 90vh;
+    padding: var(--space-8);
+  }
+}
+
 /* ─── Stripe PaymentElement wrapper ────────────────────────────── */
 
 .stripe-payment-element-wrapper {

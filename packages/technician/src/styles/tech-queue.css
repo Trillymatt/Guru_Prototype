@@ -3,6 +3,48 @@
    Repair queue with filters and card layout
    ═══════════════════════════════════════════════════════════════ */
 
+/* ─── Payment Complete Banner ───────────────────────────────────── */
+
+.payment-complete-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background: rgba(34, 197, 94, 0.12);
+  border-bottom: 1px solid rgba(34, 197, 94, 0.25);
+  color: #4ADE80;
+}
+
+.payment-complete-banner__icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.payment-complete-banner__text {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.payment-complete-banner__close {
+  background: none;
+  border: none;
+  color: #4ADE80;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+  font-family: inherit;
+}
+
+.payment-complete-banner__close:hover {
+  opacity: 1;
+}
+
+/* ─── Queue Page ─────────────────────────────────────────────────── */
+
 .queue-page {
   min-height: calc(100vh - 64px); /* Account for nav height */
   background: var(--dark-bg-base);
@@ -89,7 +131,56 @@
 .queue-list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ─── Date Group Sections ───────────────────────────────────────── */
+
+.queue-date-group {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
+}
+
+.queue-date-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.queue-date-header__label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--dark-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.queue-date-header--today .queue-date-header__label {
+  color: var(--dark-purple-400);
+}
+
+.queue-date-header--tomorrow .queue-date-header__label {
+  color: var(--dark-text-secondary);
+}
+
+.queue-date-header__count {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--dark-text-tertiary);
+  background: var(--dark-bg-elevated);
+  border: 1px solid var(--dark-border-subtle);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.queue-date-header__line {
+  flex: 1;
+  height: 1px;
+  background: var(--dark-border-subtle);
 }
 
 /* ─── Individual Repair Card ────────────────────────────────────── */

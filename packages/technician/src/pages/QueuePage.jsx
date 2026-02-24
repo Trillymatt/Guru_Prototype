@@ -9,6 +9,11 @@ export default function QueuePage() {
     const [repairs, setRepairs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [unreadCounts, setUnreadCounts] = useState({}); // { repairId: count }
+    const [paymentComplete, setPaymentComplete] = useState(() => {
+        const flag = sessionStorage.getItem('guru_payment_complete');
+        if (flag) { sessionStorage.removeItem('guru_payment_complete'); return true; }
+        return false;
+    });
 
     // Fetch repairs from Supabase
     useEffect(() => {
@@ -132,9 +137,40 @@ export default function QueuePage() {
         ? sortedRepairs
         : sortedRepairs.filter((r) => r.status === filter);
 
+    // Group repairs by schedule_date for section headers
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = tomorrowDate.toLocaleDateString('en-CA');
+
+    const groupedRepairs = filteredRepairs.reduce((groups, repair) => {
+        const key = repair.schedule_date || 'unscheduled';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(repair);
+        return groups;
+    }, {});
+
+    const dateGroups = Object.entries(groupedRepairs).map(([key, items]) => {
+        let label;
+        if (key === 'unscheduled') label = 'Unscheduled';
+        else if (key === todayStr) label = 'Today';
+        else if (key === tomorrowStr) label = 'Tomorrow';
+        else label = new Date(key + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        return { key, label, repairs: items };
+    });
+
     return (
         <>
             <TechNav />
+
+            {/* Payment Complete Banner */}
+            {paymentComplete && (
+                <div className="payment-complete-banner">
+                    <span className="payment-complete-banner__icon">✅</span>
+                    <span className="payment-complete-banner__text">Payment complete! Repair has been marked as done.</span>
+                    <button className="payment-complete-banner__close" onClick={() => setPaymentComplete(false)}>×</button>
+                </div>
+            )}
 
             {/* Queue Content */}
             <div className="queue-page">
@@ -177,42 +213,50 @@ export default function QueuePage() {
                                 <div className="tech-empty-state__icon">📋</div>
                                 <div className="tech-empty-state__text">No repairs in this category</div>
                             </div>
-                        ) : filteredRepairs.map((repair) => {
-                            const customerName = repair.customers?.full_name || 'Unknown Customer';
-                            const issues = Array.isArray(repair.issues) ? repair.issues : [];
-                            const issueLabels = issues.map(id => {
-                                const type = REPAIR_TYPES.find(t => t.id === id);
-                                return type ? `${type.icon} ${type.name}` : id;
-                            });
-                            return (
-                                <Link to={`/repair/${repair.id}`} key={repair.id} className="repair-card animate-fade-in-up" style={{ position: 'relative' }}>
-                                    {unreadCounts[repair.id] > 0 && (
-                                        <span className="msg-notify-badge">
-                                            💬 {unreadCounts[repair.id]}
-                                        </span>
-                                    )}
-                                    <div className={`repair-card__priority repair-card__priority--${repair.status}`}></div>
-                                    <div className="repair-card__info">
-                                        <div className="repair-card__device">{repair.device}</div>
-                                        <div className="repair-card__issues">{issueLabels.join(' · ')}</div>
-                                        <div className="repair-card__meta">
-                                            <span>👤 {customerName}</span>
-                                            <span>📅 {repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
-                                            <span>🕐 {repair.schedule_time}</span>
-                                        </div>
-                                    </div>
-                                    <div className="repair-card__actions">
-                                        <div className="repair-card__price">${repair.total_estimate}</div>
-                                        <span className={`guru-badge ${repair.status === REPAIR_STATUS.PENDING ? 'guru-badge--warning' :
-                                            repair.status === REPAIR_STATUS.COMPLETE ? 'guru-badge--success' :
-                                                'guru-badge--purple'
-                                            }`}>
-                                            {REPAIR_STATUS_LABELS[repair.status] || repair.status}
-                                        </span>
-                                    </div>
-                                </Link>
-                            );
-                        })}
+                        ) : dateGroups.map(({ key, label, repairs: groupRepairs }) => (
+                            <div key={key} className="queue-date-group">
+                                <div className={`queue-date-header ${key === todayStr ? 'queue-date-header--today' : key === tomorrowStr ? 'queue-date-header--tomorrow' : ''}`}>
+                                    <span className="queue-date-header__label">{label}</span>
+                                    <span className="queue-date-header__count">{groupRepairs.length}</span>
+                                    <span className="queue-date-header__line" />
+                                </div>
+                                {groupRepairs.map((repair) => {
+                                    const customerName = repair.customers?.full_name || 'Unknown Customer';
+                                    const issues = Array.isArray(repair.issues) ? repair.issues : [];
+                                    const issueLabels = issues.map(id => {
+                                        const type = REPAIR_TYPES.find(t => t.id === id);
+                                        return type ? `${type.icon} ${type.name}` : id;
+                                    });
+                                    return (
+                                        <Link to={`/repair/${repair.id}`} key={repair.id} className="repair-card animate-fade-in-up" style={{ position: 'relative' }}>
+                                            {unreadCounts[repair.id] > 0 && (
+                                                <span className="msg-notify-badge">
+                                                    💬 {unreadCounts[repair.id]}
+                                                </span>
+                                            )}
+                                            <div className={`repair-card__priority repair-card__priority--${repair.status}`}></div>
+                                            <div className="repair-card__info">
+                                                <div className="repair-card__device">{repair.device}</div>
+                                                <div className="repair-card__issues">{issueLabels.join(' · ')}</div>
+                                                <div className="repair-card__meta">
+                                                    <span>👤 {customerName}</span>
+                                                    <span>🕐 {repair.schedule_time || '—'}</span>
+                                                </div>
+                                            </div>
+                                            <div className="repair-card__actions">
+                                                <div className="repair-card__price">${repair.total_estimate}</div>
+                                                <span className={`guru-badge ${repair.status === REPAIR_STATUS.PENDING ? 'guru-badge--warning' :
+                                                    repair.status === REPAIR_STATUS.COMPLETE ? 'guru-badge--success' :
+                                                        'guru-badge--purple'
+                                                    }`}>
+                                                    {REPAIR_STATUS_LABELS[repair.status] || repair.status}
+                                                </span>
+                                            </div>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

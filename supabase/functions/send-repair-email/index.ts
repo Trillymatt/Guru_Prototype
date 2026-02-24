@@ -2,13 +2,14 @@
 // GURU MOBILE REPAIR SOLUTIONS — Email Notification Edge Function
 // Sends professional transactional emails via Resend for repair lifecycle events.
 //
-// Handles 6 email types:
+// Handles 7 email types:
 //   1. repair_confirmed  — When a repair is first created
 //   2. day_of_reminder   — Morning of the scheduled repair date (via pg_cron)
 //   3. tech_en_route     — Technician is driving to the customer
 //   4. tech_arrived      — Technician has arrived at the location
 //   5. repair_complete   — Repair finished successfully
 //   6. review_request    — Post-service survey (sent ~2 hrs after completion)
+//   7. invoice_ready     — Payment received; invoice link emailed to customer
 //
 // SETUP:
 //   1. Create a free Resend account at https://resend.com
@@ -483,6 +484,78 @@ ${ctaButton("Leave a Review", `${SURVEY_URL}?repair_id=${data.repair_id}`, "#FF9
   };
 }
 
+// ─── 7. Invoice Ready ────────────────────────────────────────────────────────
+
+function invoiceReady(data: any): { subject: string; html: string } {
+  const orderId = (data.repair_id || "").slice(-8).toUpperCase();
+  const subject = `Your Invoice — Guru Mobile Repair #${orderId}`;
+
+  const paymentMethodLabel =
+    data.payment_method === "square"
+      ? "Square (Card / Tap to Pay)"
+      : data.payment_method === "cash"
+      ? "Cash"
+      : data.payment_method || "Paid";
+
+  const paidDate = data.paid_at
+    ? new Date(data.paid_at).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "Today";
+
+  const totalEstimate = Number(data.total_estimate || 0);
+  const tipAmount = Number(data.tip_amount || 0);
+  const totalPaid = totalEstimate + tipAmount;
+
+  const tipRow =
+    tipAmount > 0
+      ? detailRow("Tip", formatCurrency(tipAmount))
+      : "";
+
+  const content = `
+<p style="font-size:22px;font-weight:600;color:#1D1D1F;margin:0 0 8px;">Hi ${data.customer_name},</p>
+<p style="font-size:16px;color:#6E6E73;margin:0 0 24px;line-height:1.5;">Thank you for your payment! Here is your invoice for the repair services completed on your ${data.device || "device"}.</p>
+
+${statusBadge("Paid", "#34C759")}
+
+${detailCard(
+  "Invoice Details",
+  detailRow("Invoice #", `#${orderId}`) +
+    detailRow("Date Paid", paidDate) +
+    detailRow("Device", data.device || "N/A") +
+    detailRow("Service(s)", formatIssues(data.issues)) +
+    detailRow("Payment Method", paymentMethodLabel)
+)}
+
+${detailCard(
+  "Payment Summary",
+  detailRow("Repair Subtotal", formatCurrency(totalEstimate)) +
+    tipRow +
+    totalRow("Total Paid", formatCurrency(totalPaid), "#34C759")
+)}
+
+${highlightBox(
+  "<strong>Need a copy for your records?</strong><br>Click the button below to view and print your full invoice anytime from your Guru account.",
+  "#34C759",
+  "#F0FAF0"
+)}
+
+${ctaButton("View & Print Invoice", `${APP_URL}/invoice/${data.repair_id}`, "#34C759")}
+
+<p style="font-size:13px;color:#86868B;line-height:1.6;margin:0;">Questions about your invoice? Reply to this email or contact our support team. We're happy to help!</p>`;
+
+  return {
+    subject,
+    html: wrapEmail(
+      content,
+      `Your invoice for ${data.device || "your repair"} is ready. Total paid: ${formatCurrency(totalPaid)}.`
+    ),
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMAIL ROUTER & MAIN HANDLER
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -503,6 +576,8 @@ function generateEmail(emailType: string, data: any): EmailResult | null {
       return repairComplete(data);
     case "review_request":
       return reviewRequest(data);
+    case "invoice_ready":
+      return invoiceReady(data);
     default:
       return null;
   }
@@ -550,6 +625,7 @@ Deno.serve(async (req: Request) => {
       "tech_arrived",
       "repair_complete",
       "review_request",
+      "invoice_ready",
     ];
     if (!validEmailTypes.includes(email_type)) {
       return new Response(

@@ -36,6 +36,7 @@ export default function RepairDetailPage() {
     const { user } = useAuth();
     const [repair, setRepair] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showCancelModal, setShowCancelModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editDate, setEditDate] = useState('');
     const [editTime, setEditTime] = useState('');
@@ -172,6 +173,25 @@ export default function RepairDetailPage() {
         setIsEditing(false);
         setIsSaving(false);
     };
+
+    const handleCancelRepair = async () => {
+        setShowCancelModal(false);
+        const { error } = await supabase
+            .from('repairs')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .eq('id', id);
+        if (!error) {
+            setRepair(prev => ({ ...prev, status: 'cancelled' }));
+        }
+    };
+
+    const canCancel = repair && ![
+        REPAIR_STATUS.EN_ROUTE,
+        REPAIR_STATUS.ARRIVED,
+        REPAIR_STATUS.IN_PROGRESS,
+        REPAIR_STATUS.COMPLETE,
+        REPAIR_STATUS.CANCELLED,
+    ].includes(repair.status);
 
     const minDate = new Date();
     minDate.setDate(minDate.getDate() + 3);
@@ -492,14 +512,67 @@ export default function RepairDetailPage() {
                         </div>
                     </div>
 
+                    {/* Invoice Link — shown once payment is complete */}
+                    {repair.payment_status === 'completed' && (
+                        <div className="rd-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
+                            <div>
+                                <h3 className="rd-section-title" style={{ margin: 0, marginBottom: 4 }}>Invoice</h3>
+                                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--guru-gray-500)', margin: 0 }}>
+                                    Your repair has been paid. View or print your invoice below.
+                                </p>
+                            </div>
+                            <Link
+                                to={`/invoice/${id}`}
+                                className="guru-btn guru-btn--primary"
+                                style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                            >
+                                View Invoice
+                            </Link>
+                        </div>
+                    )}
+
                     {repair.notes && (
                         <div className="rd-card">
                             <h3 className="rd-section-title">Notes</h3>
                             <p className="rd-notes">{repair.notes}</p>
                         </div>
                     )}
+
+                    {canCancel && (
+                        <div className="rd-cancel-section">
+                            <button
+                                className="guru-btn guru-btn--danger"
+                                onClick={() => setShowCancelModal(true)}
+                            >
+                                Cancel Repair
+                            </button>
+                            <p className="rd-cancel-note">
+                                Cancellation is not available once a technician is en route.
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {showCancelModal && (
+                <div className="rd-modal-overlay" onClick={() => setShowCancelModal(false)}>
+                    <div className="rd-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="rd-modal__icon">⚠️</div>
+                        <h3 className="rd-modal__title">Cancel This Repair?</h3>
+                        <p className="rd-modal__message">
+                            Are you sure you want to cancel? Your repair request will be removed and you will need to rebook if you change your mind.
+                        </p>
+                        <div className="rd-modal__actions">
+                            <button className="guru-btn guru-btn--ghost" onClick={() => setShowCancelModal(false)}>
+                                Keep Repair
+                            </button>
+                            <button className="guru-btn guru-btn--danger" onClick={handleCancelRepair}>
+                                Yes, Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

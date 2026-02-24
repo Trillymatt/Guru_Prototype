@@ -8,6 +8,7 @@ import RepairDetailPage from './pages/RepairDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import FAQPage from './pages/FAQPage';
 import LegalPage from './pages/LegalPage';
+import InvoicePage from './pages/InvoicePage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -32,6 +33,11 @@ export default function App() {
                 <Route path="/profile" element={
                     <ProtectedRoute>
                         <ProfilePage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/invoice/:id" element={
+                    <ProtectedRoute>
+                        <InvoicePage />
                     </ProtectedRoute>
                 } />
             </Routes>

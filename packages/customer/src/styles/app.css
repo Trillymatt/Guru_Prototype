@@ -147,6 +147,7 @@ body {
     font-weight: 800;
     color: var(--guru-purple-600);
     letter-spacing: -0.02em;
+    text-decoration: none;
 }
 
 .navbar__logo-text {
@@ -197,6 +198,7 @@ body {
     color: var(--guru-gray-600);
     transition: color var(--transition-fast);
     position: relative;
+    text-decoration: none;
 }
 
 .navbar__link:hover {
@@ -1609,6 +1611,7 @@ body {
     font-size: var(--font-size-sm);
     color: var(--guru-gray-400);
     transition: color var(--transition-fast);
+    text-decoration: none;
 }
 
 .footer__links a:hover {

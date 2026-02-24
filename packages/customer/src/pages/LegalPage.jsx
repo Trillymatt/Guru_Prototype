@@ -225,7 +225,7 @@ function RepairAgreement() {
                 Upon completion of the repair, you will be asked to review the device and sign a digital
                 completion form. Your signature confirms the repair was completed to your satisfaction.
                 Any concerns must be raised before signing. Post-sign-off claims regarding repair quality
-                are handled through our warranty policy.
+                are subject to the terms outlined in our no-warranty policy.
             </p>
 
             <h3>7. Third-Party Software</h3>
@@ -241,80 +241,47 @@ function RepairAgreement() {
 function WarrantyPolicy() {
     return (
         <div className="legal-doc">
-            <p className="legal-updated">Last updated: January 1, 2026</p>
+            <p className="legal-updated">Last updated: February 21, 2026</p>
 
             <p className="legal-intro">
-                Guru stands behind the quality of every repair. Our warranty covers defects in parts and
-                workmanship for the periods listed below. We want you to feel confident in choosing Guru —
-                if something isn't right, we will make it right.
+                Please read this policy carefully before booking a repair with Guru Mobile Repair Solutions.
             </p>
 
-            <div className="legal-warranty-tiers">
-                <div className="legal-warranty-tier">
-                    <div className="legal-warranty-tier__badge legal-warranty-tier__badge--eco">$</div>
-                    <div className="legal-warranty-tier__info">
-                        <h4>Economy Parts</h4>
-                        <p>Aftermarket components. Quality aftermarket parts at the best price point.</p>
-                    </div>
-                    <div className="legal-warranty-tier__duration">30 days</div>
-                </div>
-                <div className="legal-warranty-tier">
-                    <div className="legal-warranty-tier__badge legal-warranty-tier__badge--prem">$$</div>
-                    <div className="legal-warranty-tier__info">
-                        <h4>Premium Parts</h4>
-                        <p>High-quality aftermarket components meeting or exceeding OEM spec.</p>
-                    </div>
-                    <div className="legal-warranty-tier__duration">90 days</div>
-                </div>
-                <div className="legal-warranty-tier">
-                    <div className="legal-warranty-tier__badge legal-warranty-tier__badge--gen">$$$</div>
-                    <div className="legal-warranty-tier__info">
-                        <h4>Genuine Apple Parts</h4>
-                        <p>Original Apple OEM components for maximum compatibility and fidelity.</p>
-                    </div>
-                    <div className="legal-warranty-tier__duration">180 days</div>
-                </div>
-            </div>
-
-            <h3>What the Warranty Covers</h3>
-            <ul>
-                <li>Defects in the replacement part itself (dead pixels, touch failure, battery failure)</li>
-                <li>Workmanship defects resulting from the installation process</li>
-                <li>Failure of the repair to correct the reported issue</li>
-            </ul>
-
-            <h3>What the Warranty Does Not Cover</h3>
-            <ul>
-                <li>Accidental damage after the repair (drops, liquid exposure, crushing)</li>
-                <li>Damage caused by unauthorized repair attempts by third parties after Guru's service</li>
-                <li>Normal wear and tear on parts</li>
-                <li>Software or operating system issues unrelated to hardware</li>
-                <li>Pre-existing conditions documented before the repair</li>
-                <li>Devices reported lost or stolen</li>
-            </ul>
-
-            <h3>How to Make a Warranty Claim</h3>
+            <h3>No Warranty on Repairs</h3>
             <p>
-                To file a warranty claim, contact us at{' '}
-                <a href="mailto:warranty@gururepair.com">warranty@gururepair.com</a> within your warranty
-                period with:
+                All repairs performed by Guru are provided <strong>as-is</strong> and do not include any
+                warranty on parts or labor. Once a repair is completed and signed off by the customer,
+                Guru assumes no further responsibility for the repaired component or device.
             </p>
-            <ol>
-                <li>Your name and repair order number</li>
-                <li>Description of the issue</li>
-                <li>Photos or video demonstrating the defect (if applicable)</li>
-            </ol>
+
+            <h3>Customer Acknowledgment</h3>
             <p>
-                We will respond within one business day and schedule a follow-up repair at no cost if the
-                claim is covered. Warranty service is performed by a Guru technician at a mutually agreed
-                location.
+                By booking a repair with Guru, you acknowledge and agree to the following:
+            </p>
+            <ul>
+                <li>No warranty of any kind — express or implied — is provided on any repair, part, or service.</li>
+                <li>All sales and services are final once the repair completion form is signed.</li>
+                <li>Guru is not responsible for issues that arise after the repair has been completed and accepted.</li>
+                <li>Prices shown during booking are estimates. Final pricing is confirmed after technician diagnosis.</li>
+            </ul>
+
+            <h3>Third-Party Parts</h3>
+            <p>
+                Guru sources parts from third-party suppliers at various quality tiers (Economy, Premium, and
+                Genuine Apple). While we strive to use reliable parts, Guru does not guarantee the longevity
+                or performance of any replacement component after installation.
             </p>
 
             <h3>Limitation of Liability</h3>
             <p>
-                Guru's warranty liability is limited to repair or replacement of the defective part. We are
-                not liable for consequential, incidental, or indirect damages. Our maximum liability under
-                any warranty claim is limited to the original cost of the repair.
+                Guru is not liable for any consequential, incidental, or indirect damages arising from any
+                repair service. Our maximum liability is limited to the original cost of the repair performed.
+            </p>
+
+            <h3>Questions?</h3>
+            <p>
+                If you have questions about this policy, contact us at{' '}
+                <a href="mailto:support@gururepair.com">support@gururepair.com</a> before booking your repair.
             </p>
         </div>
     );
