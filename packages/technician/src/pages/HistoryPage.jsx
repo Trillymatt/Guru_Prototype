@@ -77,7 +77,7 @@ export default function HistoryPage() {
                             const issues = Array.isArray(repair.issues) ? repair.issues : [];
                             const completedDate = repair.updated_at
                                 ? new Date(repair.updated_at).toLocaleDateString('en-US', {
-                                    month: 'short', day: 'numeric', year: 'numeric'
+                                    month: '2-digit', day: '2-digit', year: 'numeric'
                                 })
                                 : '—';
 

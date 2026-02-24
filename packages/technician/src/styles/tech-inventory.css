@@ -1,0 +1,749 @@
+/* ═══════════════════════════════════════════════════════════════
+   Technician Portal - Inventory Page
+   Shared parts inventory management
+   ═══════════════════════════════════════════════════════════════ */
+
+.inventory-page {
+  padding: var(--space-6) 0;
+  min-height: 100vh;
+}
+
+/* ─── Header ────────────────────────────────────────────────── */
+
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.inventory-header__title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--dark-text-primary);
+  margin: 0;
+}
+
+.inventory-header__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--dark-text-secondary);
+  margin: 4px 0 0;
+}
+
+/* ─── Stats ─────────────────────────────────────────────────── */
+
+.inventory-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.inventory-stat {
+  background: var(--dark-bg-elevated);
+  border: 1px solid var(--dark-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  text-align: center;
+}
+
+.inventory-stat__value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--dark-text-primary);
+}
+
+.inventory-stat__label {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--dark-text-tertiary);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.inventory-stat--success .inventory-stat__value {
+  color: var(--guru-success);
+}
+
+.inventory-stat--danger .inventory-stat__value {
+  color: var(--guru-error);
+}
+
+/* ─── Filters ───────────────────────────────────────────────── */
+
+.inventory-filters {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.inventory-filter-select {
+  padding: 10px 16px;
+  background: var(--dark-bg-elevated);
+  border: 1px solid var(--dark-border-subtle);
+  border-radius: var(--radius-lg);
+  color: var(--dark-text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  cursor: pointer;
+  min-width: 180px;
+}
+
+.inventory-filter-select:focus {
+  outline: none;
+  border-color: var(--dark-purple-500);
+}
+
+/* ─── Card Grid ──────────────────────────────────────────────── */
+
+.inventory-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+.inventory-card {
+  background: var(--dark-bg-card);
+  border: 1px solid var(--dark-border-subtle);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+  position: relative;
+}
+
+.inventory-card:hover {
+  border-color: var(--dark-border-medium);
+  transform: translateY(-2px);
+}
+
+/* Colored top bar indicating stock level */
+.inventory-card__bar {
+  height: 3px;
+  width: 100%;
+}
+
+.inventory-card__bar--in  { background: var(--dark-success); }
+.inventory-card__bar--low { background: var(--dark-warning); }
+.inventory-card__bar--out { background: var(--dark-error); }
+
+.inventory-card--out {
+  opacity: 0.75;
+}
+
+.inventory-card__body {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.inventory-card__device {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--dark-text-primary);
+}
+
+.inventory-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.inventory-card__repair {
+  font-size: var(--font-size-sm);
+  color: var(--dark-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inventory-card__tier {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.inventory-card__qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--dark-border-subtle);
+}
+
+.inventory-card__actions {
+  display: flex;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--dark-border-subtle);
+}
+
+.inventory-card__action-btn {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--dark-border-subtle);
+  background: var(--dark-bg-elevated);
+  color: var(--dark-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.inventory-card__action-btn:hover {
+  border-color: var(--dark-purple-500);
+  color: var(--dark-purple-400);
+  background: rgba(168, 85, 247, 0.08);
+}
+
+.inventory-card__action-btn--delete:hover {
+  border-color: var(--dark-error);
+  color: var(--dark-error);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* ─── Form Header ─────────────────────────────────────────────── */
+
+.inventory-form__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-5);
+}
+
+.inventory-form__title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--dark-text-primary);
+  margin: 0;
+}
+
+.inventory-form__close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--dark-border-subtle);
+  background: var(--dark-bg-elevated);
+  color: var(--dark-text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.inventory-form__close:hover {
+  background: var(--dark-bg-hover);
+  color: var(--dark-text-primary);
+}
+
+/* ─── Repair Type Grid (in form) ──────────────────────────────── */
+
+.inventory-repair-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.inventory-repair-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--dark-border-subtle);
+  background: var(--dark-bg-elevated);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.inventory-repair-type-btn:hover {
+  border-color: var(--dark-border-medium);
+  background: var(--dark-bg-hover);
+}
+
+.inventory-repair-type-btn--active {
+  border-color: var(--dark-purple-500);
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.inventory-repair-type-btn__icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.inventory-repair-type-btn__name {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--dark-text-secondary);
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.inventory-repair-type-btn--active .inventory-repair-type-btn__name {
+  color: var(--dark-purple-400);
+}
+
+/* ─── Full-width select ────────────────────────────────────────── */
+
+.inventory-filter-select--full {
+  width: 100%;
+  min-width: unset;
+}
+
+/* ─── Enhanced Edit Info ───────────────────────────────────────── */
+
+.inventory-form__edit-info {
+  background: var(--dark-bg-elevated);
+  border: 1px solid var(--dark-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.inventory-form__edit-device {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  color: var(--dark-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.inventory-form__edit-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--dark-text-secondary);
+}
+
+/* ─── Repair Name (legacy, keep for compat) ───────────────────── */
+
+.inventory-repair-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.inventory-tier-tag {
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+}
+
+/* ─── Quantity Controls (in-table) ──────────────────────────── */
+
+.inventory-qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-qty-sm-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--dark-border-medium);
+  background: var(--dark-bg-card);
+  color: var(--dark-text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.inventory-qty-sm-btn:hover:not(:disabled) {
+  border-color: var(--dark-purple-500);
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.inventory-qty-sm-btn:focus-visible {
+  border-color: var(--dark-purple-500);
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+  outline: none;
+}
+
+.inventory-qty-sm-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.inventory-qty-display {
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  min-width: 24px;
+  text-align: center;
+}
+
+/* ─── Status Badges ─────────────────────────────────────────── */
+
+.inventory-status {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.inventory-status--in {
+  color: var(--guru-success);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.inventory-status--low {
+  color: #F59E0B;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.inventory-status--out {
+  color: var(--guru-error);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* ─── Action Buttons ────────────────────────────────────────── */
+
+.inventory-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.inventory-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.inventory-action-btn:hover {
+  background: var(--dark-bg-hover);
+}
+
+.inventory-action-btn--delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* ─── Form Overlay ──────────────────────────────────────────── */
+
+.inventory-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-4);
+}
+
+.inventory-form {
+  background: var(--dark-bg-card);
+  border: 1px solid var(--dark-border-subtle);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.inventory-form__title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--dark-text-primary);
+  margin: 0 0 var(--space-5);
+}
+
+.inventory-form__field {
+  margin-bottom: var(--space-4);
+}
+
+.inventory-form__label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--dark-text-primary);
+  margin-bottom: 8px;
+}
+
+.inventory-form__edit-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--dark-bg-elevated);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--dark-text-primary);
+  font-weight: 600;
+}
+
+/* ─── Generation Tabs (in form) ─────────────────────────────── */
+
+.inventory-gen-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.inventory-gen-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--dark-border-subtle);
+  background: var(--dark-bg-elevated);
+  color: var(--dark-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.inventory-gen-tab:hover {
+  border-color: var(--dark-border-medium);
+}
+
+.inventory-gen-tab--active {
+  background: var(--dark-purple-500);
+  border-color: var(--dark-purple-500);
+  color: white;
+}
+
+/* ─── Tier Options (in form) ────────────────────────────────── */
+
+.inventory-tier-options {
+  display: flex;
+  gap: 10px;
+}
+
+.inventory-tier-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--dark-border-subtle);
+  background: var(--dark-bg-elevated);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+  font-family: inherit;
+}
+
+.inventory-tier-btn:hover {
+  border-color: var(--dark-border-medium);
+}
+
+.inventory-tier-btn__dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-bottom: 4px;
+}
+
+.inventory-tier-btn__name {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--dark-text-primary);
+}
+
+.inventory-tier-btn__price {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--dark-text-tertiary);
+}
+
+/* ─── Quantity Input (in form) ──────────────────────────────── */
+
+.inventory-qty-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inventory-qty-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--dark-border-subtle);
+  background: var(--dark-bg-elevated);
+  color: var(--dark-text-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.inventory-qty-btn:hover {
+  border-color: var(--dark-purple-500);
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.inventory-qty-value {
+  width: 80px;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 8px;
+  border: 1px solid var(--dark-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--dark-bg-elevated);
+  color: var(--dark-text-primary);
+  font-family: inherit;
+}
+
+.inventory-qty-value:focus {
+  outline: none;
+  border-color: var(--dark-purple-500);
+}
+
+/* ─── Form Error ────────────────────────────────────────────── */
+
+.inventory-form__error {
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--guru-error);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+}
+
+/* ─── Form Actions ──────────────────────────────────────────── */
+
+.inventory-form__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--dark-border-subtle);
+}
+
+/* ─── Empty / Loading ───────────────────────────────────────── */
+
+.inventory-loading {
+  text-align: center;
+  padding: 4rem 0;
+  color: var(--dark-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.inventory-empty {
+  text-align: center;
+  padding: 4rem 0;
+}
+
+.inventory-empty__icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.inventory-empty h3 {
+  color: var(--dark-text-primary);
+  margin: 0 0 8px;
+}
+
+.inventory-empty p {
+  color: var(--dark-text-secondary);
+  font-size: var(--font-size-sm);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* ─── Responsive ────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .inventory-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .inventory-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .inventory-tier-options {
+    flex-direction: column;
+  }
+
+  .inventory-repair-type-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .inventory-card-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Full-screen overlay on mobile for usability */
+  .inventory-form-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .inventory-form {
+    margin: 0;
+    max-width: none;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: var(--space-5) var(--space-4);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .inventory-gen-tabs {
+    gap: 4px;
+  }
+
+  .inventory-gen-tab {
+    padding: 5px 10px;
+    font-size: 0.6875rem;
+  }
+
+  .inventory-form__actions {
+    flex-direction: column;
+  }
+
+  .inventory-form__actions .guru-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .inventory-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-repair-type-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

@@ -178,6 +178,11 @@ body {
 .guru-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
+}
+
+.guru-btn--full {
+  width: 100%;
 }
 
 /* Button Variants */
@@ -215,6 +220,29 @@ body {
 .guru-btn--ghost:hover:not(:disabled) {
   background: var(--guru-gray-100);
   color: var(--guru-gray-900);
+}
+
+.guru-btn--danger {
+  background: transparent;
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.guru-btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.dark .guru-btn--danger {
+  color: #f87171;
+  border-color: #f87171;
+}
+
+.dark .guru-btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border-color: #ef4444;
 }
 
 /* Button Sizes */

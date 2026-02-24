@@ -48,7 +48,15 @@ CREATE TABLE IF NOT EXISTS repairs (
     'pending', 'confirmed', 'parts_ordered', 'parts_received',
     'scheduled', 'en_route', 'arrived', 'in_progress', 'complete', 'cancelled'
   )),
+  parts_in_stock BOOLEAN DEFAULT NULL,
+  device_color TEXT,
   notes TEXT,
+  labor_fee DECIMAL(10, 2) DEFAULT 10,
+  payment_method TEXT CHECK (payment_method IN ('cash', 'stripe')),
+  payment_status TEXT DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'pending', 'completed')),
+  tip_amount DECIMAL(10, 2) DEFAULT 0,
+  stripe_payment_intent_id TEXT,
+  paid_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -116,9 +124,186 @@ CREATE TRIGGER update_repairs_updated_at
   BEFORE UPDATE ON repairs
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- ─── Messages (Chat per Repair) ──────────────────────────────────────────────
+-- Each repair has its own chat thread between customer and technician.
+
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  repair_id UUID NOT NULL REFERENCES repairs(id) ON DELETE CASCADE,
+  sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  sender_role TEXT NOT NULL CHECK (sender_role IN ('customer', 'technician')),
+  sender_name TEXT DEFAULT '',
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for fast lookup by repair
+CREATE INDEX idx_messages_repair_id ON messages(repair_id);
+CREATE INDEX idx_messages_created_at ON messages(repair_id, created_at);
+
+-- ─── Messages RLS ────────────────────────────────────────────────────────────
+
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- Customers can read messages for their own repairs
+CREATE POLICY "Customers can view messages for own repairs"
+  ON messages FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM repairs
+      WHERE repairs.id = messages.repair_id
+        AND repairs.customer_id = auth.uid()
+    )
+  );
+
+-- Technicians can read all messages
+CREATE POLICY "Technicians can view all messages"
+  ON messages FOR SELECT USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+-- Customers can send messages on their own repairs
+CREATE POLICY "Customers can send messages on own repairs"
+  ON messages FOR INSERT WITH CHECK (
+    auth.uid() = sender_id
+    AND sender_role = 'customer'
+    AND EXISTS (
+      SELECT 1 FROM repairs
+      WHERE repairs.id = messages.repair_id
+        AND repairs.customer_id = auth.uid()
+    )
+  );
+
+-- Technicians can send messages on any repair
+CREATE POLICY "Technicians can send messages"
+  ON messages FOR INSERT WITH CHECK (
+    auth.uid() = sender_id
+    AND sender_role = 'technician'
+    AND EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+-- ─── Chat Read Tracking ──────────────────────────────────────────────────────
+-- Tracks when each user last opened the chat for a given repair.
+
+CREATE TABLE IF NOT EXISTS chat_last_read (
+  repair_id UUID NOT NULL REFERENCES repairs(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  last_read_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (repair_id, user_id)
+);
+
+ALTER TABLE chat_last_read ENABLE ROW LEVEL SECURITY;
+
+-- Users can read their own last-read timestamps
+CREATE POLICY "Users can view own read timestamps"
+  ON chat_last_read FOR SELECT USING (auth.uid() = user_id);
+
+-- Users can insert their own last-read timestamps
+CREATE POLICY "Users can insert own read timestamps"
+  ON chat_last_read FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own last-read timestamps
+CREATE POLICY "Users can update own read timestamps"
+  ON chat_last_read FOR UPDATE USING (auth.uid() = user_id);
+
+-- ─── Technician Schedules ─────────────────────────────────────────────────────
+-- Technicians set their availability per date. Customers see available dates.
+
+CREATE TABLE IF NOT EXISTS tech_schedules (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  technician_id UUID NOT NULL REFERENCES technicians(id) ON DELETE CASCADE,
+  schedule_date DATE NOT NULL,
+  time_slots JSONB DEFAULT '["morning","afternoon","evening"]'::jsonb,
+  is_available BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(technician_id, schedule_date)
+);
+
+CREATE INDEX idx_tech_schedules_date ON tech_schedules(schedule_date);
+CREATE INDEX idx_tech_schedules_tech ON tech_schedules(technician_id);
+
+ALTER TABLE tech_schedules ENABLE ROW LEVEL SECURITY;
+
+-- Technicians can manage their own schedule
+CREATE POLICY "Technicians can view own schedule"
+  ON tech_schedules FOR SELECT USING (auth.uid() = technician_id);
+
+CREATE POLICY "Technicians can insert own schedule"
+  ON tech_schedules FOR INSERT WITH CHECK (auth.uid() = technician_id);
+
+CREATE POLICY "Technicians can update own schedule"
+  ON tech_schedules FOR UPDATE USING (auth.uid() = technician_id);
+
+CREATE POLICY "Technicians can delete own schedule"
+  ON tech_schedules FOR DELETE USING (auth.uid() = technician_id);
+
+-- Customers can read all tech schedules (to see available dates)
+CREATE POLICY "Anyone can view available schedules"
+  ON tech_schedules FOR SELECT USING (is_available = true);
+
+-- Auto-update timestamps
+CREATE TRIGGER update_tech_schedules_updated_at
+  BEFORE UPDATE ON tech_schedules
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ─── Parts Inventory ────────────────────────────────────────────────────────
+-- Shared inventory of parts across all technicians.
+-- Tracks quantity per device + repair_type + parts_tier combination.
+
+CREATE TABLE IF NOT EXISTS parts_inventory (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  device TEXT NOT NULL,
+  repair_type TEXT NOT NULL,
+  parts_tier TEXT NOT NULL CHECK (parts_tier IN ('economy', 'premium', 'genuine')),
+  quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(device, repair_type, parts_tier)
+);
+
+CREATE INDEX idx_parts_inventory_device ON parts_inventory(device);
+CREATE INDEX idx_parts_inventory_lookup ON parts_inventory(device, repair_type, parts_tier);
+
+CREATE TRIGGER update_parts_inventory_updated_at
+  BEFORE UPDATE ON parts_inventory
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE parts_inventory ENABLE ROW LEVEL SECURITY;
+
+-- Technicians can fully manage inventory
+CREATE POLICY "Technicians can view inventory"
+  ON parts_inventory FOR SELECT USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+CREATE POLICY "Technicians can insert inventory"
+  ON parts_inventory FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+CREATE POLICY "Technicians can update inventory"
+  ON parts_inventory FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+CREATE POLICY "Technicians can delete inventory"
+  ON parts_inventory FOR DELETE USING (
+    EXISTS (SELECT 1 FROM technicians WHERE id = auth.uid())
+  );
+
+-- Customers can view inventory (for checking part availability)
+CREATE POLICY "Customers can view inventory"
+  ON parts_inventory FOR SELECT USING (
+    EXISTS (SELECT 1 FROM customers WHERE id = auth.uid())
+  );
+
 -- ─── Enable Realtime ─────────────────────────────────────────────────────────
 
 ALTER PUBLICATION supabase_realtime ADD TABLE repairs;
+ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE tech_schedules;
+ALTER PUBLICATION supabase_realtime ADD TABLE parts_inventory;
 
 -- ─── IMPORTANT: After running this schema ────────────────────────────────────
 -- 1. Create a Supabase auth user for your technician (email + password).

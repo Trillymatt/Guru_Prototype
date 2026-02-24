@@ -5,6 +5,8 @@ import QueuePage from './pages/QueuePage';
 import HistoryPage from './pages/HistoryPage';
 import ProfilePage from './pages/ProfilePage';
 import RepairDetailPage from './pages/RepairDetailPage';
+import SchedulePage from './pages/SchedulePage';
+import InventoryPage from './pages/InventoryPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -25,6 +27,22 @@ export default function App() {
                     element={
                         <ProtectedRoute>
                             <HistoryPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/schedule"
+                    element={
+                        <ProtectedRoute>
+                            <SchedulePage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/inventory"
+                    element={
+                        <ProtectedRoute>
+                            <InventoryPage />
                         </ProtectedRoute>
                     }
                 />

@@ -3,6 +3,48 @@
    Repair queue with filters and card layout
    ═══════════════════════════════════════════════════════════════ */
 
+/* ─── Payment Complete Banner ───────────────────────────────────── */
+
+.payment-complete-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background: rgba(34, 197, 94, 0.12);
+  border-bottom: 1px solid rgba(34, 197, 94, 0.25);
+  color: #4ADE80;
+}
+
+.payment-complete-banner__icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.payment-complete-banner__text {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.payment-complete-banner__close {
+  background: none;
+  border: none;
+  color: #4ADE80;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+  font-family: inherit;
+}
+
+.payment-complete-banner__close:hover {
+  opacity: 1;
+}
+
+/* ─── Queue Page ─────────────────────────────────────────────────── */
+
 .queue-page {
   min-height: calc(100vh - 64px); /* Account for nav height */
   background: var(--dark-bg-base);
@@ -89,7 +131,56 @@
 .queue-list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ─── Date Group Sections ───────────────────────────────────────── */
+
+.queue-date-group {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
+}
+
+.queue-date-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.queue-date-header__label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--dark-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.queue-date-header--today .queue-date-header__label {
+  color: var(--dark-purple-400);
+}
+
+.queue-date-header--tomorrow .queue-date-header__label {
+  color: var(--dark-text-secondary);
+}
+
+.queue-date-header__count {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--dark-text-tertiary);
+  background: var(--dark-bg-elevated);
+  border: 1px solid var(--dark-border-subtle);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.queue-date-header__line {
+  flex: 1;
+  height: 1px;
+  background: var(--dark-border-subtle);
 }
 
 /* ─── Individual Repair Card ────────────────────────────────────── */
@@ -115,7 +206,13 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* ─── Priority Indicator (Left Edge) ────────────────────────────── */
+.repair-card:focus-visible {
+  border-color: var(--dark-purple-500);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
+  outline: none;
+}
+
+/* ─── Status Indicator (Left Edge) ──────────────────────────────── */
 
 .repair-card__priority {
   border-radius: var(--radius-full);
@@ -123,19 +220,54 @@
   align-self: stretch;
 }
 
-.repair-card__priority--high {
-  background: var(--dark-error);
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
-}
-
-.repair-card__priority--medium {
+.repair-card__priority--pending {
   background: var(--dark-warning);
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
 }
 
-.repair-card__priority--low {
+.repair-card__priority--confirmed {
   background: var(--dark-info);
   box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.repair-card__priority--parts_ordered {
+  background: var(--dark-warning);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+}
+
+.repair-card__priority--parts_received {
+  background: var(--dark-info);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.repair-card__priority--scheduled {
+  background: var(--dark-info);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.repair-card__priority--en_route {
+  background: var(--dark-purple-500);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+}
+
+.repair-card__priority--arrived {
+  background: var(--dark-purple-500);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+}
+
+.repair-card__priority--in_progress {
+  background: var(--dark-purple-400);
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.4);
+}
+
+.repair-card__priority--complete {
+  background: var(--dark-success);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+}
+
+.repair-card__priority--cancelled {
+  background: var(--dark-error);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
 }
 
 /* ─── Card Info Section ─────────────────────────────────────────── */
@@ -221,6 +353,31 @@
   .repair-card__price {
     font-size: var(--font-size-lg);
   }
+}
+
+/* ─── Message Notification Badge ──────────────────────────────── */
+
+.msg-notify-badge {
+    position: absolute;
+    top: -8px;
+    right: -4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    background: var(--dark-purple-500);
+    border-radius: var(--radius-full);
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.5);
+    z-index: 2;
+    animation: notifyPulse 2s ease-in-out infinite;
+}
+
+@keyframes notifyPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
 }
 
 @media (max-width: 480px) {

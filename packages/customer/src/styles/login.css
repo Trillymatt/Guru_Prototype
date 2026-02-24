@@ -76,58 +76,6 @@
     color: var(--guru-gray-800);
 }
 
-/* Social buttons */
-.login-card__socials {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    margin-bottom: var(--space-6);
-}
-
-.login-card__social-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
-    width: 100%;
-    padding: var(--space-3) var(--space-6);
-    border: 1px solid var(--guru-gray-200);
-    border-radius: var(--radius-xl);
-    background: var(--guru-white);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    color: var(--guru-gray-700);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.login-card__social-btn:hover {
-    border-color: var(--guru-gray-400);
-    background: var(--guru-gray-50);
-}
-
-/* Divider */
-.login-card__divider {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    margin-bottom: var(--space-6);
-}
-
-.login-card__divider::before,
-.login-card__divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--guru-gray-200);
-}
-
-.login-card__divider span {
-    font-size: var(--font-size-sm);
-    color: var(--guru-gray-400);
-    font-weight: 500;
-}
-
 /* OTP Method Toggle */
 .otp-toggle {
     display: flex;

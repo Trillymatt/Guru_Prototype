@@ -125,7 +125,7 @@ Parts are currently ordered per-repair (3-day lead time). As inventory grows, on
 ## User Roles
 
 ### Customer
-- **Auth**: Email/password, Google, Apple sign-in, or guest checkout
+- **Auth**: Email OTP (magic code via email)
 - **Capabilities**:
   - Submit repair request via guided quiz
   - Choose device, issue, and parts tier
