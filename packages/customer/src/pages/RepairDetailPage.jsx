@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '@shared/AuthProvider';
@@ -16,6 +16,7 @@ import {
     SERVICE_FEE,
     SAMPLE_PRICING,
     TAX_RATE,
+    SCHEDULING_LEAD_DAYS,
     getRepairStatusFlow,
 } from '@shared/constants';
 import GuruCalendar from '@shared/GuruCalendar';
@@ -36,6 +37,7 @@ export default function RepairDetailPage() {
     const { user } = useAuth();
     const [repair, setRepair] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState('');
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editDate, setEditDate] = useState('');
@@ -57,19 +59,18 @@ export default function RepairDetailPage() {
     });
 
     // Geocode the repair address to get customer lat/lng for the map
+    const geocodeCancelledRef = useRef(false);
     useEffect(() => {
         if (!repair?.address) return;
-        let cancelled = false;
+        geocodeCancelledRef.current = false;
         geocodeAddress(repair.address)
             .then((coords) => {
-                if (!cancelled && coords) {
+                if (!geocodeCancelledRef.current && coords) {
                     setCustomerLocation(coords);
                 }
             })
-            .catch((err) => {
-                console.error('Geocoding failed for address:', err.message);
-            });
-        return () => { cancelled = true; };
+            .catch(() => {});
+        return () => { geocodeCancelledRef.current = true; };
     }, [repair?.address]);
 
     // Fetch the customer's display name for chat
@@ -89,12 +90,15 @@ export default function RepairDetailPage() {
         if (!user || !id) return;
 
         async function fetchRepair() {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('repairs')
                 .select('*')
                 .eq('id', id)
                 .eq('customer_id', user.id)
                 .single();
+            if (error) {
+                setFetchError('Failed to load repair details. Please try again.');
+            }
             setRepair(data);
             setLoading(false);
         }
@@ -194,7 +198,7 @@ export default function RepairDetailPage() {
     ].includes(repair.status);
 
     const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 3);
+    minDate.setDate(minDate.getDate() + SCHEDULING_LEAD_DAYS);
     const minDateStr = minDate.toISOString().split('T')[0];
 
     const timeSlots = [
@@ -220,15 +224,15 @@ export default function RepairDetailPage() {
         );
     }
 
-    if (!repair) {
+    if (fetchError || !repair) {
         return (
             <>
                 <Navbar />
                 <div className="repair-detail">
                     <div className="guru-container guru-container--narrow">
                         <div className="rd-empty">
-                            <h2>Repair not found</h2>
-                            <p>This repair doesn't exist or you don't have access to it.</p>
+                            <h2>{fetchError ? 'Error loading repair' : 'Repair not found'}</h2>
+                            <p>{fetchError || "This repair doesn't exist or you don't have access to it."}</p>
                             <Link to="/dashboard" className="guru-btn guru-btn--primary" style={{ marginTop: 16 }}>
                                 Back to Dashboard
                             </Link>
@@ -466,7 +470,11 @@ export default function RepairDetailPage() {
                                 </div>
                                 <div className="rd-detail-row">
                                     <span className="rd-detail-label">Date</span>
-                                    <span className="rd-detail-value">{repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
+                                    <span className="rd-detail-value">{repair.schedule_date
+                                        ? new Date(repair.schedule_date + 'T00:00:00').toLocaleDateString('en-US', {
+                                            month: '2-digit', day: '2-digit', year: 'numeric'
+                                        })
+                                        : '—'}</span>
                                 </div>
                                 <div className="rd-detail-row">
                                     <span className="rd-detail-label">Time</span>

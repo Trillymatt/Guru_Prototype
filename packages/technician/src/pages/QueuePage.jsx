@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_TYPES } from '@shared/constants';
 import { supabase } from '@shared/supabase';
 import TechNav from '../components/TechNav';
@@ -8,17 +8,18 @@ export default function QueuePage() {
     const [filter, setFilter] = useState('all');
     const [repairs, setRepairs] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [unreadCounts, setUnreadCounts] = useState({}); // { repairId: count }
-    const [paymentComplete, setPaymentComplete] = useState(() => {
-        const flag = sessionStorage.getItem('guru_payment_complete');
-        if (flag) { sessionStorage.removeItem('guru_payment_complete'); return true; }
-        return false;
-    });
+    const [unreadCounts, setUnreadCounts] = useState({});
+    const [fetchError, setFetchError] = useState(null);
+    const location = useLocation();
+    const [paymentComplete, setPaymentComplete] = useState(
+        () => location.state?.paymentComplete === true
+    );
 
     // Fetch repairs from Supabase
     useEffect(() => {
         const fetchRepairs = async () => {
             setLoading(true);
+            setFetchError(null);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
@@ -48,7 +49,12 @@ export default function QueuePage() {
                 .neq('status', 'cancelled')
                 .order('schedule_date', { ascending: true });
 
-            if (!error && data) {
+            if (error) {
+                setFetchError(error.message);
+                setLoading(false);
+                return;
+            }
+            if (data) {
                 setRepairs(data);
 
                 // Fetch unread message counts (only messages newer than last read)
@@ -125,39 +131,41 @@ export default function QueuePage() {
         };
     }, []);
 
-    // Sort repairs by schedule_date ascending (closest date first), nulls at end
-    const sortedRepairs = [...repairs].sort((a, b) => {
-        if (!a.schedule_date && !b.schedule_date) return 0;
-        if (!a.schedule_date) return 1;
-        if (!b.schedule_date) return -1;
-        return new Date(a.schedule_date) - new Date(b.schedule_date);
-    });
-
-    const filteredRepairs = filter === 'all'
-        ? sortedRepairs
-        : sortedRepairs.filter((r) => r.status === filter);
-
-    // Group repairs by schedule_date for section headers
     const todayStr = new Date().toLocaleDateString('en-CA');
     const tomorrowDate = new Date();
     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
     const tomorrowStr = tomorrowDate.toLocaleDateString('en-CA');
 
-    const groupedRepairs = filteredRepairs.reduce((groups, repair) => {
-        const key = repair.schedule_date || 'unscheduled';
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(repair);
-        return groups;
-    }, {});
+    const { filteredRepairs, dateGroups } = useMemo(() => {
+        const sorted = [...repairs].sort((a, b) => {
+            if (!a.schedule_date && !b.schedule_date) return 0;
+            if (!a.schedule_date) return 1;
+            if (!b.schedule_date) return -1;
+            return new Date(a.schedule_date) - new Date(b.schedule_date);
+        });
 
-    const dateGroups = Object.entries(groupedRepairs).map(([key, items]) => {
-        let label;
-        if (key === 'unscheduled') label = 'Unscheduled';
-        else if (key === todayStr) label = 'Today';
-        else if (key === tomorrowStr) label = 'Tomorrow';
-        else label = new Date(key + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        return { key, label, repairs: items };
-    });
+        const filtered = filter === 'all'
+            ? sorted
+            : sorted.filter((r) => r.status === filter);
+
+        const grouped = filtered.reduce((groups, repair) => {
+            const key = repair.schedule_date || 'unscheduled';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(repair);
+            return groups;
+        }, {});
+
+        const groups = Object.entries(grouped).map(([key, items]) => {
+            let label;
+            if (key === 'unscheduled') label = 'Unscheduled';
+            else if (key === todayStr) label = 'Today';
+            else if (key === tomorrowStr) label = 'Tomorrow';
+            else label = new Date(key + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            return { key, label, repairs: items };
+        });
+
+        return { filteredRepairs: filtered, dateGroups: groups };
+    }, [repairs, filter, todayStr, tomorrowStr]);
 
     return (
         <>
@@ -207,6 +215,11 @@ export default function QueuePage() {
                             <div className="tech-loading-state">
                                 <div className="tech-loading-state__icon">⏳</div>
                                 <div className="tech-loading-state__text">Loading repairs...</div>
+                            </div>
+                        ) : fetchError ? (
+                            <div className="tech-empty-state">
+                                <div className="tech-empty-state__icon">⚠️</div>
+                                <div className="tech-empty-state__text">Failed to load repairs: {fetchError}</div>
                             </div>
                         ) : filteredRepairs.length === 0 ? (
                             <div className="tech-empty-state">

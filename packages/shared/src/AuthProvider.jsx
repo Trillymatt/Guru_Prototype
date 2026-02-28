@@ -5,6 +5,7 @@ const AuthContext = createContext({
     user: null,
     session: null,
     loading: true,
+    error: null,
     signOut: async () => { },
 });
 
@@ -12,20 +13,30 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session: s } }) => {
+        supabase.auth.getSession().then(({ data: { session: s }, error: err }) => {
+            if (err) {
+                setError(err.message);
+                setLoading(false);
+                return;
+            }
             setSession(s);
             setUser(s?.user ?? null);
             setLoading(false);
         });
 
-        // Listen for auth changes (login, logout, token refresh)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (_event, s) => {
-                setSession(s);
-                setUser(s?.user ?? null);
+            (event, s) => {
+                if (event === 'SIGNED_OUT') {
+                    setSession(null);
+                    setUser(null);
+                } else {
+                    setSession(s);
+                    setUser(s?.user ?? null);
+                }
+                setError(null);
                 setLoading(false);
             }
         );
@@ -34,13 +45,16 @@ export function AuthProvider({ children }) {
     }, []);
 
     const signOut = async () => {
-        await supabase.auth.signOut();
-        setUser(null);
-        setSession(null);
+        const { error: err } = await supabase.auth.signOut();
+        if (!err) {
+            setUser(null);
+            setSession(null);
+        }
+        return err;
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, signOut }}>
+        <AuthContext.Provider value={{ user, session, loading, error, signOut }}>
             {children}
         </AuthContext.Provider>
     );

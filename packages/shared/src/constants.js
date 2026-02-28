@@ -48,6 +48,12 @@ export const REPAIR_TYPES = [
     { id: 'back-glass', name: 'Back Glass', icon: '🪟', description: 'Cracked or shattered back panel' },
     { id: 'camera-rear', name: 'Rear Camera', icon: '📸', description: 'Blurry, cracked, or non-functional rear camera' },
     { id: 'camera-front', name: 'Front Camera', icon: '🤳', description: 'Blurry or non-functional front camera / Face ID' },
+    { id: 'charging-port', name: 'Charging Port', icon: '🔌', description: 'Loose, damaged, or non-functional charging port' },
+    { id: 'speaker', name: 'Speaker', icon: '🔊', description: 'Muffled, crackling, or non-functional speaker' },
+    { id: 'mic', name: 'Microphone', icon: '🎙️', description: 'Callers can\'t hear you or muffled mic audio' },
+    { id: 'water-damage', name: 'Water Damage', icon: '💧', description: 'Liquid exposure causing corrosion or malfunction' },
+    { id: 'buttons', name: 'Buttons', icon: '🔘', description: 'Stuck, unresponsive, or broken physical buttons' },
+    { id: 'software', name: 'Software', icon: '⚙️', description: 'Freezing, crashing, boot loops, or data recovery' },
 ];
 
 // ─── Parts Tiers ─────────────────────────────────────────────────────────────
@@ -893,7 +899,7 @@ export const DEVICE_REPAIR_PRICING = {
         },
         'camera-front': {
             premium: { price: 70, parts_url: 'https://www.mobilesentrix.com/front-camera-compatible-for-iphone-12-mini' },
-            genuine: { price: 170, parts_url: 'https://selfservicerepair.com/en-US/iphone-12-pro/truedepth-camera' },
+            genuine: { price: 170, parts_url: 'https://selfservicerepair.com/en-US/iphone-12-mini/truedepth-camera' },
         },
     },
     'iPhone 12': {
@@ -931,7 +937,7 @@ export function getAvailableTiersForRepair(deviceName, repairTypeId) {
 
 /**
  * Get the price for a specific device + repair type + tier combination.
- * Returns null if not found (caller should fall back to SAMPLE_PRICING).
+ * Returns null if not found.
  */
 export function getDeviceRepairPrice(deviceName, repairTypeId, tierId) {
     return DEVICE_REPAIR_PRICING[deviceName]?.[repairTypeId]?.[tierId]?.price ?? null;
@@ -976,7 +982,9 @@ export const TIP_PRESETS = [
 
 export const TAX_RATE = 0.0825; // 8.25% Texas sales tax
 
-// ─── Sample Pricing (placeholder until database is wired) ────────────────────
+// ─── Fallback Pricing ────────────────────────────────────────────────────────
+// Used when a device doesn't have specific pricing in DEVICE_REPAIR_PRICING.
+// TODO: Remove once all devices have full pricing coverage.
 
 export const SAMPLE_PRICING = {
     screen: { economy: 49, premium: 89, genuine: 179 },
@@ -984,4 +992,11 @@ export const SAMPLE_PRICING = {
     'back-glass': { economy: 39, premium: 69, genuine: 149 },
     'camera-rear': { economy: 49, premium: 79, genuine: 159 },
     'camera-front': { economy: 39, premium: 69, genuine: 129 },
+    'charging-port': { economy: 29, premium: 49, genuine: 89 },
+    speaker: { economy: 29, premium: 49, genuine: 79 },
+    mic: { economy: 29, premium: 49, genuine: 79 },
+    'water-damage': { premium: 79 },
+    buttons: { economy: 29, premium: 49, genuine: 79 },
+    software: { premium: 49 },
 };
+

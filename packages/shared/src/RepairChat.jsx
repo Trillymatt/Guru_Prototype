@@ -106,20 +106,9 @@ export default function RepairChat({ repairId, userId, senderRole, senderName })
                     { repair_id: repairId, user_id: userId, last_read_at: new Date().toISOString() },
                     { onConflict: 'repair_id,user_id' }
                 )
-                .then(({ error }) => {
-                    if (error) console.error('Failed to update chat_last_read:', error.message);
-                });
+                .then(() => {});
         }
     }, [isOpen, repairId, userId]);
-
-    const sanitizeText = (text) => {
-        return text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;');
-    };
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -217,7 +206,7 @@ export default function RepairChat({ repairId, userId, senderRole, senderName })
             {/* Chat Body */}
             {isOpen && (
                 <div className="rc-chat__body">
-                    <div className="rc-chat__messages" ref={messagesRef}>
+                    <div className="rc-chat__messages" ref={messagesRef} role="log" aria-label="Chat messages" aria-live="polite">
                         {messages.length === 0 ? (
                             <div className="rc-chat__empty">
                                 <span className="rc-chat__empty-icon">💬</span>

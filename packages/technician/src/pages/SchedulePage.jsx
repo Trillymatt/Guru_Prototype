@@ -45,7 +45,7 @@ export default function SchedulePage() {
         };
 
         fetchSchedule();
-    }, []);
+    }, [todayStr]);
 
     // Available dates set for the calendar (show dots on dates that have availability)
     const availableDatesSet = useMemo(() => {

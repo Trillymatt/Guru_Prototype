@@ -23,6 +23,7 @@ export default function InventoryPage() {
     const [formQuantity, setFormQuantity] = useState(0);
     const [formError, setFormError] = useState('');
     const [saving, setSaving] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(null);
 
     // Filters
     const [filterDevice, setFilterDevice] = useState('');
@@ -99,8 +100,8 @@ export default function InventoryPage() {
             setFormError('Please fill in all fields.');
             return;
         }
-        if (formQuantity < 0) {
-            setFormError('Quantity cannot be negative.');
+        if (formQuantity < 0 || formQuantity > 9999) {
+            setFormError('Quantity must be between 0 and 9,999.');
             return;
         }
 
@@ -152,8 +153,6 @@ export default function InventoryPage() {
     };
 
     const handleDelete = async (itemId) => {
-        const confirmed = window.confirm('Remove this part from inventory?');
-        if (!confirmed) return;
         const { error } = await supabase
             .from('parts_inventory')
             .delete()
@@ -162,6 +161,7 @@ export default function InventoryPage() {
         if (!error) {
             setInventory(prev => prev.filter(item => item.id !== itemId));
         }
+        setConfirmDelete(null);
     };
 
     const handleQuickQuantityChange = async (item, delta) => {
@@ -387,12 +387,17 @@ export default function InventoryPage() {
                                             type="number"
                                             className="inventory-qty-value"
                                             value={formQuantity}
-                                            onChange={(e) => setFormQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                                            onChange={(e) => {
+                                                const val = parseInt(e.target.value) || 0;
+                                                setFormQuantity(Math.max(0, Math.min(9999, val)));
+                                            }}
                                             min="0"
+                                            max="9999"
                                         />
                                         <button
                                             className="inventory-qty-btn"
-                                            onClick={() => setFormQuantity(formQuantity + 1)}
+                                            onClick={() => setFormQuantity(Math.min(9999, formQuantity + 1))}
+                                            disabled={formQuantity >= 9999}
                                         >
                                             +
                                         </button>
@@ -510,13 +515,30 @@ export default function InventoryPage() {
                                                 >
                                                     Edit Qty
                                                 </button>
-                                                <button
-                                                    className="inventory-card__action-btn inventory-card__action-btn--delete"
-                                                    onClick={() => handleDelete(item.id)}
-                                                    title="Remove from inventory"
-                                                >
-                                                    Remove
-                                                </button>
+                                                {confirmDelete === item.id ? (
+                                                    <>
+                                                        <button
+                                                            className="inventory-card__action-btn inventory-card__action-btn--delete"
+                                                            onClick={() => handleDelete(item.id)}
+                                                        >
+                                                            Confirm
+                                                        </button>
+                                                        <button
+                                                            className="inventory-card__action-btn"
+                                                            onClick={() => setConfirmDelete(null)}
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <button
+                                                        className="inventory-card__action-btn inventory-card__action-btn--delete"
+                                                        onClick={() => setConfirmDelete(item.id)}
+                                                        title="Remove from inventory"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

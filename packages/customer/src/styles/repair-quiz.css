@@ -461,6 +461,11 @@
     margin-top: var(--space-2);
 }
 
+.sched-hint--above {
+    margin-top: 0;
+    margin-bottom: var(--space-2);
+}
+
 .sched-hint--warn {
     color: var(--guru-gray-600);
     background: var(--guru-gray-50);

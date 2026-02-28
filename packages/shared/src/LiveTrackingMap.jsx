@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+// Default center when no customer location is provided (Dallas, TX)
+const DEFAULT_CENTER = { lat: 32.7767, lng: -96.7970 };
+
 /**
  * Live tracking map component using Leaflet.js.
  * Shows customer location and technician location with a route line.
@@ -47,24 +50,27 @@ export default function LiveTrackingMap({
     useEffect(() => {
         if (!leaflet || !mapContainerRef.current || mapRef.current) return;
 
-        const defaultCenter = customerLocation || { lat: 32.7767, lng: -96.7970 };
+        try {
+            const center = customerLocation || DEFAULT_CENTER;
 
-        const map = leaflet.map(mapContainerRef.current, {
-            center: [defaultCenter.lat, defaultCenter.lng],
-            zoom: 14,
-            zoomControl: true,
-            attributionControl: true,
-            scrollWheelZoom: true,
-        });
+            const map = leaflet.map(mapContainerRef.current, {
+                center: [center.lat, center.lng],
+                zoom: 14,
+                zoomControl: true,
+                attributionControl: true,
+                scrollWheelZoom: true,
+            });
 
-        // Use a clean, modern tile layer
-        leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-            maxZoom: 19,
-        }).addTo(map);
+            leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19,
+            }).addTo(map);
 
-        mapRef.current = map;
-        setMapReady(true);
+            mapRef.current = map;
+            setMapReady(true);
+        } catch {
+            // Leaflet initialization failed — component stays in loading state
+        }
 
         return () => {
             if (mapRef.current) {
@@ -78,6 +84,7 @@ export default function LiveTrackingMap({
     // Customer marker
     useEffect(() => {
         if (!mapReady || !leaflet || !mapRef.current || !customerLocation) return;
+        if (customerLocation.lat == null || customerLocation.lng == null) return;
 
         const customerIcon = leaflet.divIcon({
             className: 'lt-marker lt-marker--customer',
@@ -105,6 +112,7 @@ export default function LiveTrackingMap({
     // Technician marker
     useEffect(() => {
         if (!mapReady || !leaflet || !mapRef.current || !techLocation) return;
+        if (techLocation.lat == null || techLocation.lng == null) return;
 
         const techIcon = leaflet.divIcon({
             className: 'lt-marker lt-marker--tech',
@@ -180,6 +188,15 @@ export default function LiveTrackingMap({
     // Cleanup markers/lines on unmount
     useEffect(() => {
         return () => {
+            if (customerMarkerRef.current && mapRef.current) {
+                mapRef.current.removeLayer(customerMarkerRef.current);
+            }
+            if (techMarkerRef.current && mapRef.current) {
+                mapRef.current.removeLayer(techMarkerRef.current);
+            }
+            if (routeLineRef.current && mapRef.current) {
+                mapRef.current.removeLayer(routeLineRef.current);
+            }
             customerMarkerRef.current = null;
             techMarkerRef.current = null;
             routeLineRef.current = null;

@@ -21,12 +21,11 @@ export default function TechNav() {
                     .single();
 
                 if (error) {
-                    console.error('Failed to fetch technician name:', error.message);
                     return;
                 }
                 if (tech?.full_name) setTechName(tech.full_name);
             } catch (err) {
-                console.error('TechNav fetch error:', err.message);
+                // silently ignore fetch errors
             }
         };
         fetchTechName();

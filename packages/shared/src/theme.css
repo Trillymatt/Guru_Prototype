@@ -109,6 +109,42 @@
   --dark-warning: #f59e0b;
   --dark-error: #ef4444;
   --dark-info: #3b82f6;
+
+  /* ─── Font Weights ────────────────────────────────────────────── */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* ─── Line Heights ────────────────────────────────────────────── */
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ─── Breakpoints (for reference in media queries) ────────────── */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  /* ─── Status Colors ───────────────────────────────────────────── */
+  --color-success: #22C55E;
+  --color-success-bg: #D1FAE5;
+  --color-success-border: #A7F3D0;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FEF3C7;
+  --color-warning-border: #FDE68A;
+  --color-warning-text: #92400E;
+  --color-error: #EF4444;
+  --color-error-bg: #FEE2E2;
+  --color-error-text: #991B1B;
+  --color-info: #3B82F6;
+  --color-info-bg: #DBEAFE;
+
+  /* ─── Opacity ─────────────────────────────────────────────────── */
+  --opacity-disabled: 0.5;
+  --opacity-hover: 0.8;
 }
 
 /* ─── Global Reset & Base Styles ──────────────────────────────── */

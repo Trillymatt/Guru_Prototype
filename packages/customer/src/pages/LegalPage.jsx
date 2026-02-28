@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import '../styles/legal.css';
 
@@ -295,12 +295,13 @@ const SECTION_COMPONENTS = {
 };
 
 export default function LegalPage() {
-    const location = useLocation();
-    const params = new URLSearchParams(location.search);
-    const initialSection = params.get('section') || 'terms';
-    const [activeSection, setActiveSection] = useState(
-        SECTIONS.find(s => s.id === initialSection) ? initialSection : 'terms'
-    );
+    const [searchParams, setSearchParams] = useSearchParams();
+    const sectionParam = searchParams.get('section') || 'terms';
+    const activeSection = SECTIONS.find(s => s.id === sectionParam) ? sectionParam : 'terms';
+
+    const setActiveSection = (id) => {
+        setSearchParams(id === 'terms' ? {} : { section: id });
+    };
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -390,7 +391,6 @@ export default function LegalPage() {
                             <h4 className="footer__col-title">Company</h4>
                             <ul className="footer__links">
                                 <li><Link to="/">About Us</Link></li>
-                                <li><a href="http://localhost:5174" target="_blank" rel="noopener noreferrer">Technician Portal →</a></li>
                             </ul>
                         </div>
                         <div>

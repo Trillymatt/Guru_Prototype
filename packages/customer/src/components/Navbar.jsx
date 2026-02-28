@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@shared/AuthProvider';
 
 export default function Navbar({ darkHero = false }) {
@@ -7,6 +7,17 @@ export default function Navbar({ darkHero = false }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const { user, loading, signOut } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const scrollToSection = (sectionId) => {
+        closeMenu();
+        if (location.pathname === '/') {
+            const el = document.getElementById(sectionId);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            navigate('/', { state: { scrollTo: sectionId } });
+        }
+    };
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -34,7 +45,7 @@ export default function Navbar({ darkHero = false }) {
     const isLoggedIn = !loading && user;
 
     return (
-        <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${darkHero && !scrolled ? 'navbar--on-dark' : ''}`}>
+        <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${darkHero && !scrolled ? 'navbar--on-dark' : ''}`} aria-label="Main navigation">
             <div className="guru-container navbar__inner">
                 <Link to="/" className="navbar__logo" onClick={closeMenu}>
                     <div className="navbar__logo-icon">G</div>
@@ -51,8 +62,8 @@ export default function Navbar({ darkHero = false }) {
                     )}
                     {!isLoggedIn && (
                         <>
-                            <a href="/#how-it-works" className="navbar__link" onClick={closeMenu}>How It Works</a>
-                            <a href="/#features" className="navbar__link" onClick={closeMenu}>Features</a>
+                            <button className="navbar__link" onClick={() => scrollToSection('how-it-works')}>How It Works</button>
+                            <button className="navbar__link" onClick={() => scrollToSection('features')}>Features</button>
                         </>
                     )}
                     <Link to="/faq" className="navbar__link" onClick={closeMenu}>Support</Link>
@@ -95,7 +106,8 @@ export default function Navbar({ darkHero = false }) {
 
                 <button
                     className={`navbar__mobile-toggle ${menuOpen ? 'navbar__mobile-toggle--active' : ''}`}
-                    aria-label="Menu"
+                    aria-label="Toggle menu"
+                    aria-expanded={menuOpen}
                     onClick={() => setMenuOpen(!menuOpen)}
                 >
                     <span></span>

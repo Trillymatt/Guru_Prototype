@@ -9,6 +9,7 @@ export default function DashboardPage() {
     const { user } = useAuth();
     const [repairs, setRepairs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const [customer, setCustomer] = useState(null);
     const [activeTab, setActiveTab] = useState('active'); // 'active' or 'history'
     const [unreadCounts, setUnreadCounts] = useState({}); // { repairId: count }
@@ -17,10 +18,18 @@ export default function DashboardPage() {
         if (!user) return;
 
         async function fetchData() {
-            const [{ data: profile }, { data: repairData }] = await Promise.all([
+            try {
+            const [{ data: profile, error: profileErr }, { data: repairData, error: repairErr }] = await Promise.all([
                 supabase.from('customers').select('*').eq('id', user.id).single(),
                 supabase.from('repairs').select('*').eq('customer_id', user.id).order('created_at', { ascending: false }),
             ]);
+
+            if (profileErr || repairErr) {
+                setError('Unable to load your repairs. Please try again later.');
+                setLoading(false);
+                return;
+            }
+
             setCustomer(profile);
             setRepairs(repairData || []);
             setLoading(false);
@@ -57,6 +66,10 @@ export default function DashboardPage() {
                     });
                     setUnreadCounts(counts);
                 }
+            }
+            } catch (err) {
+                setError('Something went wrong loading your repairs.');
+                setLoading(false);
             }
         }
 
@@ -141,7 +154,20 @@ export default function DashboardPage() {
                         </button>
                     </div>
 
-                    {loading ? (
+                    {error ? (
+                        <div className="dash-empty">
+                            <div className="dash-empty__icon">⚠️</div>
+                            <h2>Something went wrong</h2>
+                            <p>{error}</p>
+                            <button
+                                className="guru-btn guru-btn--primary"
+                                style={{ marginTop: 16 }}
+                                onClick={() => window.location.reload()}
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    ) : loading ? (
                         <div className="dash-loading">Loading your repairs...</div>
                     ) : activeTab === 'active' ? (
                         activeRepairs.length === 0 ? (
@@ -177,7 +203,11 @@ export default function DashboardPage() {
                                             </div>
                                             <div className="dash-card__row">
                                                 <span>Date</span>
-                                                <span>{repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
+                                                <span>{repair.schedule_date
+                                                        ? new Date(repair.schedule_date + 'T00:00:00').toLocaleDateString('en-US', {
+                                                            month: '2-digit', day: '2-digit', year: 'numeric'
+                                                        })
+                                                        : '—'}</span>
                                             </div>
                                             <div className="dash-card__row">
                                                 <span>Time</span>

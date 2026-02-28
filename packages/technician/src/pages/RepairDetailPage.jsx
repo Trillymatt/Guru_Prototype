@@ -4,6 +4,8 @@ import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, 
 import { supabase } from '@shared/supabase';
 import { useLocationBroadcast } from '@shared/useLocationBroadcast';
 import RepairChat from '@shared/RepairChat';
+import usePaymentFlow from '../hooks/usePaymentFlow';
+import useRepairPhotos from '../hooks/useRepairPhotos';
 import TechNav from '../components/TechNav';
 import '@shared/repair-chat.css';
 import '@shared/live-tracking.css';
@@ -43,30 +45,34 @@ export default function RepairDetailPage() {
     const [confirmModal, setConfirmModal] = useState(null); // { nextStatus, nextLabel, isClaim }
     const [showCancelModal, setShowCancelModal] = useState(false);
 
-    // Photo state
-    const [photos, setPhotos] = useState([]);
-    const [photosLoading, setPhotosLoading] = useState(true);
-    const [uploading, setUploading] = useState(false);
+    // Photo state (delegated to useRepairPhotos hook)
+    const {
+        photos, beforePhotos, afterPhotos,
+        photosLoading, uploading, photoError,
+        uploadPhoto, deletePhoto,
+    } = useRepairPhotos(id, supabase);
     const [photoType, setPhotoType] = useState('before');
-    const [photoError, setPhotoError] = useState('');
     const [expandedPhoto, setExpandedPhoto] = useState(null);
     const fileInputRef = useRef(null);
 
-    // Payment state
-    const [tipAmount, setTipAmount] = useState(0);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [paymentModalStep, setPaymentModalStep] = useState('tip'); // 'tip' | 'payment' | 'signature'
-    const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'square-qr' | 'square-tap'
-    const [paymentProcessing, setPaymentProcessing] = useState(false);
-    const [paymentError, setPaymentError] = useState('');
-
-    // Cash change calculator state
-    const [cashReceived, setCashReceived] = useState('');
-
-    // Square payment state
-    const [squarePaymentUrl, setSquarePaymentUrl] = useState(null);
-    const [squarePhase, setSquarePhase] = useState('idle'); // 'idle' | 'loading' | 'ready' | 'waiting'
-    const [splitCashAmount, setSplitCashAmount] = useState(0); // cash collected in a split payment
+    // Payment state (delegated to usePaymentFlow reducer)
+    const {
+        payment,
+        showModal: openPaymentModal,
+        hideModal: closePaymentModal,
+        setTip,
+        setMethod,
+        setStep: setPaymentStep,
+        startProcessing,
+        stopProcessing,
+        setError: setPaymentError,
+        setSquarePhase,
+        setSquareUrl,
+        setCashReceived,
+        setSplitCash,
+        backToTip,
+        backToMethod,
+    } = usePaymentFlow();
 
     // Location sharing state
     const [locationModal, setLocationModal] = useState(false);
@@ -117,7 +123,6 @@ export default function RepairDetailPage() {
                 .single();
 
             if (error || !data) {
-                console.error('Repair not found:', error);
                 setLoading(false);
                 return;
             }
@@ -150,7 +155,7 @@ export default function RepairDetailPage() {
 
     // Initialize signature pad — shared canvas for intake and completion signatures
     useEffect(() => {
-        const needsSig = showIntakeSignature || (showPaymentModal && paymentModalStep === 'signature');
+        const needsSig = showIntakeSignature || (payment.showModal && payment.step === 'signature');
         if (!needsSig) {
             sigPadRef.current = null;
             return;
@@ -169,122 +174,20 @@ export default function RepairDetailPage() {
                 canvas.getContext('2d').scale(ratio, ratio);
             });
         }
-    }, [showIntakeSignature, showPaymentModal, paymentModalStep]);
+    }, [showIntakeSignature, payment.showModal, payment.step]);
 
-    // Fetch repair photos
-    useEffect(() => {
-        const fetchPhotos = async () => {
-            setPhotosLoading(true);
-            const { data, error } = await supabase
-                .from('repair_photos')
-                .select('*')
-                .eq('repair_id', id)
-                .order('created_at', { ascending: true });
 
-            if (!error && data) {
-                const photosWithUrls = await Promise.all(
-                    data.map(async (photo) => {
-                        const { data: urlData } = await supabase.storage
-                            .from('repair-photos')
-                            .createSignedUrl(photo.file_path, 3600);
-                        return { ...photo, signedUrl: urlData?.signedUrl || null };
-                    })
-                );
-                setPhotos(photosWithUrls);
-            }
-            setPhotosLoading(false);
-        };
-
-        fetchPhotos();
-    }, [id]);
-
-    // Upload photo handler
     const handlePhotoUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        const validTypes = ['image/jpeg', 'image/heic', 'image/heif'];
-        const validExtensions = ['.jpg', '.jpeg', '.heic', '.heif'];
-        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-        if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
-            setPhotoError('Only JPEG and HEIC files are accepted.');
-            return;
-        }
-
-        if (file.size > 20 * 1024 * 1024) {
-            setPhotoError('File size must be under 20MB.');
-            return;
-        }
-
-        setUploading(true);
-        setPhotoError('');
-
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Not authenticated');
-
-            const timestamp = Date.now();
-            const fileExt = ext || '.jpg';
-            const filePath = `repairs/${id}/${photoType}_${timestamp}${fileExt}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('repair-photos')
-                .upload(filePath, file, { contentType: file.type || 'image/jpeg' });
-
-            if (uploadError) throw uploadError;
-
-            const { data: photoRecord, error: insertError } = await supabase
-                .from('repair_photos')
-                .insert({
-                    repair_id: id,
-                    technician_id: user.id,
-                    photo_type: photoType,
-                    file_path: filePath,
-                    file_name: file.name,
-                    content_type: file.type || 'image/jpeg',
-                })
-                .select()
-                .single();
-
-            if (insertError) throw insertError;
-
-            const { data: urlData } = await supabase.storage
-                .from('repair-photos')
-                .createSignedUrl(filePath, 3600);
-
-            setPhotos(prev => [...prev, { ...photoRecord, signedUrl: urlData?.signedUrl || null }]);
-        } catch (err) {
-            console.error('Photo upload failed:', err);
-            setPhotoError(err.message || 'Upload failed. Please try again.');
-        }
-
-        setUploading(false);
+        await uploadPhoto(file, photoType);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // Delete photo handler
     const handlePhotoDelete = async (photo) => {
-        if (!window.confirm('Delete this photo? This cannot be undone.')) return;
-        try {
-            await supabase.storage
-                .from('repair-photos')
-                .remove([photo.file_path]);
-
-            await supabase
-                .from('repair_photos')
-                .delete()
-                .eq('id', photo.id);
-
-            setPhotos(prev => prev.filter(p => p.id !== photo.id));
-            if (expandedPhoto?.id === photo.id) setExpandedPhoto(null);
-        } catch (err) {
-            console.error('Photo delete failed:', err);
-            setPhotoError('Failed to delete photo. Please try again.');
-        }
+        const deletedId = await deletePhoto(photo);
+        if (deletedId && expandedPhoto?.id === deletedId) setExpandedPhoto(null);
     };
-
-    const beforePhotos = photos.filter(p => p.photo_type === 'before');
-    const afterPhotos = photos.filter(p => p.photo_type === 'after');
 
     const clearSignature = () => {
         if (sigPadRef.current) {
@@ -309,7 +212,7 @@ export default function RepairDetailPage() {
                 setRepair(prev => ({ ...prev, signature_path: fileName }));
             }
         } catch (err) {
-            console.log('Intake signature storage skipped:', err.message);
+            // signature storage is non-critical
         }
         setIntakeSigned(true);
         setShowIntakeSignature(false);
@@ -332,21 +235,10 @@ export default function RepairDetailPage() {
                 setRepair(prev => ({ ...prev, completion_signature_path: fileName }));
             }
         } catch (err) {
-            console.log('Completion signature storage skipped:', err.message);
+            // signature storage is non-critical
         }
         setCompletionSigned(true);
         await finalizeRepair();
-    };
-
-    const closePaymentModal = () => {
-        setShowPaymentModal(false);
-        setPaymentModalStep('tip');
-        setPaymentMethod(null);
-        setSquarePaymentUrl(null);
-        setSquarePhase('idle');
-        setPaymentError('');
-        setCashReceived('');
-        setSplitCashAmount(0);
     };
 
     // Called after payment + completion signature — marks the repair as complete
@@ -368,11 +260,11 @@ export default function RepairDetailPage() {
                         device: repair.device,
                         issues: repair.issues,
                         total_estimate: repair.total_estimate,
-                        tip_amount: repair.tip_amount || tipAmount,
+                        tip_amount: repair.tip_amount || payment.tipAmount,
                         payment_method: repair.payment_method,
                         paid_at: repair.paid_at || new Date().toISOString(),
                     },
-                }).catch((err) => console.error('Invoice email error:', err));
+                }).catch(() => {});
             }
         }
         setUpdating(false);
@@ -393,12 +285,7 @@ export default function RepairDetailPage() {
 
         // Completing a repair → trigger payment + signature flow instead of a simple confirm
         if (nextStatus === REPAIR_STATUS.COMPLETE) {
-            setPaymentModalStep('tip');
-            setPaymentMethod(null);
-            setPaymentError('');
-            setSquarePaymentUrl(null);
-            setSquarePhase('idle');
-            setShowPaymentModal(true);
+            openPaymentModal();
             return;
         }
 
@@ -481,15 +368,14 @@ export default function RepairDetailPage() {
 
 
     const handleCashPayment = async () => {
-        setPaymentProcessing(true);
-        setPaymentError('');
+        startProcessing();
         try {
             const { error } = await supabase
                 .from('repairs')
                 .update({
                     payment_method: 'cash',
                     payment_status: 'completed',
-                    tip_amount: tipAmount,
+                    tip_amount: payment.tipAmount,
                     paid_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 })
@@ -500,29 +386,26 @@ export default function RepairDetailPage() {
                 ...prev,
                 payment_method: 'cash',
                 payment_status: 'completed',
-                tip_amount: tipAmount,
+                tip_amount: payment.tipAmount,
                 paid_at: new Date().toISOString(),
             }));
-            // Advance to completion signature step
-            setPaymentModalStep('signature');
+            setPaymentStep('signature');
         } catch (err) {
-            console.error('Cash payment error:', err);
             setPaymentError(err.message || 'Failed to record cash payment.');
         }
-        setPaymentProcessing(false);
+        stopProcessing();
     };
 
     // Square QR: create a hosted Square payment link → show as QR for customer to scan
     // cashPortion: amount already collected in cash (split payment), 0 for full card payment
     const handleSquareQRPayment = async (cashPortion = 0) => {
-        setPaymentProcessing(true);
-        setPaymentError('');
+        startProcessing();
         setSquarePhase('loading');
         try {
             const { grandTotal } = computeTotal();
-            const totalDue = grandTotal + tipAmount;
+            const totalDue = grandTotal + payment.tipAmount;
             const chargeAmount = cashPortion > 0 ? totalDue - cashPortion : grandTotal;
-            const chargeTip = cashPortion > 0 ? 0 : tipAmount;
+            const chargeTip = cashPortion > 0 ? 0 : payment.tipAmount;
             if (cashPortion > 0) {
                 sessionStorage.setItem(`split_cash_${repair.id}`, cashPortion.toString());
             }
@@ -550,14 +433,13 @@ export default function RepairDetailPage() {
             }
             if (!fnData?.url) throw new Error('No payment URL returned.');
 
-            setSquarePaymentUrl(fnData.url);
+            setSquareUrl(fnData.url);
             setSquarePhase('ready');
         } catch (err) {
-            console.error('Square QR error:', err);
             setPaymentError(err.message || 'Failed to create payment link.');
             setSquarePhase('idle');
         }
-        setPaymentProcessing(false);
+        stopProcessing();
     };
 
     // Square Tap to Pay: deep-link into the Square POS app with the correct amount
@@ -565,7 +447,7 @@ export default function RepairDetailPage() {
     const handleSquareTapPay = (cashPortion = 0) => {
         setPaymentError('');
         const { grandTotal } = computeTotal();
-        const totalDue = grandTotal + tipAmount;
+        const totalDue = grandTotal + payment.tipAmount;
         const chargeAmount = cashPortion > 0 ? totalDue - cashPortion : totalDue;
         const totalCents = Math.round(chargeAmount * 100);
         const issueNames = issues.map(iid => REPAIR_TYPES.find(t => t.id === iid)?.name || iid).join(', ');
@@ -640,7 +522,7 @@ export default function RepairDetailPage() {
                                         payment_method: 'square',
                                         paid_at: paidAt,
                                     },
-                                }).catch((err) => console.error('Invoice email error:', err));
+                                }).catch(() => {});
                             }
                             navigate('/queue');
                         }
@@ -688,7 +570,7 @@ export default function RepairDetailPage() {
                                     payment_method: 'square',
                                     paid_at: paidAt,
                                 },
-                            }).catch((err) => console.error('Invoice email error:', err));
+                            }).catch(() => {});
                         }
                         navigate('/queue');
                     }
@@ -701,11 +583,11 @@ export default function RepairDetailPage() {
     useEffect(() => {
         if (
             repair?.payment_status === 'completed' &&
-            showPaymentModal &&
-            paymentMethod === 'square-qr' &&
-            paymentModalStep === 'payment'
+            payment.showModal &&
+            payment.method === 'square-qr' &&
+            payment.step === 'payment'
         ) {
-            setPaymentModalStep('signature');
+            setPaymentStep('signature');
         }
     }, [repair?.payment_status]);
 
@@ -1213,16 +1095,7 @@ export default function RepairDetailPage() {
                             <button
                                 className="payment-actions__btn payment-actions__btn--card"
                                 style={{ width: '100%', marginTop: 24 }}
-                                onClick={() => {
-                                    setTipAmount(0);
-                                    setPaymentModalStep('tip');
-                                    setPaymentMethod(null);
-                                    setPaymentError('');
-                                    setSquarePaymentUrl(null);
-                                    setSquarePhase('idle');
-                                    setCashReceived('');
-                                    setShowPaymentModal(true);
-                                }}
+                                onClick={openPaymentModal}
                             >
                                 <span className="payment-actions__icon">💳</span>
                                 <span>Collect Payment</span>
@@ -1231,24 +1104,20 @@ export default function RepairDetailPage() {
                     </div>
 
                     {/* ── Payment Wizard Modal (tip → method → signature) ── */}
-                    {showPaymentModal && (
+                    {payment.showModal && (
                         <div
                             className="confirm-modal-overlay"
                             onClick={() => {
-                                // Cannot dismiss during processing or on the final signature step
-                                if (paymentProcessing || squarePhase === 'loading' || paymentModalStep === 'signature') return;
+                                if (payment.processing || payment.squarePhase === 'loading' || payment.step === 'signature') return;
                                 closePaymentModal();
                             }}
                         >
                             <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
 
                                 {/* ── Step 1: Tip selection (auto-advances on selection) ── */}
-                                {paymentModalStep === 'tip' && (() => {
+                                {payment.step === 'tip' && (() => {
                                     const { grandTotal } = computeTotal();
-                                    const advance = (amount) => {
-                                        setTipAmount(amount);
-                                        setPaymentModalStep('payment');
-                                    };
+                                    const advance = (amount) => setTip(amount);
                                     return (
                                         <>
                                             <div className="confirm-modal__icon">💰</div>
@@ -1284,9 +1153,9 @@ export default function RepairDetailPage() {
                                 })()}
 
                                 {/* ── Step 2a: Method selection ── */}
-                                {paymentModalStep === 'payment' && paymentMethod === null && (() => {
+                                {payment.step === 'payment' && payment.method === null && (() => {
                                     const { grandTotal } = computeTotal();
-                                    const amountDue = Math.round((grandTotal + tipAmount) * 100) / 100;
+                                    const amountDue = Math.round((grandTotal + payment.tipAmount) * 100) / 100;
                                     return (
                                         <>
                                             <div className="confirm-modal__icon">💳</div>
@@ -1296,10 +1165,10 @@ export default function RepairDetailPage() {
                                                     <span>Repair Total</span>
                                                     <span>${grandTotal.toFixed(2)}</span>
                                                 </div>
-                                                {tipAmount > 0 && (
+                                                {payment.tipAmount > 0 && (
                                                     <div className="payment-modal__row">
                                                         <span>Tip</span>
-                                                        <span>${tipAmount.toFixed(2)}</span>
+                                                        <span>${payment.tipAmount.toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 <div className="payment-modal__row payment-modal__row--total">
@@ -1308,19 +1177,19 @@ export default function RepairDetailPage() {
                                                 </div>
                                             </div>
                                             <div className="payment-actions" style={{ flexDirection: 'column' }}>
-                                                <button className="payment-actions__btn payment-actions__btn--cash" onClick={() => setPaymentMethod('cash')}>
+                                                <button className="payment-actions__btn payment-actions__btn--cash" onClick={() => setMethod('cash')}>
                                                     <span className="payment-actions__icon">💵</span>
                                                     <span>Cash</span>
                                                 </button>
                                                 <button className="payment-actions__btn payment-actions__btn--card" onClick={() => {
-                                                    setPaymentMethod('square-qr');
+                                                    setMethod('square-qr');
                                                     handleSquareQRPayment();
                                                 }}>
                                                     <span className="payment-actions__icon">📱</span>
                                                     <span>QR Code — Customer Scans</span>
                                                 </button>
                                                 <button className="payment-actions__btn payment-actions__btn--card" onClick={() => {
-                                                    setPaymentMethod('square-tap');
+                                                    setMethod('square-tap');
                                                     handleSquareTapPay();
                                                 }}>
                                                     <span className="payment-actions__icon">📲</span>
@@ -1328,18 +1197,17 @@ export default function RepairDetailPage() {
                                                 </button>
                                             </div>
                                             <div className="confirm-modal__actions" style={{ marginTop: 8 }}>
-                                                <button className="guru-btn guru-btn--ghost" onClick={() => setPaymentModalStep('tip')}>← Back</button>
+                                                <button className="guru-btn guru-btn--ghost" onClick={backToTip}>← Back</button>
                                             </div>
                                         </>
                                     );
                                 })()}
 
                                 {/* ── Step 2b: Cash — enter received amount + show change ── */}
-                                {paymentModalStep === 'payment' && paymentMethod === 'cash' && (() => {
+                                {payment.step === 'payment' && payment.method === 'cash' && (() => {
                                     const { grandTotal } = computeTotal();
-                                    // Round to cents so the displayed total matches the comparison
-                                    const amountDue = Math.round((grandTotal + tipAmount) * 100) / 100;
-                                    const cashNum = Math.round((parseFloat(cashReceived) || 0) * 100) / 100;
+                                    const amountDue = Math.round((grandTotal + payment.tipAmount) * 100) / 100;
+                                    const cashNum = Math.round((parseFloat(payment.cashReceived) || 0) * 100) / 100;
                                     const changeDue = cashNum - amountDue;
                                     const hasEnough = cashNum >= amountDue;
                                     return (
@@ -1347,10 +1215,10 @@ export default function RepairDetailPage() {
                                             <div className="confirm-modal__icon">💵</div>
                                             <h3 className="confirm-modal__title">Cash Payment</h3>
                                             <div className="payment-modal__summary">
-                                                {tipAmount > 0 && (
+                                                {payment.tipAmount > 0 && (
                                                     <div className="payment-modal__row">
                                                         <span>Tip</span>
-                                                        <span>${tipAmount.toFixed(2)}</span>
+                                                        <span>${payment.tipAmount.toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 <div className="payment-modal__row payment-modal__row--total">
@@ -1366,13 +1234,9 @@ export default function RepairDetailPage() {
                                                         type="text"
                                                         inputMode="decimal"
                                                         placeholder="0.00"
-                                                        value={cashReceived}
+                                                        value={payment.cashReceived}
                                                         autoFocus
-                                                        onChange={(e) => {
-                                                            const val = e.target.value.replace(/[^0-9.]/g, '');
-                                                            const parts = val.split('.');
-                                                            setCashReceived(parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : val);
-                                                        }}
+                                                        onChange={(e) => setCashReceived(e.target.value)}
                                                         className="cash-change__input"
                                                     />
                                                 </div>
@@ -1389,7 +1253,7 @@ export default function RepairDetailPage() {
                                                     </div>
                                                 )}
                                             </div>
-                                            {paymentError && <div className="payment-modal__error">{paymentError}</div>}
+                                            {payment.error && <div className="payment-modal__error">{payment.error}</div>}
 
                                             {/* Split payment — show when partial cash entered */}
                                             {cashNum > 0 && !hasEnough && (
@@ -1403,11 +1267,11 @@ export default function RepairDetailPage() {
                                                             style={{ flex: 1, padding: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}
                                                             onClick={() => {
                                                                 const cashPortion = cashNum;
-                                                                setSplitCashAmount(cashPortion);
-                                                                setPaymentMethod('square-qr');
+                                                                setSplitCash(cashPortion);
+                                                                setMethod('square-qr');
                                                                 handleSquareQRPayment(cashPortion);
                                                             }}
-                                                            disabled={paymentProcessing}
+                                                            disabled={payment.processing}
                                                         >
                                                             📱 QR Code
                                                         </button>
@@ -1416,11 +1280,11 @@ export default function RepairDetailPage() {
                                                             style={{ flex: 1, padding: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}
                                                             onClick={() => {
                                                                 const cashPortion = cashNum;
-                                                                setSplitCashAmount(cashPortion);
-                                                                setPaymentMethod('square-tap');
+                                                                setSplitCash(cashPortion);
+                                                                setMethod('square-tap');
                                                                 handleSquareTapPay(cashPortion);
                                                             }}
-                                                            disabled={paymentProcessing}
+                                                            disabled={payment.processing}
                                                         >
                                                             📲 Tap to Pay
                                                         </button>
@@ -1429,9 +1293,9 @@ export default function RepairDetailPage() {
                                             )}
 
                                             <div className="confirm-modal__actions">
-                                                <button className="guru-btn guru-btn--ghost" onClick={() => { setPaymentMethod(null); setCashReceived(''); }} disabled={paymentProcessing}>← Back</button>
-                                                <button className="guru-btn guru-btn--primary" onClick={handleCashPayment} disabled={paymentProcessing || !hasEnough || cashNum === 0}>
-                                                    {paymentProcessing ? 'Processing...' : 'Confirm Cash Received'}
+                                                <button className="guru-btn guru-btn--ghost" onClick={backToMethod} disabled={payment.processing}>← Back</button>
+                                                <button className="guru-btn guru-btn--primary" onClick={handleCashPayment} disabled={payment.processing || !hasEnough || cashNum === 0}>
+                                                    {payment.processing ? 'Processing...' : 'Confirm Cash Received'}
                                                 </button>
                                             </div>
                                         </>
@@ -1439,35 +1303,35 @@ export default function RepairDetailPage() {
                                 })()}
 
                                 {/* ── Step 2c: Square QR Code — customer scans on their phone ── */}
-                                {paymentModalStep === 'payment' && paymentMethod === 'square-qr' && (() => {
+                                {payment.step === 'payment' && payment.method === 'square-qr' && (() => {
                                     const { grandTotal } = computeTotal();
                                     return (
                                         <>
                                             <div className="confirm-modal__icon">
-                                                {squarePhase === 'waiting' ? '⏳' : '📱'}
+                                                {payment.squarePhase === 'waiting' ? '⏳' : '📱'}
                                             </div>
                                             <h3 className="confirm-modal__title">
-                                                {squarePhase === 'loading' && 'Creating Payment Link...'}
-                                                {squarePhase === 'ready' && 'Customer Scans to Pay'}
-                                                {squarePhase === 'waiting' && 'Waiting for Payment...'}
+                                                {payment.squarePhase === 'loading' && 'Creating Payment Link...'}
+                                                {payment.squarePhase === 'ready' && 'Customer Scans to Pay'}
+                                                {payment.squarePhase === 'waiting' && 'Waiting for Payment...'}
                                             </h3>
 
-                                            {squarePhase === 'loading' && (
+                                            {payment.squarePhase === 'loading' && (
                                                 <div className="stripe-loading" style={{ margin: '24px 0' }}>
                                                     Setting up secure payment...
                                                 </div>
                                             )}
 
-                                            {squarePhase === 'ready' && squarePaymentUrl && (
+                                            {payment.squarePhase === 'ready' && payment.squarePaymentUrl && (
                                                 <>
                                                     <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 4, textAlign: 'center' }}>
-                                                        {splitCashAmount > 0 ? (
+                                                        {payment.splitCashAmount > 0 ? (
                                                             <>
-                                                                Charging: <strong style={{ color: 'var(--text-primary)' }}>${(grandTotal + tipAmount - splitCashAmount).toFixed(2)}</strong>
-                                                                <span style={{ display: 'block', fontSize: '0.8rem', marginTop: 2 }}>${splitCashAmount.toFixed(2)} collected in cash</span>
+                                                                Charging: <strong style={{ color: 'var(--text-primary)' }}>${(grandTotal + payment.tipAmount - payment.splitCashAmount).toFixed(2)}</strong>
+                                                                <span style={{ display: 'block', fontSize: '0.8rem', marginTop: 2 }}>${payment.splitCashAmount.toFixed(2)} collected in cash</span>
                                                             </>
                                                         ) : (
-                                                            <>Total: <strong style={{ color: 'var(--text-primary)' }}>${(grandTotal + tipAmount).toFixed(2)}</strong></>
+                                                            <>Total: <strong style={{ color: 'var(--text-primary)' }}>${(grandTotal + payment.tipAmount).toFixed(2)}</strong></>
                                                         )}
                                                     </p>
                                                     <div style={{ textAlign: 'center', margin: '16px 0 8px' }}>
@@ -1476,7 +1340,7 @@ export default function RepairDetailPage() {
                                                         </p>
                                                         <div style={{ display: 'inline-block', background: '#fff', padding: 10, borderRadius: 12 }}>
                                                             <img
-                                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(squarePaymentUrl)}&bgcolor=ffffff&color=000000`}
+                                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payment.squarePaymentUrl)}&bgcolor=ffffff&color=000000`}
                                                                 alt="Scan to pay"
                                                                 width={200}
                                                                 height={200}
@@ -1491,7 +1355,7 @@ export default function RepairDetailPage() {
                                                         className="guru-btn guru-btn--primary guru-btn--full"
                                                         style={{ marginTop: 4 }}
                                                         onClick={() => {
-                                                            window.open(squarePaymentUrl, '_blank');
+                                                            window.open(payment.squarePaymentUrl, '_blank');
                                                             setSquarePhase('waiting');
                                                         }}
                                                     >
@@ -1500,20 +1364,20 @@ export default function RepairDetailPage() {
                                                 </>
                                             )}
 
-                                            {squarePhase === 'waiting' && (
+                                            {payment.squarePhase === 'waiting' && (
                                                 <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '20px 0', lineHeight: 1.6 }}>
                                                     Waiting for the customer to complete payment.<br />
                                                     This screen will update automatically once paid.
                                                 </p>
                                             )}
 
-                                            {paymentError && <div className="payment-modal__error">{paymentError}</div>}
+                                            {payment.error && <div className="payment-modal__error">{payment.error}</div>}
 
                                             <div className="confirm-modal__actions">
                                                 <button
                                                     className="guru-btn guru-btn--ghost"
-                                                    onClick={() => { setPaymentMethod(null); setSquarePaymentUrl(null); setSquarePhase('idle'); }}
-                                                    disabled={squarePhase === 'loading'}
+                                                    onClick={backToMethod}
+                                                    disabled={payment.squarePhase === 'loading'}
                                                 >
                                                     ← Back
                                                 </button>
@@ -1523,16 +1387,16 @@ export default function RepairDetailPage() {
                                 })()}
 
                                 {/* ── Step 2d: Square Tap to Pay — opens Square POS app via deep link ── */}
-                                {paymentModalStep === 'payment' && paymentMethod === 'square-tap' && (
+                                {payment.step === 'payment' && payment.method === 'square-tap' && (
                                     <>
                                         <div className="confirm-modal__icon">
-                                            {squarePhase === 'waiting' ? '📲' : '📲'}
+                                            {payment.squarePhase === 'waiting' ? '📲' : '📲'}
                                         </div>
                                         <h3 className="confirm-modal__title">
-                                            {squarePhase === 'waiting' ? 'Square POS Opening...' : 'Tap to Pay'}
+                                            {payment.squarePhase === 'waiting' ? 'Square POS Opening...' : 'Tap to Pay'}
                                         </h3>
 
-                                        {squarePhase === 'waiting' ? (
+                                        {payment.squarePhase === 'waiting' ? (
                                             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '16px 0', lineHeight: 1.6 }}>
                                                 Complete the payment in the Square POS app.<br />
                                                 You'll be returned here automatically when done.<br /><br />
@@ -1545,12 +1409,12 @@ export default function RepairDetailPage() {
                                             </p>
                                         )}
 
-                                        {paymentError && <div className="payment-modal__error">{paymentError}</div>}
+                                        {payment.error && <div className="payment-modal__error">{payment.error}</div>}
 
                                         <div className="confirm-modal__actions">
                                             <button
                                                 className="guru-btn guru-btn--ghost"
-                                                onClick={() => { setPaymentMethod(null); setSquarePhase('idle'); }}
+                                                onClick={backToMethod}
                                             >
                                                 ← Back
                                             </button>
@@ -1558,14 +1422,14 @@ export default function RepairDetailPage() {
                                                 className="guru-btn guru-btn--primary"
                                                 onClick={handleSquareTapPay}
                                             >
-                                                {squarePhase === 'waiting' ? 'Try Again' : 'Open Square POS'}
+                                                {payment.squarePhase === 'waiting' ? 'Try Again' : 'Open Square POS'}
                                             </button>
                                         </div>
                                     </>
                                 )}
 
                                 {/* ── Step 3: Completion signature ── */}
-                                {paymentModalStep === 'signature' && (
+                                {payment.step === 'signature' && (
                                     <>
                                         <div className="confirm-modal__icon">✅</div>
                                         <h3 className="confirm-modal__title">Repair Complete!</h3>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { analytics } from '@shared/analytics';
 import Navbar from '../components/Navbar';
 
 /* ─── Daily Bible Verse ─────────────────────────────────────── */
@@ -332,7 +333,7 @@ function HowItWorks() {
                 </div>
 
                 <div className="hiw-cta" style={{ textAlign: 'center', marginTop: 48 }}>
-                    <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--lg">
+                    <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--lg" onClick={() => analytics.buttonClick('hiw_start_repair')}>
                         Start Your Repair →
                     </Link>
                 </div>
@@ -342,6 +343,19 @@ function HowItWorks() {
 }
 
 export default function LandingPage() {
+    const location = useLocation();
+
+    useEffect(() => {
+        const sectionId = location.state?.scrollTo;
+        if (sectionId) {
+            requestAnimationFrame(() => {
+                const el = document.getElementById(sectionId);
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+            });
+            window.history.replaceState({}, '');
+        }
+    }, [location.state]);
+
     return (
         <>
             <Navbar />
@@ -384,10 +398,10 @@ export default function LandingPage() {
                             choose a time, and we handle the rest — fast, transparent, guaranteed.
                         </p>
                         <div className="hero__actions">
-                            <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--lg">
+                            <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--lg" onClick={() => analytics.buttonClick('hero_start_repair')}>
                                 Start a Repair →
                             </Link>
-                            <a href="#how-it-works" className="guru-btn guru-btn--secondary guru-btn--lg">
+                            <a href="#how-it-works" className="guru-btn guru-btn--secondary guru-btn--lg" onClick={() => analytics.buttonClick('hero_how_it_works')}>
                                 See How It Works
                             </a>
                         </div>
@@ -569,7 +583,7 @@ export default function LandingPage() {
                             <p className="cta__subtitle">
                                 Your phone deserves the best. Start your repair in under 2 minutes.
                             </p>
-                            <Link to="/repair" className="cta__button">
+                            <Link to="/repair" className="cta__button" onClick={() => analytics.buttonClick('cta_start_repair')}>
                                 Start Your Repair →
                             </Link>
                         </div>
@@ -595,7 +609,6 @@ export default function LandingPage() {
                             <h4 className="footer__col-title">Company</h4>
                             <ul className="footer__links">
                                 <li><a href="#features">About Us</a></li>
-                                <li><a href="http://localhost:5174" target="_blank" rel="noopener noreferrer">Technician Portal →</a></li>
                             </ul>
                         </div>
                         <div>

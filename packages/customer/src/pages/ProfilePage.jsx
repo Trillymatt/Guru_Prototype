@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
+import { isValidPhone, isValidEmail } from '@shared/validation';
 
 export default function ProfilePage() {
     const { user } = useAuth();
@@ -55,9 +56,18 @@ export default function ProfilePage() {
         setError('');
         setSaved(false);
 
-        // Basic validation
         if (!form.full_name.trim()) {
             setError('Name is required.');
+            setSaving(false);
+            return;
+        }
+        if (form.email.trim() && !isValidEmail(form.email.trim())) {
+            setError('Please enter a valid email address.');
+            setSaving(false);
+            return;
+        }
+        if (form.phone.trim() && !isValidPhone(form.phone.trim())) {
+            setError('Please enter a valid 10-digit US phone number.');
             setSaving(false);
             return;
         }

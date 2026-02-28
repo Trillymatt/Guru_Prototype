@@ -292,7 +292,6 @@ export default function FAQPage() {
                             <h4 className="footer__col-title">Company</h4>
                             <ul className="footer__links">
                                 <li><Link to="/">About Us</Link></li>
-                                <li><a href="http://localhost:5174" target="_blank" rel="noopener noreferrer">Technician Portal →</a></li>
                             </ul>
                         </div>
                         <div>

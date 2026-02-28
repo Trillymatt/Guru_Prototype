@@ -1,10 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
 ];
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseISODate(str) {
+    if (!str || !ISO_DATE_RE.test(str)) return null;
+    const d = new Date(str + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+}
 
 function isSameDay(a, b) {
     return a.getFullYear() === b.getFullYear()
@@ -28,8 +36,8 @@ function toDateKey(date) {
  * @param {Object<string, string[]>} [props.availableSlots] - map of date -> available slot ids
  */
 export default function GuruCalendar({ value, onChange, minDate, availableDates, availableSlots, disableUnavailable = true }) {
-    const selected = value ? new Date(value + 'T00:00:00') : null;
-    const minDateObj = minDate ? new Date(minDate + 'T00:00:00') : null;
+    const selected = value ? parseISODate(value) : null;
+    const minDateObj = minDate ? parseISODate(minDate) : null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -105,6 +113,24 @@ export default function GuruCalendar({ value, onChange, minDate, availableDates,
         onChange(toDateKey(date));
     };
 
+    const handleGridKeyDown = useCallback((e) => {
+        const focusable = e.currentTarget.querySelectorAll('button:not([disabled])');
+        const arr = Array.from(focusable);
+        const idx = arr.indexOf(document.activeElement);
+        if (idx === -1) return;
+
+        let next = -1;
+        if (e.key === 'ArrowRight') next = Math.min(idx + 1, arr.length - 1);
+        else if (e.key === 'ArrowLeft') next = Math.max(idx - 1, 0);
+        else if (e.key === 'ArrowDown') next = Math.min(idx + 7, arr.length - 1);
+        else if (e.key === 'ArrowUp') next = Math.max(idx - 7, 0);
+        else if (e.key === 'Enter' || e.key === ' ') { arr[idx].click(); e.preventDefault(); return; }
+        else return;
+
+        e.preventDefault();
+        arr[next]?.focus();
+    }, []);
+
     return (
         <div className="guru-calendar">
             <div className="guru-calendar__header">
@@ -136,7 +162,7 @@ export default function GuruCalendar({ value, onChange, minDate, availableDates,
                 ))}
             </div>
 
-            <div className="guru-calendar__grid">
+            <div className="guru-calendar__grid" role="grid" aria-label="Choose a date" onKeyDown={handleGridKeyDown}>
                 {calendarDays.map((date, i) => {
                     if (!date) {
                         return <div key={`blank-${i}`} className="guru-calendar__day guru-calendar__day--blank" />;
@@ -160,8 +186,11 @@ export default function GuruCalendar({ value, onChange, minDate, availableDates,
                             className={className}
                             onClick={() => handleSelectDate(date)}
                             disabled={disabled}
+                            tabIndex={disabled ? -1 : 0}
+                            aria-disabled={disabled || undefined}
                             aria-label={`${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`}
                             aria-selected={isSelected}
+                            aria-current={isSelected ? 'date' : undefined}
                         >
                             {date.getDate()}
                         </button>
