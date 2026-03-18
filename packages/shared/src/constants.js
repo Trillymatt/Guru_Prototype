@@ -1,5 +1,5 @@
 /**
- * Guru — Shared Constants
+ * SEER — Shared Constants
  * Single source of truth for devices, repair types, tiers, and statuses.
  */
 
@@ -75,7 +75,7 @@ export const PARTS_TIERS = [
         label: 'Recommended',
         description: 'High-quality parts with reliable performance and durability.',
         priceLabel: '$$',
-        color: '#7C3AED',
+        color: '#525462',
     },
     {
         id: 'genuine',

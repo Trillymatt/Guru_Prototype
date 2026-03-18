@@ -55,8 +55,8 @@
 }
 
 .guru-badge--purple {
-  background: rgba(168, 85, 247, 0.15);
-  color: var(--dark-purple-400);
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--dark-accent-400);
 }
 
 .guru-badge--warning {

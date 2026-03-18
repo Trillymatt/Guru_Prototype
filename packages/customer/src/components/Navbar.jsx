@@ -48,9 +48,9 @@ export default function Navbar({ darkHero = false }) {
         <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${darkHero && !scrolled ? 'navbar--on-dark' : ''}`} aria-label="Main navigation">
             <div className="guru-container navbar__inner">
                 <Link to="/" className="navbar__logo" onClick={closeMenu}>
-                    <div className="navbar__logo-icon">G</div>
+                    <div className="navbar__logo-icon">S</div>
                     <div className="navbar__logo-text">
-                        <span className="navbar__logo-name">Guru</span>
+                        <span className="navbar__logo-name">SEER</span>
                         <span className="navbar__logo-tagline">Mobile Repairs</span>
                     </div>
                 </Link>

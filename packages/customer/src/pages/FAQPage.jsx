@@ -6,7 +6,7 @@ import '../styles/faq.css';
 const FAQ_CATEGORIES = [
     {
         id: 'about',
-        label: 'About Guru',
+        label: 'About SEER',
         icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
@@ -14,16 +14,16 @@ const FAQ_CATEGORIES = [
         ),
         faqs: [
             {
-                q: 'What is Guru Mobile Repair?',
-                a: 'Guru is a mobile iPhone repair service serving the Dallas–Fort Worth area. Our Apple Certified technicians — many of whom are former Apple employees — come directly to you. Whether you\'re at home, the office, or a coffee shop, we repair your device on-site so you never have to visit a store.'
+                q: 'What is SEER Mobile Repair?',
+                a: 'SEER is a mobile iPhone repair service serving the Dallas–Fort Worth area. Our Apple Certified technicians — many of whom are former Apple employees — come directly to you. Whether you\'re at home, the office, or a coffee shop, we repair your device on-site so you never have to visit a store.'
             },
             {
                 q: 'Are your technicians Apple Certified?',
-                a: 'Yes. Every Guru technician is Apple Certified and has hands-on experience working directly at Apple. Our team brings the same expertise you\'d find inside an Apple Store directly to your door — without the Genius Bar wait.'
+                a: 'Yes. Every SEER technician is Apple Certified and has hands-on experience working directly at Apple. Our team brings the same expertise you\'d find inside an Apple Store directly to your door — without the Genius Bar wait.'
             },
             {
-                q: 'Is Guru a Christian company?',
-                a: 'Yes. Guru was founded on Christian values — honesty, integrity, and excellence in everything we do. We strive to serve every customer the way we\'d want to be served, treating your device (and your time) with the care and respect it deserves.'
+                q: 'Is SEER a Christian company?',
+                a: 'Yes. SEER was founded on Christian values — honesty, integrity, and excellence in everything we do. We strive to serve every customer the way we\'d want to be served, treating your device (and your time) with the care and respect it deserves.'
             },
             {
                 q: 'What areas do you currently serve?',
@@ -162,7 +162,7 @@ export default function FAQPage() {
                         </div>
                         <h1 className="faq-hero__title">How can we help you?</h1>
                         <p className="faq-hero__subtitle">
-                            Find answers to common questions about Guru repairs, scheduling, parts, and more.
+                            Find answers to common questions about SEER repairs, scheduling, parts, and more.
                             Can't find what you need? Our team is here for you.
                         </p>
                     </div>
@@ -282,7 +282,7 @@ export default function FAQPage() {
                 <div className="guru-container">
                     <div className="footer__grid">
                         <div>
-                            <div className="footer__brand-name">Guru</div>
+                            <div className="footer__brand-name">SEER</div>
                             <p className="footer__brand-desc">
                                 Premium mobile repair delivered to your door.
                                 Fast, transparent, and guaranteed.
@@ -312,7 +312,7 @@ export default function FAQPage() {
                         </div>
                     </div>
                     <div className="footer__bottom">
-                        <span>© 2026 Guru Mobile Repair Solutions. All rights reserved.</span>
+                        <span>© 2026 SEER Mobile Repair Solutions. All rights reserved.</span>
                         <span>Built with faith, purpose, and care.</span>
                     </div>
                 </div>

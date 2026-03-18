@@ -12,20 +12,20 @@
     gap: var(--space-2);
     font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--guru-purple-600);
+    color: var(--seer-platinum-700);
     margin-bottom: var(--space-6);
     transition: color var(--transition-fast);
 }
 
 .invoice-back:hover {
-    color: var(--guru-purple-800);
+    color: var(--seer-platinum-800);
 }
 
 /* ─── Invoice Document ─────────────────────────────────────────── */
 
 .invoice-doc {
-    background: var(--guru-white);
-    border: 1px solid var(--guru-gray-200);
+    background: var(--seer-white);
+    border: 1px solid var(--seer-gray-200);
     border-radius: var(--radius-2xl);
     overflow: hidden;
     margin-bottom: var(--space-6);
@@ -33,7 +33,7 @@
 
 /* Header band */
 .invoice-header {
-    background: linear-gradient(135deg, var(--guru-purple-700), var(--guru-purple-500));
+    background: linear-gradient(135deg, var(--seer-platinum-800), var(--seer-platinum-500));
     padding: var(--space-8) var(--space-8);
     display: flex;
     align-items: flex-start;
@@ -44,7 +44,7 @@
 .invoice-brand__name {
     font-size: 1.75rem;
     font-weight: 800;
-    color: var(--guru-white);
+    color: var(--seer-white);
     letter-spacing: 3px;
     line-height: 1;
 }
@@ -64,7 +64,7 @@
 .invoice-meta__title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--guru-white);
+    color: var(--seer-white);
     letter-spacing: 2px;
     text-transform: uppercase;
     margin-bottom: 8px;
@@ -104,13 +104,13 @@
     gap: var(--space-6);
     margin-bottom: var(--space-8);
     padding-bottom: var(--space-6);
-    border-bottom: 1px solid var(--guru-gray-100);
+    border-bottom: 1px solid var(--seer-gray-100);
 }
 
 .invoice-info__label {
     font-size: var(--font-size-xs);
     font-weight: 700;
-    color: var(--guru-gray-400);
+    color: var(--seer-gray-400);
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: var(--space-2);
@@ -119,13 +119,13 @@
 .invoice-info__value {
     font-size: var(--font-size-base);
     font-weight: 600;
-    color: var(--guru-black);
+    color: var(--seer-black);
     line-height: 1.5;
 }
 
 .invoice-info__sub {
     font-size: var(--font-size-sm);
-    color: var(--guru-gray-500);
+    color: var(--seer-gray-500);
     margin-top: 2px;
 }
 
@@ -133,7 +133,7 @@
 .invoice-section-title {
     font-size: var(--font-size-xs);
     font-weight: 700;
-    color: var(--guru-gray-400);
+    color: var(--seer-gray-400);
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: var(--space-3);
@@ -149,11 +149,11 @@
 .invoice-items thead th {
     font-size: var(--font-size-xs);
     font-weight: 700;
-    color: var(--guru-gray-400);
+    color: var(--seer-gray-400);
     text-transform: uppercase;
     letter-spacing: 1px;
     padding: var(--space-2) 0;
-    border-bottom: 2px solid var(--guru-gray-100);
+    border-bottom: 2px solid var(--seer-gray-100);
     text-align: left;
 }
 
@@ -163,21 +163,21 @@
 
 .invoice-items tbody td {
     padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--guru-gray-100);
+    border-bottom: 1px solid var(--seer-gray-100);
     font-size: var(--font-size-sm);
-    color: var(--guru-gray-700);
+    color: var(--seer-gray-700);
     vertical-align: middle;
 }
 
 .invoice-items tbody td:last-child {
     text-align: right;
     font-weight: 700;
-    color: var(--guru-gray-900);
+    color: var(--seer-gray-900);
 }
 
 .invoice-item__name {
     font-weight: 600;
-    color: var(--guru-black);
+    color: var(--seer-black);
 }
 
 .invoice-tier-badge {
@@ -186,8 +186,8 @@
     font-weight: 600;
     padding: 2px 8px;
     border-radius: var(--radius-full);
-    background: var(--guru-purple-100);
-    color: var(--guru-purple-700);
+    background: var(--seer-platinum-100);
+    color: var(--seer-platinum-800);
     margin-left: var(--space-2);
 }
 
@@ -204,8 +204,8 @@
     align-items: center;
     padding: var(--space-2) 0;
     font-size: var(--font-size-sm);
-    color: var(--guru-gray-600);
-    border-bottom: 1px solid var(--guru-gray-100);
+    color: var(--seer-gray-600);
+    border-bottom: 1px solid var(--seer-gray-100);
 }
 
 .invoice-total-row:last-child {
@@ -215,14 +215,14 @@
 .invoice-total-row--grand {
     padding-top: var(--space-4);
     margin-top: var(--space-2);
-    border-top: 2px solid var(--guru-purple-200) !important;
+    border-top: 2px solid var(--seer-platinum-200) !important;
     font-size: var(--font-size-lg);
     font-weight: 800;
-    color: var(--guru-black);
+    color: var(--seer-black);
 }
 
 .invoice-total-row--grand span:last-child {
-    color: var(--guru-purple-600);
+    color: var(--seer-platinum-700);
     font-size: var(--font-size-2xl);
 }
 
@@ -230,13 +230,13 @@
 .invoice-payment-note {
     padding: var(--space-4) var(--space-5);
     background: var(--guru-gray-50, #F9FAFB);
-    border: 1px solid var(--guru-gray-100);
+    border: 1px solid var(--seer-gray-100);
     border-radius: var(--radius-xl);
     display: flex;
     align-items: center;
     gap: var(--space-3);
     font-size: var(--font-size-sm);
-    color: var(--guru-gray-600);
+    color: var(--seer-gray-600);
     margin-bottom: var(--space-8);
 }
 
@@ -247,22 +247,22 @@
 
 .invoice-payment-note__method {
     font-weight: 700;
-    color: var(--guru-gray-800);
+    color: var(--seer-gray-800);
 }
 
 /* Footer */
 .invoice-footer {
-    border-top: 1px solid var(--guru-gray-100);
+    border-top: 1px solid var(--seer-gray-100);
     padding-top: var(--space-6);
     text-align: center;
     font-size: var(--font-size-xs);
-    color: var(--guru-gray-400);
+    color: var(--seer-gray-400);
     line-height: 1.8;
 }
 
 .invoice-footer__brand {
     font-weight: 700;
-    color: var(--guru-gray-600);
+    color: var(--seer-gray-600);
     margin-bottom: 4px;
 }
 
@@ -282,13 +282,13 @@
 .invoice-error {
     text-align: center;
     padding: var(--space-16) 0;
-    color: var(--guru-gray-500);
+    color: var(--seer-gray-500);
 }
 
 .invoice-error h2 {
     font-size: var(--font-size-xl);
     font-weight: 700;
-    color: var(--guru-black);
+    color: var(--seer-black);
     margin-bottom: var(--space-2);
 }
 

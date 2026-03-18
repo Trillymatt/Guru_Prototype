@@ -54,8 +54,8 @@ export default function TechNav() {
         <nav className="tech-nav" ref={menuRef}>
             <div className="guru-container tech-nav__inner">
                 <Link to="/queue" className="tech-nav__logo">
-                    <div className="tech-nav__logo-icon">G</div>
-                    Guru
+                    <div className="tech-nav__logo-icon">S</div>
+                    SEER
                     <span className="tech-nav__logo-badge">Tech</span>
                 </Link>
 

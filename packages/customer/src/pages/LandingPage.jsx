@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { analytics } from '@shared/analytics';
 import Navbar from '../components/Navbar';
+import VanTransition from '../components/VanTransition';
 
 /* ─── Daily Bible Verse ─────────────────────────────────────── */
 const VERSES = [
@@ -164,7 +165,7 @@ function PhoneScreenRepair({ active }) {
                     <svg viewBox="0 0 100 100" className="hiw-scene-ring-svg">
                         <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="6"/>
                         <circle cx="50" cy="50" r="42" fill="none" stroke="url(#ringGrad)" strokeWidth="6" strokeLinecap="round" strokeDasharray="264" strokeDashoffset="66" className="hiw-scene-ring-progress"/>
-                        <defs><linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#a855f7"/><stop offset="100%" stopColor="#22c55e"/></linearGradient></defs>
+                        <defs><linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#a8aab6"/><stop offset="100%" stopColor="#22c55e"/></linearGradient></defs>
                     </svg>
                     <div className="hiw-scene-status-pct">75%</div>
                 </div>
@@ -267,7 +268,7 @@ function HowItWorks() {
             <div className="guru-container">
                 <div className="hiw-header">
                     <span className="section-label">4 Simple Steps</span>
-                    <h2 className="section-title">How Guru works</h2>
+                    <h2 className="section-title">How SEER works</h2>
                 </div>
 
                 <div className="hiw-layout">
@@ -344,6 +345,13 @@ function HowItWorks() {
 
 export default function LandingPage() {
     const location = useLocation();
+    const navigate = useNavigate();
+    const [showVanTransition, setShowVanTransition] = useState(false);
+
+    const handleStartRepair = (analyticsLabel) => {
+        if (analyticsLabel) analytics.buttonClick(analyticsLabel);
+        setShowVanTransition(true);
+    };
 
     useEffect(() => {
         const sectionId = location.state?.scrollTo;
@@ -358,6 +366,7 @@ export default function LandingPage() {
 
     return (
         <>
+            <VanTransition active={showVanTransition} onComplete={() => navigate('/repair')} />
             <Navbar />
 
             {/* ─── Hero ─────────────────────────────────────────── */}
@@ -398,9 +407,9 @@ export default function LandingPage() {
                             choose a time, and we handle the rest — fast, transparent, guaranteed.
                         </p>
                         <div className="hero__actions">
-                            <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--lg" onClick={() => analytics.buttonClick('hero_start_repair')}>
+                            <button className="guru-btn guru-btn--primary guru-btn--lg" onClick={() => handleStartRepair('hero_start_repair')}>
                                 Start a Repair →
-                            </Link>
+                            </button>
                             <a href="#how-it-works" className="guru-btn guru-btn--secondary guru-btn--lg" onClick={() => analytics.buttonClick('hero_how_it_works')}>
                                 See How It Works
                             </a>
@@ -422,9 +431,9 @@ export default function LandingPage() {
                     </div>
                     <div className="hero__visual">
                         <div className="hero__phone-mockup">
-                            <Link to="/repair" className="hero__phone-screen">
+                            <button className="hero__phone-screen" onClick={() => handleStartRepair('hero_phone_start_repair')}>
                                 <div className="hero__phone-notch"></div>
-                                <div className="hero__phone-logo">Guru</div>
+                                <div className="hero__phone-logo">SEER</div>
                                 <div className="hero__phone-tagline">
                                     Better than when you gave it to us.
                                 </div>
@@ -432,7 +441,7 @@ export default function LandingPage() {
                                     Start Repair
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                                 </div>
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -446,7 +455,7 @@ export default function LandingPage() {
                 <div className="guru-container">
                     <Reveal>
                         <div className="section-header">
-                            <span className="section-label">The Guru Difference</span>
+                            <span className="section-label">The SEER Difference</span>
                             <h2 className="section-title">Why customers love us</h2>
                         </div>
                     </Reveal>
@@ -521,7 +530,7 @@ export default function LandingPage() {
                             <span className="section-label">Who We Are</span>
                             <h2 className="section-title">Built on expertise & faith</h2>
                             <p className="section-desc">
-                                Guru was founded by former Apple professionals who believe great repair
+                                SEER was founded by former Apple professionals who believe great repair
                                 work starts with integrity — and that integrity starts with faith.
                             </p>
                         </div>
@@ -536,7 +545,7 @@ export default function LandingPage() {
                             </div>
                             <h3 className="trust-card__title">Apple Certified Technicians</h3>
                             <p className="trust-card__desc">
-                                Every Guru technician holds Apple certification — the same credentials
+                                Every SEER technician holds Apple certification — the same credentials
                                 recognized at Apple Stores and Authorized Service Providers. You get
                                 Genius Bar expertise at your door.
                             </p>
@@ -564,7 +573,7 @@ export default function LandingPage() {
                             </div>
                             <h3 className="trust-card__title">A Faith-Based Company</h3>
                             <p className="trust-card__desc">
-                                Guru was founded on Christian values — honesty, servant leadership,
+                                SEER was founded on Christian values — honesty, servant leadership,
                                 and a commitment to treating every customer the way we'd want to be
                                 treated. Our faith drives the way we work.
                             </p>
@@ -583,9 +592,9 @@ export default function LandingPage() {
                             <p className="cta__subtitle">
                                 Your phone deserves the best. Start your repair in under 2 minutes.
                             </p>
-                            <Link to="/repair" className="cta__button" onClick={() => analytics.buttonClick('cta_start_repair')}>
+                            <button className="cta__button" onClick={() => handleStartRepair('cta_start_repair')}>
                                 Start Your Repair →
-                            </Link>
+                            </button>
                         </div>
                     </Reveal>
                 </div>
@@ -599,7 +608,7 @@ export default function LandingPage() {
                 <div className="guru-container">
                     <div className="footer__grid">
                         <div>
-                            <div className="footer__brand-name">Guru</div>
+                            <div className="footer__brand-name">SEER</div>
                             <p className="footer__brand-desc">
                                 Premium mobile repair delivered to your door.
                                 Fast, transparent, and guaranteed.
@@ -615,7 +624,7 @@ export default function LandingPage() {
                             <h4 className="footer__col-title">Support</h4>
                             <ul className="footer__links">
                                 <li><Link to="/faq">FAQ</Link></li>
-                                <li><a href="mailto:support@gururepair.com">Contact</a></li>
+                                <li><a href="mailto:support@seerrepair.com">Contact</a></li>
                                 <li><Link to="/legal?section=warranty">Warranty</Link></li>
                             </ul>
                         </div>
@@ -629,7 +638,7 @@ export default function LandingPage() {
                         </div>
                     </div>
                     <div className="footer__bottom">
-                        <span>© 2026 Guru Mobile Repair Solutions. All rights reserved.</span>
+                        <span>© 2026 SEER Mobile Repair Solutions. All rights reserved.</span>
                         <span>Built with faith, purpose, and care.</span>
                     </div>
                 </div>

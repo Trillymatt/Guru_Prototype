@@ -13,6 +13,7 @@ import {
     DEVICE_REPAIR_PRICING,
     getAvailableTiersForRepair,
     getDeviceRepairPrice,
+    getDevicesByGeneration,
     SERVICE_FEE,
     LABOR_FEE,
     TIME_SLOTS,
@@ -78,8 +79,63 @@ export default function RepairQuiz() {
     const [inventoryLoading, setInventoryLoading] = useState(false);
     const isLoggedIn = Boolean(user);
 
+    // Saved devices & addresses
+    const [savedDevices, setSavedDevices] = useState([]);
+    const [savedAddresses, setSavedAddresses] = useState([]);
+    const [savedDataLoaded, setSavedDataLoaded] = useState(false);
+
     // Track quiz start
     useEffect(() => { analytics.quizStart(); }, []);
+
+    // Fetch saved devices and addresses for logged-in users
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchSavedData = async () => {
+            const [devicesRes, addressesRes] = await Promise.all([
+                supabase
+                    .from('customer_devices')
+                    .select('*')
+                    .eq('customer_id', user.id)
+                    .order('is_default', { ascending: false }),
+                supabase
+                    .from('customer_addresses')
+                    .select('*')
+                    .eq('customer_id', user.id)
+                    .order('is_default', { ascending: false }),
+            ]);
+
+            if (devicesRes.data) setSavedDevices(devicesRes.data);
+            if (addressesRes.data) setSavedAddresses(addressesRes.data);
+            setSavedDataLoaded(true);
+
+            // Auto-select default device if none is selected yet
+            if (devicesRes.data && devicesRes.data.length > 0 && !selectedDevice) {
+                const defaultDevice = devicesRes.data.find(d => d.is_default) || devicesRes.data[0];
+                const matchingDevice = DEVICE_GENERATIONS.reduce((found, gen) => {
+                    if (found) return found;
+                    const devices = getDevicesByGeneration(gen);
+                    return devices.find(d => d.id === defaultDevice.device_id);
+                }, null);
+
+                if (matchingDevice) {
+                    setSelectedDevice(matchingDevice);
+                    setActiveGen(matchingDevice.generation);
+                    if (defaultDevice.device_color) {
+                        setBackGlassColor(defaultDevice.device_color);
+                    }
+                }
+            }
+
+            // Auto-fill default address
+            if (addressesRes.data && addressesRes.data.length > 0 && !scheduleAddress) {
+                const defaultAddr = addressesRes.data.find(a => a.is_default) || addressesRes.data[0];
+                setScheduleAddress(defaultAddr.address);
+            }
+        };
+
+        fetchSavedData();
+    }, [user]);
 
     // Fetch tech availability from Supabase
     useEffect(() => {
@@ -510,6 +566,18 @@ export default function RepairQuiz() {
                                 selectedDevice={selectedDevice}
                                 onSelectDevice={setSelectedDevice}
                                 sortedGens={sortedGens}
+                                savedDevices={savedDevices}
+                                onSelectSavedDevice={(saved) => {
+                                    const matchingDevice = DEVICE_GENERATIONS.reduce((found, gen) => {
+                                        if (found) return found;
+                                        return getDevicesByGeneration(gen).find(d => d.id === saved.device_id);
+                                    }, null);
+                                    if (matchingDevice) {
+                                        setSelectedDevice(matchingDevice);
+                                        setActiveGen(matchingDevice.generation);
+                                        if (saved.device_color) setBackGlassColor(saved.device_color);
+                                    }
+                                }}
                             />
 
                             {selectedDevice && (
@@ -563,6 +631,7 @@ export default function RepairQuiz() {
                             onServiceAreaError={setServiceAreaError}
                             onBack={goBack}
                             onNext={goNext}
+                            savedAddresses={savedAddresses}
                         />
                     )}
 

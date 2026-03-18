@@ -120,10 +120,10 @@
 }
 
 .queue-filter--active {
-  background: var(--dark-purple-500);
+  background: var(--dark-accent-500);
   color: white;
-  border-color: var(--dark-purple-500);
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+  border-color: var(--dark-accent-500);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
 }
 
 /* ─── Repair Cards List ─────────────────────────────────────────── */
@@ -159,7 +159,7 @@
 }
 
 .queue-date-header--today .queue-date-header__label {
-  color: var(--dark-purple-400);
+  color: var(--dark-accent-400);
 }
 
 .queue-date-header--tomorrow .queue-date-header__label {
@@ -207,8 +207,8 @@
 }
 
 .repair-card:focus-visible {
-  border-color: var(--dark-purple-500);
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
+  border-color: var(--dark-accent-500);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.3);
   outline: none;
 }
 
@@ -246,17 +246,17 @@
 }
 
 .repair-card__priority--en_route {
-  background: var(--dark-purple-500);
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+  background: var(--dark-accent-500);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
 }
 
 .repair-card__priority--arrived {
-  background: var(--dark-purple-500);
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+  background: var(--dark-accent-500);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
 }
 
 .repair-card__priority--in_progress {
-  background: var(--dark-purple-400);
+  background: var(--dark-accent-400);
   box-shadow: 0 0 12px rgba(192, 132, 252, 0.4);
 }
 
@@ -318,7 +318,7 @@
 .repair-card__price {
   font-size: var(--font-size-xl);
   font-weight: 800;
-  color: var(--dark-purple-400);
+  color: var(--dark-accent-400);
 }
 
 /* ─── Responsive Design ─────────────────────────────────────────── */
@@ -368,9 +368,9 @@
     font-size: 12px;
     font-weight: 700;
     color: white;
-    background: var(--dark-purple-500);
+    background: var(--dark-accent-500);
     border-radius: var(--radius-full);
-    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.5);
+    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.5);
     z-index: 2;
     animation: notifyPulse 2s ease-in-out infinite;
 }

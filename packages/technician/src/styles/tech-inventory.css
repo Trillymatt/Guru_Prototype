@@ -95,7 +95,7 @@
 
 .inventory-filter-select:focus {
   outline: none;
-  border-color: var(--dark-purple-500);
+  border-color: var(--dark-accent-500);
 }
 
 /* ─── Card Grid ──────────────────────────────────────────────── */
@@ -198,9 +198,9 @@
 }
 
 .inventory-card__action-btn:hover {
-  border-color: var(--dark-purple-500);
-  color: var(--dark-purple-400);
-  background: rgba(168, 85, 247, 0.08);
+  border-color: var(--dark-accent-500);
+  color: var(--dark-accent-400);
+  background: rgba(6, 182, 212, 0.08);
 }
 
 .inventory-card__action-btn--delete:hover {
@@ -274,8 +274,8 @@
 }
 
 .inventory-repair-type-btn--active {
-  border-color: var(--dark-purple-500);
-  background: rgba(168, 85, 247, 0.12);
+  border-color: var(--dark-accent-500);
+  background: rgba(6, 182, 212, 0.12);
 }
 
 .inventory-repair-type-btn__icon {
@@ -293,7 +293,7 @@
 }
 
 .inventory-repair-type-btn--active .inventory-repair-type-btn__name {
-  color: var(--dark-purple-400);
+  color: var(--dark-accent-400);
 }
 
 /* ─── Full-width select ────────────────────────────────────────── */
@@ -368,13 +368,13 @@
 }
 
 .inventory-qty-sm-btn:hover:not(:disabled) {
-  border-color: var(--dark-purple-500);
-  background: rgba(168, 85, 247, 0.1);
+  border-color: var(--dark-accent-500);
+  background: rgba(6, 182, 212, 0.1);
 }
 
 .inventory-qty-sm-btn:focus-visible {
-  border-color: var(--dark-purple-500);
-  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+  border-color: var(--dark-accent-500);
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.3);
   outline: none;
 }
 
@@ -526,8 +526,8 @@
 }
 
 .inventory-gen-tab--active {
-  background: var(--dark-purple-500);
-  border-color: var(--dark-purple-500);
+  background: var(--dark-accent-500);
+  border-color: var(--dark-accent-500);
   color: white;
 }
 
@@ -601,8 +601,8 @@
 }
 
 .inventory-qty-btn:hover {
-  border-color: var(--dark-purple-500);
-  background: rgba(168, 85, 247, 0.1);
+  border-color: var(--dark-accent-500);
+  background: rgba(6, 182, 212, 0.1);
 }
 
 .inventory-qty-value {
@@ -620,7 +620,7 @@
 
 .inventory-qty-value:focus {
   outline: none;
-  border-color: var(--dark-purple-500);
+  border-color: var(--dark-accent-500);
 }
 
 /* ─── Form Error ────────────────────────────────────────────── */

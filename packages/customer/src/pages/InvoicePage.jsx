@@ -258,10 +258,10 @@ export default function InvoicePage() {
 
                             {/* Footer */}
                             <div className="invoice-footer">
-                                <div className="invoice-footer__brand">Guru Mobile Repair Solutions</div>
+                                <div className="invoice-footer__brand">SEER Mobile Repair Solutions</div>
                                 <div>support@gurumobilerepair.com</div>
                                 <div style={{ marginTop: 8 }}>
-                                    Thank you for choosing Guru. Your repair is covered by our standard parts warranty.
+                                    Thank you for choosing SEER. Your repair is covered by our standard parts warranty.
                                 </div>
                             </div>
 
