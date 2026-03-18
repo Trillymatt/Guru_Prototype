@@ -1,11 +1,83 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import '../styles/repair-quiz.css';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
 import { isValidPhone, isValidEmail } from '@shared/validation';
 import { DEVICES, DEVICE_GENERATIONS, getDevicesByGeneration } from '@shared/constants';
 import { BACK_GLASS_COLORS } from '@shared/constants';
+
+// ─── Address Autocomplete ─────────────────────────────────────────────────────
+function AddressAutocomplete({ value, onChange }) {
+    const [query, setQuery] = useState(value || '');
+    const [results, setResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const timerRef = useRef(null);
+
+    useEffect(() => {
+        setQuery(value || '');
+    }, [value]);
+
+    useEffect(() => {
+        if (query === value) return;
+        clearTimeout(timerRef.current);
+        if (query.length > 2) {
+            timerRef.current = setTimeout(() => {
+                setIsSearching(true);
+                fetch(
+                    `https://nominatim.openstreetmap.org/search?` +
+                    `format=json&q=${encodeURIComponent(query)}&countrycodes=us` +
+                    `&addressdetails=1&limit=6`
+                )
+                    .then(res => res.json())
+                    .then(data => {
+                        const formatted = data
+                            .filter(r => r.address && (r.type === 'house' || r.type === 'residential' || r.class === 'place' || r.class === 'building' || r.class === 'highway' || r.address.road))
+                            .map(r => r.display_name.split(',').slice(0, 4).join(','));
+                        setResults(formatted.length > 0 ? formatted : data.slice(0, 5).map(r => r.display_name.split(',').slice(0, 4).join(',')));
+                        setIsSearching(false);
+                    })
+                    .catch(() => { setResults([]); setIsSearching(false); });
+            }, 500);
+        } else {
+            setResults([]);
+        }
+        return () => clearTimeout(timerRef.current);
+    }, [query]);
+
+    const handleSelect = (display) => {
+        setQuery(display);
+        setResults([]);
+        onChange(display);
+    };
+
+    return (
+        <div className="address-search-container">
+            <input
+                className="guru-input"
+                type="text"
+                placeholder="1234 Oak Lawn Ave, Dallas, TX 75219"
+                value={query}
+                onChange={(e) => {
+                    setQuery(e.target.value);
+                    onChange(e.target.value);
+                }}
+            />
+            {isSearching && <div className="address-searching">Searching addresses...</div>}
+            {results.length > 0 && (
+                <div className="address-results">
+                    {results.map((r, i) => (
+                        <button key={i} className="address-result-item" type="button" onClick={() => handleSelect(r)}>
+                            📍 {r}
+                        </button>
+                    ))}
+                    <div className="address-api-note">Powered by OpenStreetMap</div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function ProfilePage() {
     const { user } = useAuth();
@@ -489,12 +561,9 @@ export default function ProfilePage() {
 
                                 <div className="profile-field">
                                     <label className="profile-label">Address</label>
-                                    <input
-                                        className="guru-input"
-                                        type="text"
-                                        placeholder="1234 Oak Lawn Ave, Dallas, TX 75219"
+                                    <AddressAutocomplete
                                         value={newAddress.address}
-                                        onChange={(e) => setNewAddress(prev => ({ ...prev, address: e.target.value }))}
+                                        onChange={(val) => setNewAddress(prev => ({ ...prev, address: val }))}
                                     />
                                 </div>
 
