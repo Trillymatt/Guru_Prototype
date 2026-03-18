@@ -515,6 +515,19 @@ export default function RepairQuiz() {
                 return;
             }
 
+            // Auto-save address if it's new (not already in saved addresses)
+            if (scheduleAddress && savedDataLoaded) {
+                const addressAlreadySaved = savedAddresses.some(a => a.address === scheduleAddress);
+                if (!addressAlreadySaved) {
+                    await supabase.from('customer_addresses').insert({
+                        customer_id: user.id,
+                        label: 'Other',
+                        address: scheduleAddress,
+                        is_default: savedAddresses.length === 0,
+                    });
+                }
+            }
+
             setContact((prev) => ({ ...prev, name: profilePayload.full_name, email: profilePayload.email }));
             setConfirmed(true);
             setIsVerifying(false);

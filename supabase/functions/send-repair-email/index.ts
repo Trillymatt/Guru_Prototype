@@ -37,6 +37,20 @@ const APP_URL = Deno.env.get("APP_URL") || "https://gurumobilerepair.com";
 const SURVEY_URL =
   Deno.env.get("SURVEY_URL") || "https://gurumobilerepair.com/review";
 
+// ─── Handles 12 email types:
+//   1. repair_confirmed    — When a repair is first created (booking confirmation)
+//   2. repair_accepted     — When status moves to 'confirmed' (admin/tech accepted)
+//   3. parts_ordered       — When parts are ordered for the repair
+//   4. parts_received      — When parts arrive and repair is nearly ready
+//   5. repair_scheduled    — When status moves to 'scheduled' (in-stock flow)
+//   6. day_of_reminder     — Morning of the scheduled repair date (via pg_cron)
+//   7. tech_en_route       — Technician is driving to the customer
+//   8. tech_arrived        — Technician has arrived at the location
+//   9. repair_in_progress  — Technician started the repair
+//  10. repair_complete     — Repair finished successfully
+//  11. review_request      — Post-service survey (sent ~2 hrs after completion)
+//  12. invoice_ready       — Payment received; invoice link emailed to customer
+
 // ─── Repair Type Display Names ────────────────────────────────────────────────
 
 const REPAIR_TYPE_NAMES: Record<string, string> = {
@@ -270,7 +284,7 @@ ${highlightBox(
   "#EBF5FF"
 )}
 
-${ctaButton("View Your Repair", `${APP_URL}/repairs/${data.repair_id}`)}
+${ctaButton("View Your Repair", `${APP_URL}/repair/${data.repair_id}`)}
 
 <p style="font-size:13px;color:#86868B;line-height:1.6;margin:0;">Questions? Reply to this email or reach out to our support team anytime. We're here to help!</p>`;
 
@@ -283,7 +297,218 @@ ${ctaButton("View Your Repair", `${APP_URL}/repairs/${data.repair_id}`)}
   };
 }
 
-// ─── 2. Day-of Reminder ──────────────────────────────────────────────────────
+// ─── 2. Repair Accepted (status → confirmed) ─────────────────────────────────
+
+function repairAccepted(data: any): { subject: string; html: string } {
+  const orderId = (data.repair_id || "").slice(-8).toUpperCase();
+  const subject = `Your Repair Has Been Accepted — #${orderId}`;
+
+  const content = `
+<p style="font-size:22px;font-weight:600;color:#1D1D1F;margin:0 0 8px;">Hi ${data.customer_name},</p>
+<p style="font-size:16px;color:#6E6E73;margin:0 0 24px;line-height:1.5;">Good news — a technician has reviewed your repair request and confirmed they can help. We're now working on getting everything ready for your appointment.</p>
+
+${statusBadge("Accepted", "#34C759")}
+
+${detailCard(
+  "Repair Details",
+  detailRow("Order", `#${orderId}`) +
+    detailRow("Device", data.device || "N/A") +
+    detailRow("Service(s)", formatIssues(data.issues)) +
+    detailRow("Scheduled", formatDate(data.schedule_date)) +
+    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Location", data.address || "TBD") +
+    detailRow("Technician", data.technician_name || "To be assigned")
+)}
+
+${highlightBox(
+  "<strong>What's next?</strong><br>We're now sourcing the parts needed for your repair. You'll receive an update once parts have been ordered, and another when they arrive — so you always know where things stand.",
+  "#34C759",
+  "#F0FAF0"
+)}
+
+${ctaButton("View Your Repair", `${APP_URL}/repair/${data.repair_id}`)}
+
+<p style="font-size:13px;color:#86868B;line-height:1.6;margin:0;">Questions? Contact our support team anytime and we'll be happy to help.</p>`;
+
+  return {
+    subject,
+    html: wrapEmail(
+      content,
+      `Your ${data.device} repair has been accepted. We're sourcing parts now.`
+    ),
+  };
+}
+
+// ─── 3. Parts Ordered (status → parts_ordered) ────────────────────────────────
+
+function partsOrdered(data: any): { subject: string; html: string } {
+  const orderId = (data.repair_id || "").slice(-8).toUpperCase();
+  const subject = `Parts Ordered for Your Repair — #${orderId}`;
+
+  const content = `
+<p style="font-size:22px;font-weight:600;color:#1D1D1F;margin:0 0 8px;">Hi ${data.customer_name},</p>
+<p style="font-size:16px;color:#6E6E73;margin:0 0 24px;line-height:1.5;">We've placed an order for the parts needed to fix your <strong style="color:#1D1D1F;">${data.device || "device"}</strong>. Parts typically arrive within 1–3 business days.</p>
+
+${statusBadge("Parts Ordered", "#FF9500")}
+
+${detailCard(
+  "Repair Details",
+  detailRow("Order", `#${orderId}`) +
+    detailRow("Device", data.device || "N/A") +
+    detailRow("Service(s)", formatIssues(data.issues)) +
+    detailRow("Scheduled", formatDate(data.schedule_date)) +
+    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Location", data.address || "TBD")
+)}
+
+${highlightBox(
+  "<strong>Parts on the way!</strong><br>We'll send you another update as soon as your parts arrive. Once we have everything in hand, your technician will be ready to complete your repair on the scheduled date.",
+  "#FF9500",
+  "#FFF8F0"
+)}
+
+${ctaButton("View Your Repair", `${APP_URL}/repair/${data.repair_id}`)}
+
+<p style="font-size:13px;color:#86868B;line-height:1.6;margin:0;">If your scheduled date needs to change, please reach out to our team as soon as possible.</p>`;
+
+  return {
+    subject,
+    html: wrapEmail(
+      content,
+      `Parts have been ordered for your ${data.device} repair. Estimated arrival: 1–3 business days.`
+    ),
+  };
+}
+
+// ─── 4. Parts Received (status → parts_received) ──────────────────────────────
+
+function partsReceived(data: any): { subject: string; html: string } {
+  const orderId = (data.repair_id || "").slice(-8).toUpperCase();
+  const subject = `Parts Arrived — Your Repair Is Almost Ready!`;
+
+  const content = `
+<p style="font-size:22px;font-weight:600;color:#1D1D1F;margin:0 0 8px;">Hi ${data.customer_name},</p>
+<p style="font-size:16px;color:#6E6E73;margin:0 0 24px;line-height:1.5;">Great news — the parts for your <strong style="color:#1D1D1F;">${data.device || "device"}</strong> repair have arrived. Your technician is fully stocked and ready to go on your scheduled date!</p>
+
+${statusBadge("Parts Received", "#34C759")}
+
+${detailCard(
+  "Your Upcoming Appointment",
+  detailRow("Order", `#${orderId}`) +
+    detailRow("Device", data.device || "N/A") +
+    detailRow("Service(s)", formatIssues(data.issues)) +
+    detailRow("Scheduled", formatDate(data.schedule_date)) +
+    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Location", data.address || "TBD") +
+    detailRow("Technician", data.technician_name || "To be assigned")
+)}
+
+${highlightBox(
+  `<strong>You're all set!</strong><br>
+&#8226;&nbsp; Back up your device data before the appointment<br>
+&#8226;&nbsp; Have your device passcode ready for the technician<br>
+&#8226;&nbsp; Make sure the repair location is accessible on the day`,
+  "#34C759",
+  "#F0FAF0"
+)}
+
+${ctaButton("View Repair Details", `${APP_URL}/repair/${data.repair_id}`)}
+
+<p style="font-size:13px;color:#86868B;line-height:1.6;margin:0;">Need to adjust your appointment? Contact us soon so we can accommodate your request.</p>`;
+
+  return {
+    subject,
+    html: wrapEmail(
+      content,
+      `Parts for your ${data.device} repair have arrived! Your appointment is locked in.`
+    ),
+  };
+}
+
+// ─── 5. Repair Scheduled (status → scheduled) ─────────────────────────────────
+
+function repairScheduled(data: any): { subject: string; html: string } {
+  const orderId = (data.repair_id || "").slice(-8).toUpperCase();
+  const subject = `Your Repair Is Scheduled — #${orderId}`;
+
+  const content = `
+<p style="font-size:22px;font-weight:600;color:#1D1D1F;margin:0 0 8px;">Hi ${data.customer_name},</p>
+<p style="font-size:16px;color:#6E6E73;margin:0 0 24px;line-height:1.5;">Your repair appointment is officially scheduled. A technician is assigned and will be at your location during the time window below.</p>
+
+${statusBadge("Scheduled", "#0071E3")}
+
+${detailCard(
+  "Appointment Details",
+  detailRow("Order", `#${orderId}`) +
+    detailRow("Device", data.device || "N/A") +
+    detailRow("Service(s)", formatIssues(data.issues)) +
+    detailRow("Date", formatDate(data.schedule_date)) +
+    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Location", data.address || "TBD") +
+    detailRow("Technician", data.technician_name || "To be assigned")
+)}
+
+${highlightBox(
+  `<strong>Before your appointment:</strong><br>
+&#8226;&nbsp; Back up any important data on your device<br>
+&#8226;&nbsp; Have your device passcode available<br>
+&#8226;&nbsp; Ensure someone is available at the repair location`,
+  "#0071E3",
+  "#EBF5FF"
+)}
+
+${ctaButton("View Repair Details", `${APP_URL}/repair/${data.repair_id}`)}
+
+<p style="font-size:13px;color:#86868B;line-height:1.6;margin:0;">You'll receive a reminder the morning of your appointment and a notification when your technician is on the way.</p>`;
+
+  return {
+    subject,
+    html: wrapEmail(
+      content,
+      `Your ${data.device} repair is scheduled for ${formatDate(data.schedule_date)} — ${data.schedule_time || "your time window"}.`
+    ),
+  };
+}
+
+// ─── 6. Repair In Progress (status → in_progress) ────────────────────────────
+
+function repairInProgress(data: any): { subject: string; html: string } {
+  const subject = "Repair In Progress — We're Working on Your Device";
+
+  const content = `
+<p style="font-size:22px;font-weight:600;color:#1D1D1F;margin:0 0 8px;">Hi ${data.customer_name},</p>
+<p style="font-size:16px;color:#6E6E73;margin:0 0 24px;line-height:1.5;">Your technician <strong style="color:#1D1D1F;">${data.technician_name}</strong> has started working on your <strong style="color:#1D1D1F;">${data.device || "device"}</strong>. We'll let you know as soon as it's ready.</p>
+
+${statusBadge("In Progress", "#FF9500")}
+
+${detailCard(
+  "Repair Details",
+  detailRow("Technician", data.technician_name || "N/A") +
+    detailRow("Device", data.device || "N/A") +
+    detailRow("Service(s)", formatIssues(data.issues)) +
+    detailRow("Location", data.address || "N/A")
+)}
+
+${highlightBox(
+  "Your repair is underway. Most repairs take under an hour. You can use the in-app chat to communicate with your technician at any time.",
+  "#FF9500",
+  "#FFF8F0"
+)}
+
+${ctaButton("Open Chat", `${APP_URL}/repair/${data.repair_id}`)}
+
+<p style="font-size:13px;color:#86868B;line-height:1.6;margin:0;">You'll receive a confirmation email the moment your repair is complete.</p>`;
+
+  return {
+    subject,
+    html: wrapEmail(
+      content,
+      `${data.technician_name} is actively repairing your ${data.device}. Estimated time: under 1 hour.`
+    ),
+  };
+}
+
+// ─── 7. Day-of Reminder ──────────────────────────────────────────────────────
 
 function dayOfReminder(data: any): { subject: string; html: string } {
   const subject = "Reminder: Your Repair Is Today!";
@@ -311,7 +536,7 @@ ${highlightBox(
   "#FFF8F0"
 )}
 
-${ctaButton("View Repair Details", `${APP_URL}/repairs/${data.repair_id}`)}
+${ctaButton("View Repair Details", `${APP_URL}/repair/${data.repair_id}`)}
 
 <p style="font-size:13px;color:#86868B;line-height:1.6;margin:0;">Need to reschedule? Please contact us as soon as possible so we can find a new time that works for you.</p>`;
 
@@ -352,7 +577,7 @@ ${highlightBox(
   "#EBF5FF"
 )}
 
-${ctaButton("Track Your Repair", `${APP_URL}/repairs/${data.repair_id}`)}
+${ctaButton("Track Your Repair", `${APP_URL}/repair/${data.repair_id}`)}
 
 <p style="font-size:13px;color:#86868B;line-height:1.6;margin:0;">You'll receive another notification the moment your technician arrives. You can also follow the status in real time from your dashboard.</p>`;
 
@@ -391,7 +616,7 @@ ${highlightBox(
 
 <p style="font-size:14px;color:#6E6E73;line-height:1.6;margin:16px 0 0;">Have a question during the repair? Use the <strong>in-app chat</strong> to message your technician directly.</p>
 
-${ctaButton("Open Chat", `${APP_URL}/repairs/${data.repair_id}`)}`;
+${ctaButton("Open Chat", `${APP_URL}/repair/${data.repair_id}`)}`;
 
   return {
     subject,
@@ -438,7 +663,7 @@ ${highlightBox(
   "#F0FAF0"
 )}
 
-${ctaButton("View Repair Details", `${APP_URL}/repairs/${data.repair_id}`)}
+${ctaButton("View Repair Details", `${APP_URL}/repair/${data.repair_id}`)}
 
 <p style="font-size:14px;color:#6E6E73;line-height:1.6;margin:0;">Thank you for choosing Guru Mobile Repair Solutions! We'd love to hear how your experience went — keep an eye out for a quick survey from us.</p>`;
 
@@ -566,12 +791,22 @@ function generateEmail(emailType: string, data: any): EmailResult | null {
   switch (emailType) {
     case "repair_confirmed":
       return repairConfirmed(data);
+    case "repair_accepted":
+      return repairAccepted(data);
+    case "parts_ordered":
+      return partsOrdered(data);
+    case "parts_received":
+      return partsReceived(data);
+    case "repair_scheduled":
+      return repairScheduled(data);
     case "day_of_reminder":
       return dayOfReminder(data);
     case "tech_en_route":
       return techEnRoute(data);
     case "tech_arrived":
       return techArrived(data);
+    case "repair_in_progress":
+      return repairInProgress(data);
     case "repair_complete":
       return repairComplete(data);
     case "review_request":
@@ -620,9 +855,14 @@ Deno.serve(async (req: Request) => {
     // ── Validate email_type is a known type ──
     const validEmailTypes = [
       "repair_confirmed",
+      "repair_accepted",
+      "parts_ordered",
+      "parts_received",
+      "repair_scheduled",
       "day_of_reminder",
       "tech_en_route",
       "tech_arrived",
+      "repair_in_progress",
       "repair_complete",
       "review_request",
       "invoice_ready",
