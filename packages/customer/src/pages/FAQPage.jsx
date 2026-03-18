@@ -22,8 +22,8 @@ const FAQ_CATEGORIES = [
                 a: 'Yes. Every SEER technician is Apple Certified and has hands-on experience working directly at Apple. Our team brings the same expertise you\'d find inside an Apple Store directly to your door — without the Genius Bar wait.'
             },
             {
-                q: 'Is SEER a Christian company?',
-                a: 'Yes. SEER was founded on Christian values — honesty, integrity, and excellence in everything we do. We strive to serve every customer the way we\'d want to be served, treating your device (and your time) with the care and respect it deserves.'
+                q: 'What makes SEER different?',
+                a: 'SEER was founded on values of honesty, integrity, and excellence in everything we do. We strive to serve every customer the way we\'d want to be served, treating your device (and your time) with the care and respect it deserves.'
             },
             {
                 q: 'What areas do you currently serve?',
@@ -313,7 +313,7 @@ export default function FAQPage() {
                     </div>
                     <div className="footer__bottom">
                         <span>© 2026 SEER Mobile Repair Solutions. All rights reserved.</span>
-                        <span>Built with faith, purpose, and care.</span>
+                        <span>Built with purpose and care.</span>
                     </div>
                 </div>
             </footer>

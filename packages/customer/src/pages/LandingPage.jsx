@@ -4,42 +4,6 @@ import { analytics } from '@shared/analytics';
 import Navbar from '../components/Navbar';
 import VanTransition from '../components/VanTransition';
 
-/* ─── Daily Bible Verse ─────────────────────────────────────── */
-const VERSES = [
-    { ref: 'Proverbs 3:5–6', text: 'Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight.' },
-    { ref: 'Philippians 4:13', text: 'I can do all this through him who gives me strength.' },
-    { ref: 'Jeremiah 29:11', text: '"For I know the plans I have for you," declares the Lord, "plans to prosper you and not to harm you, plans to give you hope and a future."' },
-    { ref: 'Matthew 5:16', text: 'In the same way, let your light shine before others, that they may see your good deeds and glorify your Father in heaven.' },
-    { ref: 'Colossians 3:23', text: 'Whatever you do, work at it with all your heart, as working for the Lord, not for human masters.' },
-    { ref: 'Isaiah 41:10', text: 'So do not fear, for I am with you; do not be dismayed, for I am your God. I will strengthen you and help you.' },
-    { ref: 'Romans 8:28', text: 'And we know that in all things God works for the good of those who love him, who have been called according to his purpose.' },
-    { ref: 'Psalm 46:1', text: 'God is our refuge and strength, an ever-present help in trouble.' },
-    { ref: '1 Corinthians 10:31', text: 'So whether you eat or drink or whatever you do, do it all for the glory of God.' },
-    { ref: 'Galatians 5:13', text: 'You, my brothers and sisters, were called to be free. But do not use your freedom to indulge the flesh; rather, serve one another humbly in love.' },
-    { ref: 'Micah 6:8', text: 'He has shown you, O mortal, what is good. And what does the Lord require of you? To act justly and to love mercy and to walk humbly with your God.' },
-    { ref: 'Joshua 1:9', text: 'Have I not commanded you? Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go.' },
-];
-
-function getDailyVerse() {
-    const start = new Date(new Date().getFullYear(), 0, 0);
-    const diff = new Date() - start;
-    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
-    return VERSES[dayOfYear % VERSES.length];
-}
-
-function BibleVerse() {
-    const verse = getDailyVerse();
-    return (
-        <div className="bible-verse">
-            <div className="bible-verse__inner">
-                <div className="bible-verse__cross" aria-hidden="true">✝</div>
-                <p className="bible-verse__text">"{verse.text}"</p>
-                <span className="bible-verse__ref">— {verse.ref}</span>
-            </div>
-        </div>
-    );
-}
-
 /* ─── Intersection Observer hook for scroll-reveal ──── */
 function useReveal() {
     const ref = useRef(null);
@@ -394,8 +358,8 @@ export default function LandingPage() {
                             </div>
                             <div className="hero__trust-sep" aria-hidden="true">·</div>
                             <div className="hero__trust-item">
-                                <span className="hero__trust-cross">✝</span>
-                                Faith-Based Company
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Mobile — We Come to You
                             </div>
                         </div>
                         <h1 className="hero__title">
@@ -430,18 +394,63 @@ export default function LandingPage() {
                         </div>
                     </div>
                     <div className="hero__visual">
-                        <div className="hero__phone-mockup">
-                            <button className="hero__phone-screen" onClick={() => handleStartRepair('hero_phone_start_repair')}>
-                                <div className="hero__phone-notch"></div>
-                                <div className="hero__phone-logo">SEER</div>
-                                <div className="hero__phone-tagline">
-                                    Better than when you gave it to us.
-                                </div>
-                                <div className="hero__phone-cta">
-                                    Start Repair
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-                                </div>
-                            </button>
+                        <div className="hero__van-mockup" onClick={() => handleStartRepair('hero_van_start_repair')}>
+                            <svg viewBox="0 0 420 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="hero__van-svg">
+                                {/* Road */}
+                                <rect x="0" y="170" width="420" height="30" rx="4" fill="#1a1a2e" />
+                                <line x1="20" y1="185" x2="60" y2="185" stroke="#525462" strokeWidth="2" strokeDasharray="8 6" />
+                                <line x1="80" y1="185" x2="120" y2="185" stroke="#525462" strokeWidth="2" strokeDasharray="8 6" />
+                                <line x1="140" y1="185" x2="180" y2="185" stroke="#525462" strokeWidth="2" strokeDasharray="8 6" />
+                                <line x1="200" y1="185" x2="240" y2="185" stroke="#525462" strokeWidth="2" strokeDasharray="8 6" />
+                                <line x1="260" y1="185" x2="300" y2="185" stroke="#525462" strokeWidth="2" strokeDasharray="8 6" />
+                                <line x1="320" y1="185" x2="360" y2="185" stroke="#525462" strokeWidth="2" strokeDasharray="8 6" />
+                                <line x1="380" y1="185" x2="410" y2="185" stroke="#525462" strokeWidth="2" strokeDasharray="8 6" />
+                                {/* Van body */}
+                                <rect x="60" y="70" width="260" height="85" rx="10" fill="#1e1f2e" />
+                                {/* Cabin */}
+                                <path d="M270 70 L340 70 L365 100 L365 155 L270 155 Z" fill="#373848" />
+                                {/* Windshield */}
+                                <path d="M278 75 L335 75 L358 100 L358 115 L278 115 Z" fill="#a8aab6" opacity="0.5" />
+                                {/* Windshield glare */}
+                                <path d="M290 75 L310 75 L333 100 L313 100 Z" fill="#ffffff" opacity="0.12" />
+                                {/* Cargo area */}
+                                <rect x="70" y="80" width="190" height="65" rx="5" fill="#252536" />
+                                {/* SEER logo on side */}
+                                <text x="120" y="120" fill="#c7c8d0" fontSize="26" fontWeight="800" fontFamily="system-ui" letterSpacing="2">SEER</text>
+                                {/* Tagline */}
+                                <text x="100" y="138" fill="#a8aab6" fontSize="8" fontFamily="system-ui" opacity="0.7">MOBILE REPAIR — COMING TO YOU</text>
+                                {/* Bottom panel */}
+                                <rect x="60" y="148" width="305" height="14" rx="3" fill="#111827" />
+                                {/* Front wheel */}
+                                <circle cx="320" cy="165" r="22" fill="#374151" />
+                                <circle cx="320" cy="165" r="14" fill="#1f2937" />
+                                <circle cx="320" cy="165" r="5" fill="#525462" />
+                                {/* Rear wheel */}
+                                <circle cx="120" cy="165" r="22" fill="#374151" />
+                                <circle cx="120" cy="165" r="14" fill="#1f2937" />
+                                <circle cx="120" cy="165" r="5" fill="#525462" />
+                                {/* Headlight */}
+                                <rect x="358" y="108" width="10" height="18" rx="3" fill="#fbbf24" />
+                                {/* Headlight glow */}
+                                <ellipse cx="375" cy="117" rx="15" ry="10" fill="#fbbf24" opacity="0.08" />
+                                {/* Taillight */}
+                                <rect x="58" y="110" width="6" height="14" rx="2" fill="#ef4444" />
+                                {/* Roof rack */}
+                                <rect x="80" y="63" width="170" height="4" rx="2" fill="#373848" />
+                                <rect x="100" y="59" width="4" height="8" rx="1" fill="#373848" />
+                                <rect x="230" y="59" width="4" height="8" rx="1" fill="#373848" />
+                                {/* Toolbox on roof */}
+                                <rect x="140" y="50" width="55" height="14" rx="3" fill="#252536" />
+                                <rect x="155" y="47" width="25" height="6" rx="2" fill="#373848" />
+                                {/* Side mirror */}
+                                <rect x="356" y="88" width="12" height="8" rx="2" fill="#373848" />
+                                {/* Purple accent stripe */}
+                                <rect x="70" y="145" width="190" height="3" rx="1" fill="#7C3AED" opacity="0.6" />
+                            </svg>
+                            <div className="hero__van-cta">
+                                Start a Repair
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -528,10 +537,10 @@ export default function LandingPage() {
                     <Reveal>
                         <div className="section-header">
                             <span className="section-label">Who We Are</span>
-                            <h2 className="section-title">Built on expertise & faith</h2>
+                            <h2 className="section-title">Built on expertise & integrity</h2>
                             <p className="section-desc">
                                 SEER was founded by former Apple professionals who believe great repair
-                                work starts with integrity — and that integrity starts with faith.
+                                work starts with honesty, transparency, and treating every customer right.
                             </p>
                         </div>
                     </Reveal>
@@ -567,17 +576,19 @@ export default function LandingPage() {
                             <div className="trust-card__badge">Apple Alumni</div>
                         </Reveal>
 
-                        <Reveal className="trust-card trust-card--faith" delay={200}>
-                            <div className="trust-card__icon-wrap trust-card__icon-wrap--faith">
-                                <span className="trust-card__cross-icon">✝</span>
+                        <Reveal className="trust-card trust-card--mobile" delay={200}>
+                            <div className="trust-card__icon-wrap">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                                </svg>
                             </div>
-                            <h3 className="trust-card__title">A Faith-Based Company</h3>
+                            <h3 className="trust-card__title">Mobile — We Come to You</h3>
                             <p className="trust-card__desc">
-                                SEER was founded on Christian values — honesty, servant leadership,
-                                and a commitment to treating every customer the way we'd want to be
-                                treated. Our faith drives the way we work.
+                                No store visits, no waiting in line. Our technicians come directly to
+                                your home, office, or wherever you need — and fix your device on the spot
+                                while you watch.
                             </p>
-                            <div className="trust-card__badge trust-card__badge--faith">Integrity First</div>
+                            <div className="trust-card__badge">On-Site Repair</div>
                         </Reveal>
                     </div>
                 </div>
@@ -599,9 +610,6 @@ export default function LandingPage() {
                     </Reveal>
                 </div>
             </section>
-
-            {/* ─── Daily Bible Verse ────────────────────────────── */}
-            <BibleVerse />
 
             {/* ─── Footer ───────────────────────────────────────── */}
             <footer className="footer">
@@ -639,7 +647,7 @@ export default function LandingPage() {
                     </div>
                     <div className="footer__bottom">
                         <span>© 2026 SEER Mobile Repair Solutions. All rights reserved.</span>
-                        <span>Built with faith, purpose, and care.</span>
+                        <span>Built with purpose and care.</span>
                     </div>
                 </div>
             </footer>

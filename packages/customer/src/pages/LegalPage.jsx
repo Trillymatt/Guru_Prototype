@@ -412,7 +412,7 @@ export default function LegalPage() {
                     </div>
                     <div className="footer__bottom">
                         <span>© 2026 SEER Mobile Repair Solutions. All rights reserved.</span>
-                        <span>Built with faith, purpose, and care.</span>
+                        <span>Built with purpose and care.</span>
                     </div>
                 </div>
             </footer>
