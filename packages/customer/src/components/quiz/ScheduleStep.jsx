@@ -134,6 +134,7 @@ export default function ScheduleStep({
     onServiceAreaError,
     onBack,
     onNext,
+    savedAddresses = [],
 }) {
     return (
         <div className="quiz__panel animate-fade-in-up">
@@ -207,6 +208,27 @@ export default function ScheduleStep({
 
             <div className="sched-section">
                 <label className="sched-label">Your Location</label>
+                {savedAddresses.length > 0 && (
+                    <div className="quiz__saved-addresses">
+                        {savedAddresses.map((addr) => (
+                            <button
+                                key={addr.id}
+                                className={`quiz__saved-address-btn ${scheduleAddress === addr.address ? 'quiz__saved-address-btn--selected' : ''}`}
+                                onClick={() => {
+                                    onAddressChange(addr.address);
+                                    if (onServiceAreaError) onServiceAreaError(null);
+                                }}
+                            >
+                                <span className="quiz__saved-address-label">{addr.label}</span>
+                                <span className="quiz__saved-address-text">{addr.address}</span>
+                                {addr.is_default && <span className="quiz__saved-address-default">Default</span>}
+                            </button>
+                        ))}
+                        <div className="quiz__saved-devices-divider" style={{ margin: '12px 0' }}>
+                            <span>or enter a new address</span>
+                        </div>
+                    </div>
+                )}
                 <AddressSearch
                     value={scheduleAddress}
                     onChange={onAddressChange}

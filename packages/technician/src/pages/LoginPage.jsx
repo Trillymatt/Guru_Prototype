@@ -39,7 +39,7 @@ export default function LoginPage() {
                     <div className="tech-login__logo-icon">
                         G
                     </div>
-                    <span className="tech-login__logo-text">Guru</span>
+                    <span className="tech-login__logo-text">SEER</span>
                     <span className="tech-nav__logo-badge">Tech</span>
                 </div>
                 <h1 className="tech-login__title">Technician Portal</h1>

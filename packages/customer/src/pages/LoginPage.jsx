@@ -101,7 +101,7 @@ export default function LoginPage() {
 
                     {step === 1 ? (
                         <>
-                            <h1 className="login-card__title">Welcome to Guru</h1>
+                            <h1 className="login-card__title">Welcome to SEER</h1>
                             <p className="login-card__subtitle">
                                 Enter your email and we'll send you a verification code.
                             </p>

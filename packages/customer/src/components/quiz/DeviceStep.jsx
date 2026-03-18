@@ -1,10 +1,41 @@
 import React from 'react';
 import { getDevicesByGeneration } from '@shared/constants';
 
-export default function DeviceStep({ activeGen, onGenChange, selectedDevice, onSelectDevice, sortedGens }) {
+export default function DeviceStep({ activeGen, onGenChange, selectedDevice, onSelectDevice, sortedGens, savedDevices = [], onSelectSavedDevice }) {
     return (
         <div className="quiz__section">
             <h3 className="quiz__section-title">Your iPhone</h3>
+
+            {/* Saved Devices Quick-Select */}
+            {savedDevices.length > 0 && (
+                <div className="quiz__saved-devices">
+                    <div className="quiz__saved-devices-label">Your saved devices</div>
+                    <div className="quiz__saved-devices-list">
+                        {savedDevices.map((saved) => (
+                            <button
+                                key={saved.id}
+                                className={`quiz__saved-device-btn ${selectedDevice?.id === saved.device_id ? 'quiz__saved-device-btn--selected' : ''}`}
+                                onClick={() => onSelectSavedDevice && onSelectSavedDevice(saved)}
+                            >
+                                <span className="quiz__saved-device-icon">📱</span>
+                                <span className="quiz__saved-device-info">
+                                    <span className="quiz__saved-device-name">
+                                        {saved.nickname || saved.device_name}
+                                    </span>
+                                    {saved.device_color && (
+                                        <span className="quiz__saved-device-color">{saved.device_color}</span>
+                                    )}
+                                </span>
+                                {saved.is_default && <span className="quiz__saved-device-default">Default</span>}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="quiz__saved-devices-divider">
+                        <span>or select a different device</span>
+                    </div>
+                </div>
+            )}
+
             <div className="quiz__gen-tabs">
                 {sortedGens.map((gen) => (
                     <button

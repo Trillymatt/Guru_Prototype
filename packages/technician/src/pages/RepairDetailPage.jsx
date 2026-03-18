@@ -13,13 +13,13 @@ import '../styles/tech-repair-detail.css';
 
 const AGREEMENT_TEXT = `GURU MOBILE REPAIR AGREEMENT
 
-By signing below, I authorize Guru Mobile Repair Solutions ("Guru") to perform the repair service(s) described in this work order on my device.
+By signing below, I authorize SEER Mobile Repair Solutions ("SEER") to perform the repair service(s) described in this work order on my device.
 
 I acknowledge that:
 1. I am the rightful owner of the device submitted for repair.
 2. I understand the estimated cost and repair details as presented.
-3. Guru is not responsible for pre-existing conditions or damage unrelated to the requested repair.
-4. Data backup is my responsibility. Guru is not liable for any data loss during repair.
+3. SEER is not responsible for pre-existing conditions or damage unrelated to the requested repair.
+4. Data backup is my responsibility. SEER is not liable for any data loss during repair.
 5. The selected parts tier and associated quality level have been explained to me.
 6. Repair times are estimates and may vary based on device condition.
 

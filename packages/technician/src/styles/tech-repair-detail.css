@@ -27,7 +27,7 @@
 }
 
 .repair-detail__back:hover {
-  color: var(--dark-purple-400);
+  color: var(--dark-accent-400);
 }
 
 /* ─── Grid Layout ──────────────────────────────────────────────── */
@@ -182,7 +182,7 @@
 .pricing-breakdown__total-amount {
   font-size: var(--font-size-2xl);
   font-weight: 800;
-  color: var(--dark-purple-400);
+  color: var(--dark-accent-400);
   letter-spacing: -0.02em;
 }
 
@@ -229,14 +229,14 @@
 }
 
 .status-step--done .status-step__dot {
-  background: var(--dark-purple-500);
-  border-color: var(--dark-purple-500);
+  background: var(--dark-accent-500);
+  border-color: var(--dark-accent-500);
 }
 
 .status-step--active .status-step__dot {
-  background: var(--dark-purple-400);
-  border-color: var(--dark-purple-400);
-  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.2);
+  background: var(--dark-accent-400);
+  border-color: var(--dark-accent-400);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2);
 }
 
 .status-step__label {
@@ -275,8 +275,8 @@
 }
 
 .guru-badge--purple {
-  background: rgba(168, 85, 247, 0.15);
-  color: var(--dark-purple-400);
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--dark-accent-400);
 }
 
 .guru-badge--warning {
@@ -349,9 +349,9 @@
 }
 
 .repair-photos__type-btn--active {
-  background: var(--dark-purple-600);
+  background: var(--dark-accent-600);
   color: var(--dark-text-primary);
-  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.25);
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.25);
 }
 
 .repair-photos__type-btn:hover:not(.repair-photos__type-btn--active) {
@@ -432,8 +432,8 @@
 .repair-photos__heic-icon {
   font-size: var(--font-size-xs);
   font-weight: 800;
-  color: var(--dark-purple-400);
-  background: rgba(168, 85, 247, 0.15);
+  color: var(--dark-accent-400);
+  background: rgba(6, 182, 212, 0.15);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
 }
@@ -611,8 +611,8 @@
 /* ─── Payment Section ────────────────────────────────────────────── */
 
 .repair-detail__payment {
-  border: 1px solid rgba(168, 85, 247, 0.25);
-  background: linear-gradient(135deg, var(--dark-bg-card) 0%, rgba(168, 85, 247, 0.04) 100%);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  background: linear-gradient(135deg, var(--dark-bg-card) 0%, rgba(6, 182, 212, 0.04) 100%);
 }
 
 .repair-detail__payment .repair-detail__section-title {
@@ -669,13 +669,13 @@
 .confirm-modal__next-status {
   display: inline-block;
   padding: var(--space-2) var(--space-5);
-  background: rgba(168, 85, 247, 0.15);
-  color: var(--dark-purple-400);
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--dark-accent-400);
   border-radius: var(--radius-full);
   font-size: var(--font-size-base);
   font-weight: 700;
   margin-bottom: var(--space-4);
-  border: 1px solid rgba(168, 85, 247, 0.25);
+  border: 1px solid rgba(6, 182, 212, 0.25);
 }
 
 .confirm-modal__warning {
@@ -784,14 +784,14 @@
 }
 
 .tip-section__btn:hover {
-  border-color: var(--dark-purple-400);
+  border-color: var(--dark-accent-400);
   color: var(--dark-text-primary);
 }
 
 .tip-section__btn--active {
-  background: rgba(168, 85, 247, 0.15);
-  border-color: var(--dark-purple-400);
-  color: var(--dark-purple-400);
+  background: rgba(6, 182, 212, 0.15);
+  border-color: var(--dark-accent-400);
+  color: var(--dark-accent-400);
 }
 
 .tip-section__custom {
@@ -805,7 +805,7 @@
 }
 
 .tip-section__custom:focus-within {
-  border-color: var(--dark-purple-400);
+  border-color: var(--dark-accent-400);
 }
 
 .tip-section__custom-prefix {
@@ -870,7 +870,7 @@
 }
 
 .payment-actions__btn--card:hover {
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.35);
   transform: translateY(-1px);
 }
 
@@ -948,9 +948,9 @@
 }
 
 .tip-modal__btn:hover {
-  border-color: var(--dark-purple-400);
-  background: rgba(168, 85, 247, 0.08);
-  color: var(--dark-purple-400);
+  border-color: var(--dark-accent-400);
+  background: rgba(6, 182, 212, 0.08);
+  color: var(--dark-accent-400);
 }
 
 .tip-modal__btn--notip {
@@ -991,7 +991,7 @@
 }
 
 .cash-change__input-wrap:focus-within {
-  border-color: var(--dark-purple-400);
+  border-color: var(--dark-accent-400);
 }
 
 .cash-change__prefix {
@@ -1115,8 +1115,8 @@
 }
 
 .parts-link:hover {
-  border-color: var(--dark-purple-400);
-  background: rgba(168, 85, 247, 0.08);
+  border-color: var(--dark-accent-400);
+  background: rgba(6, 182, 212, 0.08);
 }
 
 .parts-link__info {
@@ -1144,6 +1144,6 @@
 .parts-link__arrow {
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: var(--dark-purple-400);
+  color: var(--dark-accent-400);
   white-space: nowrap;
 }

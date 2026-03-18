@@ -1,0 +1,166 @@
+/* ─── Van Transition Animation ────────────────────────────────── */
+
+.van-transition {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--seer-white);
+}
+
+/* ─── Van Stage ─── */
+.van-transition__van-stage {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--seer-gray-50) 0%, var(--seer-platinum-100) 100%);
+}
+
+.van-transition__road {
+    position: absolute;
+    bottom: 30%;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--seer-gray-300);
+}
+
+.van-transition__road-line {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: repeating-linear-gradient(
+        90deg,
+        var(--seer-gray-400) 0px,
+        var(--seer-gray-400) 20px,
+        transparent 20px,
+        transparent 40px
+    );
+    animation: roadScroll 0.5s linear infinite;
+}
+
+@keyframes roadScroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-40px); }
+}
+
+.van-transition__van {
+    position: absolute;
+    bottom: calc(30% + 3px);
+    width: 200px;
+    animation: vanDrive 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes vanDrive {
+    0% {
+        left: -220px;
+        transform: translateY(0);
+    }
+    30% {
+        left: 30%;
+        transform: translateY(-2px);
+    }
+    50% {
+        left: 45%;
+        transform: translateY(0);
+    }
+    70% {
+        left: 60%;
+        transform: translateY(-1px);
+    }
+    100% {
+        left: 110%;
+        transform: translateY(0);
+    }
+}
+
+.van-transition__van-svg {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+}
+
+/* Exhaust puffs */
+.van-transition__exhaust {
+    position: absolute;
+    left: -10px;
+    bottom: 8px;
+    display: flex;
+    gap: 6px;
+}
+
+.van-transition__puff {
+    width: 12px;
+    height: 12px;
+    background: var(--seer-gray-300);
+    border-radius: 50%;
+    opacity: 0;
+    animation: puffAnim 0.8s ease-out infinite;
+}
+
+.van-transition__puff--1 { animation-delay: 0s; }
+.van-transition__puff--2 { animation-delay: 0.2s; width: 8px; height: 8px; }
+.van-transition__puff--3 { animation-delay: 0.4s; width: 6px; height: 6px; }
+
+@keyframes puffAnim {
+    0% {
+        opacity: 0.6;
+        transform: translate(0, 0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-30px, -10px) scale(2);
+    }
+}
+
+/* ─── Loading Stage ─── */
+.van-transition__loading-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.van-transition__logo {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--seer-black);
+    letter-spacing: 0.1em;
+}
+
+.van-transition__tagline {
+    font-size: var(--font-size-base);
+    color: var(--seer-gray-500);
+    font-weight: 500;
+}
+
+.van-transition__loader {
+    width: 200px;
+    height: 3px;
+    background: var(--seer-gray-200);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-top: var(--space-4);
+}
+
+.van-transition__loader-bar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--seer-platinum-500), var(--seer-platinum-800));
+    border-radius: var(--radius-full);
+    animation: loaderFill 1.2s ease-in-out forwards;
+}
+
+@keyframes loaderFill {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(0); }
+}

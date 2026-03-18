@@ -16,13 +16,13 @@ function TermsOfService() {
             <p className="legal-updated">Last updated: January 1, 2026</p>
 
             <p className="legal-intro">
-                Welcome to Guru Mobile Repair Solutions ("Guru," "we," "us," or "our"). By booking a repair
+                Welcome to SEER Mobile Repair Solutions ("Guru," "we," "us," or "our"). By booking a repair
                 or using our platform, you agree to these Terms of Service. Please read them carefully.
             </p>
 
             <h3>1. Services</h3>
             <p>
-                Guru provides on-site iPhone repair services performed by Apple Certified technicians at locations
+                SEER provides on-site iPhone repair services performed by Apple Certified technicians at locations
                 designated by the customer. Services are currently available in the Dallas–Fort Worth metroplex.
                 We reserve the right to decline any repair request at our discretion.
             </p>
@@ -46,7 +46,7 @@ function TermsOfService() {
             <p>
                 You may cancel or reschedule an appointment with at least 24 hours' notice at no additional charge.
                 Cancellations within 24 hours of the scheduled appointment may result in forfeiture of
-                the $29 service fee, as parts will have already been ordered. Guru reserves the right to
+                the $29 service fee, as parts will have already been ordered. SEER reserves the right to
                 reschedule appointments due to technician unavailability or circumstances beyond our control.
             </p>
 
@@ -61,14 +61,14 @@ function TermsOfService() {
             <h3>6. Device Condition & Liability</h3>
             <p>
                 You represent that you are the lawful owner of the device or have authorization to have it repaired.
-                Guru is not liable for data loss, pre-existing conditions, or damage unrelated to the repair
-                performed. We recommend backing up your device before any repair. Guru's liability is limited
+                SEER is not liable for data loss, pre-existing conditions, or damage unrelated to the repair
+                performed. We recommend backing up your device before any repair. SEER's liability is limited
                 to the cost of the repair performed.
             </p>
 
             <h3>7. Intellectual Property</h3>
             <p>
-                All content, logos, and branding on the Guru platform are the property of Guru Mobile Repair
+                All content, logos, and branding on the SEER platform are the property of SEER Mobile Repair
                 Solutions and may not be reproduced without written permission.
             </p>
 
@@ -99,12 +99,12 @@ function PrivacyPolicy() {
             <p className="legal-updated">Last updated: January 1, 2026</p>
 
             <p className="legal-intro">
-                Guru Mobile Repair Solutions ("Guru," "we," "us," or "our") is committed to protecting your
+                SEER Mobile Repair Solutions ("Guru," "we," "us," or "our") is committed to protecting your
                 personal information. This Privacy Policy explains how we collect, use, and safeguard your data.
             </p>
 
             <h3>1. Information We Collect</h3>
-            <p>We collect the following information when you use Guru:</p>
+            <p>We collect the following information when you use SEER:</p>
             <ul>
                 <li><strong>Account information:</strong> Name, email address, phone number.</li>
                 <li><strong>Service information:</strong> Device model, repair type, parts selection, service address, appointment time.</li>
@@ -138,7 +138,7 @@ function PrivacyPolicy() {
             <p>
                 We use industry-standard encryption and security practices to protect your data. Our platform
                 is built on Supabase with Row-Level Security policies ensuring your data is only accessible
-                to you and authorized Guru personnel.
+                to you and authorized SEER personnel.
             </p>
 
             <h3>5. Data Retention</h3>
@@ -179,7 +179,7 @@ function RepairAgreement() {
 
             <p className="legal-intro">
                 This Repair Agreement ("Agreement") is entered into between you ("Customer") and Guru Mobile
-                Repair Solutions ("Guru") at the time of repair completion and customer sign-off. By signing
+                Repair Solutions ("SEER") at the time of repair completion and customer sign-off. By signing
                 the digital completion form, you agree to the following terms.
             </p>
 
@@ -193,7 +193,7 @@ function RepairAgreement() {
 
             <h3>2. Pre-Existing Conditions</h3>
             <p>
-                Guru is not responsible for pre-existing damage or conditions present before the repair.
+                SEER is not responsible for pre-existing damage or conditions present before the repair.
                 Your technician may photograph pre-existing damage before beginning work. This documentation
                 is available to you upon request.
             </p>
@@ -201,20 +201,20 @@ function RepairAgreement() {
             <h3>3. Data & Personal Information</h3>
             <p>
                 Repairs may require access to your device. The customer is solely responsible for backing
-                up data before the repair. Guru technicians will not access personal files, photos, messages,
-                or applications. Guru is not liable for data loss resulting from the repair process.
+                up data before the repair. SEER technicians will not access personal files, photos, messages,
+                or applications. SEER is not liable for data loss resulting from the repair process.
             </p>
 
             <h3>4. Device Ownership</h3>
             <p>
                 By booking a repair, you represent that you are the rightful owner of the device or have
-                explicit written authorization from the owner to have the device repaired. Guru reserves the
+                explicit written authorization from the owner to have the device repaired. SEER reserves the
                 right to refuse service if ownership cannot be reasonably established.
             </p>
 
             <h3>5. Right to Refuse</h3>
             <p>
-                Guru technicians reserve the right to refuse or halt any repair if they determine the repair
+                SEER technicians reserve the right to refuse or halt any repair if they determine the repair
                 poses a safety risk, the device is unsupported, or conditions make safe repair impossible
                 (e.g., severe structural damage, undisclosed liquid damage). In such cases, the service fee
                 may still apply for the technician's time and travel.
@@ -230,7 +230,7 @@ function RepairAgreement() {
 
             <h3>7. Third-Party Software</h3>
             <p>
-                Guru is not responsible for software issues (iOS updates, app crashes, operating system
+                SEER is not responsible for software issues (iOS updates, app crashes, operating system
                 errors) unrelated to the hardware repair performed. Software diagnosis and optimization
                 are separate services.
             </p>
@@ -244,37 +244,37 @@ function WarrantyPolicy() {
             <p className="legal-updated">Last updated: February 21, 2026</p>
 
             <p className="legal-intro">
-                Please read this policy carefully before booking a repair with Guru Mobile Repair Solutions.
+                Please read this policy carefully before booking a repair with SEER Mobile Repair Solutions.
             </p>
 
             <h3>No Warranty on Repairs</h3>
             <p>
                 All repairs performed by Guru are provided <strong>as-is</strong> and do not include any
                 warranty on parts or labor. Once a repair is completed and signed off by the customer,
-                Guru assumes no further responsibility for the repaired component or device.
+                SEER assumes no further responsibility for the repaired component or device.
             </p>
 
             <h3>Customer Acknowledgment</h3>
             <p>
-                By booking a repair with Guru, you acknowledge and agree to the following:
+                By booking a repair with SEER, you acknowledge and agree to the following:
             </p>
             <ul>
                 <li>No warranty of any kind — express or implied — is provided on any repair, part, or service.</li>
                 <li>All sales and services are final once the repair completion form is signed.</li>
-                <li>Guru is not responsible for issues that arise after the repair has been completed and accepted.</li>
+                <li>SEER is not responsible for issues that arise after the repair has been completed and accepted.</li>
                 <li>Prices shown during booking are estimates. Final pricing is confirmed after technician diagnosis.</li>
             </ul>
 
             <h3>Third-Party Parts</h3>
             <p>
-                Guru sources parts from third-party suppliers at various quality tiers (Economy, Premium, and
-                Genuine Apple). While we strive to use reliable parts, Guru does not guarantee the longevity
+                SEER sources parts from third-party suppliers at various quality tiers (Economy, Premium, and
+                Genuine Apple). While we strive to use reliable parts, SEER does not guarantee the longevity
                 or performance of any replacement component after installation.
             </p>
 
             <h3>Limitation of Liability</h3>
             <p>
-                Guru is not liable for any consequential, incidental, or indirect damages arising from any
+                SEER is not liable for any consequential, incidental, or indirect damages arising from any
                 repair service. Our maximum liability is limited to the original cost of the repair performed.
             </p>
 
@@ -326,7 +326,7 @@ export default function LegalPage() {
                         <h1 className="legal-hero__title">Your rights. Our commitments.</h1>
                         <p className="legal-hero__subtitle">
                             We believe in full transparency. Read our policies to understand exactly
-                            what to expect when you choose Guru.
+                            what to expect when you choose SEER.
                         </p>
                     </div>
                 </div>
@@ -381,7 +381,7 @@ export default function LegalPage() {
                 <div className="guru-container">
                     <div className="footer__grid">
                         <div>
-                            <div className="footer__brand-name">Guru</div>
+                            <div className="footer__brand-name">SEER</div>
                             <p className="footer__brand-desc">
                                 Premium mobile repair delivered to your door.
                                 Fast, transparent, and guaranteed.
@@ -411,7 +411,7 @@ export default function LegalPage() {
                         </div>
                     </div>
                     <div className="footer__bottom">
-                        <span>© 2026 Guru Mobile Repair Solutions. All rights reserved.</span>
+                        <span>© 2026 SEER Mobile Repair Solutions. All rights reserved.</span>
                         <span>Built with faith, purpose, and care.</span>
                     </div>
                 </div>
