@@ -497,7 +497,7 @@ body {
 
 .hero__van-mockup:hover .hero__van-cta {
     background: var(--seer-platinum-700);
-    transform: scale(1.05);
+    transform: translateX(-50%) scale(1.05);
 }
 
 .hero__van-svg {
@@ -517,7 +517,7 @@ body {
     font-size: var(--font-size-sm);
     font-weight: 600;
     color: white;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: none;
     transition: all var(--transition-base);
     position: relative;
     left: 50%;
