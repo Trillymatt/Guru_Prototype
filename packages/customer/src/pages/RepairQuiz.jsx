@@ -243,6 +243,8 @@ export default function RepairQuiz() {
         });
     }, [selectedIssues, issueTiers, inventoryData]);
 
+    const autoAdvanceTimerRef = useRef(null);
+
     const goNext = () => {
         setStep((s) => {
             const next = Math.min(s + 1, STEPS.length - 1);
@@ -251,6 +253,26 @@ export default function RepairQuiz() {
         });
     };
     const goBack = () => setStep((s) => Math.max(s - 1, 0));
+
+    // Auto-advance step 0 when all required selections are complete
+    useEffect(() => {
+        if (step !== 0) return;
+        if (selectedIssues.length === 0) return;
+        if (isSoftwareOnly) return;
+        // All issues must have tiers selected
+        const allTiersSelected = selectedIssues.every(id => issueTiers[id]);
+        if (!allTiersSelected) return;
+        // If back-glass is selected, color must be chosen
+        if (selectedIssues.includes('back-glass') && !backGlassColor) return;
+
+        // Auto-advance after a short delay so the user sees their selection
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = setTimeout(() => {
+            goNext();
+        }, 600);
+
+        return () => clearTimeout(autoAdvanceTimerRef.current);
+    }, [step, selectedIssues, issueTiers, backGlassColor, isSoftwareOnly]);
 
     const availableRepairTypes = useMemo(() => {
         if (!selectedDevice) return REPAIR_TYPES.filter(type => REPAIR_TYPES_ALWAYS_AVAILABLE.has(type.id));
@@ -443,7 +465,7 @@ export default function RepairQuiz() {
                     service_fee: SERVICE_FEE,
                     total_estimate: calculateTotal(),
                     schedule_date: scheduleDate,
-                    schedule_time: scheduleTime,
+                    schedule_time: scheduleTime || null,
                     address: scheduleAddress,
                     status: 'pending',
                     parts_in_stock: allPartsInStock === true,
@@ -501,7 +523,7 @@ export default function RepairQuiz() {
                 service_fee: SERVICE_FEE,
                 total_estimate: calculateTotal(),
                 schedule_date: scheduleDate,
-                schedule_time: scheduleTime,
+                schedule_time: scheduleTime || null,
                 address: scheduleAddress,
                 status: 'pending',
                 parts_in_stock: allPartsInStock === true,
@@ -726,7 +748,7 @@ export default function RepairQuiz() {
                                 </div>
                                 <div className="confirm__row">
                                     <span>🕐</span>
-                                    <span>{TIME_SLOTS.find(s => s.id === scheduleTime)?.range}</span>
+                                    <span>{scheduleTime ? TIME_SLOTS.find(s => s.id === scheduleTime)?.range : 'To be scheduled after parts arrive'}</span>
                                 </div>
                                 <div className="confirm__row">
                                     <span>📍</span>

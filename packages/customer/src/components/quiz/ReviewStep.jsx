@@ -62,7 +62,7 @@ function QuoteSummary({
                     <span>📅 {scheduleDate ? formatDisplayDate(scheduleDate) : ''}</span>
                 </div>
                 <div className="quiz__quote-line">
-                    <span>🕐 {TIME_SLOTS.find(s => s.id === scheduleTime)?.range}</span>
+                    <span>🕐 {scheduleTime ? TIME_SLOTS.find(s => s.id === scheduleTime)?.range : 'To be scheduled after parts arrive'}</span>
                 </div>
                 <div className="quiz__quote-line">
                     <span>📍 {scheduleAddress}</span>
