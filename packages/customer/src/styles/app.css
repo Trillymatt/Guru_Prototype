@@ -480,84 +480,48 @@ body {
     animation: fadeInUp 1s ease-out 0.2s both;
 }
 
-/* ─── Phone Mockup ────────────────────────────────────────────── */
+/* ─── Van Hero Mockup ────────────────────────────────────────────── */
 
-.hero__phone-mockup {
+.hero__van-mockup {
     position: relative;
-    width: 300px;
-    height: 620px;
-    background: linear-gradient(145deg, var(--seer-gray-900), var(--seer-black));
-    border-radius: 52px;
-    padding: 10px;
-    box-shadow:
-        0 50px 100px -30px rgba(30, 31, 46, 0.35),
-        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-    animation: float 6s ease-in-out infinite;
-}
-
-.hero__phone-screen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     width: 100%;
-    height: 100%;
-    background: linear-gradient(145deg, var(--seer-platinum-700), var(--seer-platinum-900));
-    border-radius: 44px;
-    color: white;
-    overflow: hidden;
-    position: relative;
-    gap: var(--space-6);
-    text-decoration: none;
+    max-width: 480px;
     cursor: pointer;
+    animation: float 6s ease-in-out infinite;
     transition: transform var(--transition-base);
 }
 
-.hero__phone-screen:hover {
-    transform: scale(1.01);
+.hero__van-mockup:hover {
+    transform: scale(1.02);
 }
 
-.hero__phone-screen:hover .hero__phone-cta {
-    background: rgba(255, 255, 255, 0.35);
+.hero__van-mockup:hover .hero__van-cta {
+    background: var(--seer-platinum-700);
     transform: scale(1.05);
 }
 
-.hero__phone-notch {
-    position: absolute;
-    top: 8px;
-    width: 120px;
-    height: 28px;
-    background: var(--seer-black);
-    border-radius: 20px;
+.hero__van-svg {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 30px 60px rgba(30, 31, 46, 0.35));
 }
 
-.hero__phone-logo {
-    font-size: var(--font-size-4xl);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-}
-
-.hero__phone-tagline {
-    font-size: var(--font-size-sm);
-    opacity: 0.8;
-    text-align: center;
-    padding: 0 var(--space-8);
-}
-
-.hero__phone-cta {
-    margin-top: var(--space-4);
-    padding: var(--space-3) var(--space-8);
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-    border-radius: var(--radius-full);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
+.hero__van-cta {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
+    margin-top: var(--space-4);
+    padding: var(--space-3) var(--space-8);
+    background: var(--seer-platinum-800);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.15);
     transition: all var(--transition-base);
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 @media (max-width: 1024px) {
@@ -583,9 +547,8 @@ body {
         order: -1;
     }
 
-    .hero__phone-mockup {
-        width: 240px;
-        height: 500px;
+    .hero__van-mockup {
+        max-width: 380px;
     }
 }
 
@@ -2222,11 +2185,7 @@ body {
     flex-shrink: 0;
 }
 
-.hero__trust-cross {
-    font-size: 14px;
-    line-height: 1;
-    color: #d97706;
-}
+/* hero__trust-cross removed */
 
 .hero__trust-sep {
     color: var(--seer-gray-300);
@@ -2294,9 +2253,8 @@ body {
     border-top: 3px solid var(--seer-platinum-700);
 }
 
-.trust-card--faith {
-    border-top: 3px solid #f59e0b;
-    background: linear-gradient(160deg, #fffbeb 0%, var(--seer-white) 60%);
+.trust-card--mobile {
+    border-top: 3px solid var(--seer-platinum-700);
 }
 
 .trust-card__icon-wrap {
@@ -2316,16 +2274,9 @@ body {
     color: #4f46e5;
 }
 
-.trust-card__icon-wrap--faith {
-    background: #fef3c7;
-    color: #d97706;
-}
+/* trust-card__icon-wrap--faith removed */
 
-.trust-card__cross-icon {
-    font-size: 24px;
-    line-height: 1;
-    color: #d97706;
-}
+/* trust-card__cross-icon removed */
 
 .trust-card__title {
     font-size: var(--font-size-xl);
@@ -2362,10 +2313,7 @@ body {
     color: #4338ca;
 }
 
-.trust-card__badge--faith {
-    background: #fef3c7;
-    color: #92400e;
-}
+/* trust-card__badge--faith removed */
 
 @media (max-width: 900px) {
     .trust-grid {
@@ -2376,65 +2324,7 @@ body {
     }
 }
 
-/* ─── Bible Verse Banner ──────────────────────────────────── */
-
-.bible-verse {
-    background: linear-gradient(135deg, #1c1033 0%, #2d1b5e 50%, #1c1033 100%);
-    padding: var(--space-12) 0;
-    position: relative;
-    overflow: hidden;
-}
-
-.bible-verse::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(ellipse 60% 80% at 50% 50%, rgba(30, 31, 46, 0.15) 0%, transparent 70%);
-    pointer-events: none;
-}
-
-.bible-verse__inner {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 var(--space-10);
-    text-align: center;
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-4);
-}
-
-.bible-verse__cross {
-    font-size: 28px;
-    color: #fbbf24;
-    opacity: 0.9;
-    line-height: 1;
-}
-
-.bible-verse__text {
-    font-size: clamp(var(--font-size-base), 2vw, var(--font-size-xl));
-    font-style: italic;
-    color: rgba(255, 255, 255, 0.88);
-    line-height: 1.7;
-    margin: 0;
-}
-
-.bible-verse__ref {
-    font-size: var(--font-size-sm);
-    font-weight: 700;
-    color: #fbbf24;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
-@media (max-width: 480px) {
-    .bible-verse__inner {
-        padding: 0 var(--space-6);
-    }
-}
+/* Bible verse section removed */
 
 /* ─── Footer button (for <button> elements acting as links) ─── */
 
