@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import VanLoader from '../components/VanLoader';
 import '../styles/repair-quiz.css';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
@@ -22,6 +23,15 @@ export default function ProfilePage() {
         email: '',
         phone: '',
     });
+    const [initialForm, setInitialForm] = useState({
+        full_name: '',
+        email: '',
+        phone: '',
+    });
+    const [isEditing, setIsEditing] = useState(false);
+    const [referralCode, setReferralCode] = useState('');
+    const [referralCount, setReferralCount] = useState(0);
+    const [copiedReferral, setCopiedReferral] = useState(false);
 
     // Saved devices state
     const [savedDevices, setSavedDevices] = useState([]);
@@ -48,11 +58,14 @@ export default function ProfilePage() {
                 .single();
 
             if (data) {
-                setForm({
+                const nextForm = {
                     full_name: data.full_name || '',
                     email: data.email || '',
                     phone: data.phone || '',
-                });
+                };
+                setForm(nextForm);
+                setInitialForm(nextForm);
+                setReferralCode(data.referral_code || '');
             }
             if (fetchErr) {
                 setError('Could not load your profile.');
@@ -78,9 +91,19 @@ export default function ProfilePage() {
             if (data) setSavedAddresses(data);
         }
 
+        async function fetchReferralStats() {
+            const { count } = await supabase
+                .from('customer_referrals')
+                .select('id', { count: 'exact', head: true })
+                .eq('referrer_customer_id', user.id);
+
+            setReferralCount(count || 0);
+        }
+
         fetchProfile();
         fetchDevices();
         fetchAddresses();
+        fetchReferralStats();
     }, [user]);
 
     const handleChange = (e) => {
@@ -124,8 +147,39 @@ export default function ProfilePage() {
             setError('Failed to save changes. Please try again.');
         } else {
             setSaved(true);
+            setIsEditing(false);
+            setInitialForm({
+                full_name: form.full_name.trim(),
+                email: form.email.trim(),
+                phone: form.phone.trim(),
+            });
         }
         setSaving(false);
+    };
+
+    const handleStartEditing = () => {
+        setError('');
+        setSaved(false);
+        setIsEditing(true);
+    };
+
+    const handleCancelEditing = () => {
+        setError('');
+        setSaved(false);
+        setForm(initialForm);
+        setIsEditing(false);
+    };
+
+    const handleCopyReferralLink = async () => {
+        if (!referralCode) return;
+        const link = `${window.location.origin}/repair?ref=${referralCode}`;
+        try {
+            await navigator.clipboard.writeText(link);
+            setCopiedReferral(true);
+            setTimeout(() => setCopiedReferral(false), 1800);
+        } catch {
+            setError('Could not copy referral link. Please try again.');
+        }
     };
 
     // ─── Device Management ───
@@ -267,11 +321,11 @@ export default function ProfilePage() {
                         <div className="profile-avatar">{initials}</div>
                         <h1 className="profile-title">Your Profile</h1>
                         <p className="profile-subtitle">
-                            Update your personal information below.
+                            Manage your account details and referral link.
                         </p>
 
                         {loading ? (
-                            <div className="dash-loading">Loading profile...</div>
+                            <VanLoader text="Loading profile..." compact={true} />
                         ) : (
                             <form className="profile-form" onSubmit={handleSubmit}>
                                 <div className="profile-field">
@@ -286,6 +340,7 @@ export default function ProfilePage() {
                                         placeholder="John Doe"
                                         value={form.full_name}
                                         onChange={handleChange}
+                                        disabled={!isEditing}
                                     />
                                 </div>
 
@@ -301,6 +356,7 @@ export default function ProfilePage() {
                                         placeholder="you@example.com"
                                         value={form.email}
                                         onChange={handleChange}
+                                        disabled={!isEditing}
                                     />
                                 </div>
 
@@ -316,6 +372,7 @@ export default function ProfilePage() {
                                         placeholder="(555) 123-4567"
                                         value={form.phone}
                                         onChange={handleChange}
+                                        disabled={!isEditing}
                                     />
                                 </div>
 
@@ -329,15 +386,63 @@ export default function ProfilePage() {
                                     </div>
                                 )}
 
-                                <button
-                                    type="submit"
-                                    className="guru-btn guru-btn--primary guru-btn--full"
-                                    disabled={saving}
-                                >
-                                    {saving ? 'Saving...' : 'Save Changes'}
-                                </button>
+                                {isEditing ? (
+                                    <div className="profile-form-actions">
+                                        <button
+                                            type="button"
+                                            className="guru-btn guru-btn--secondary"
+                                            onClick={handleCancelEditing}
+                                            disabled={saving}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="guru-btn guru-btn--primary"
+                                            disabled={saving}
+                                        >
+                                            {saving ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="guru-btn guru-btn--primary guru-btn--full"
+                                        onClick={handleStartEditing}
+                                    >
+                                        Edit Profile
+                                    </button>
+                                )}
                             </form>
                         )}
+                    </div>
+
+                    <div className="profile-card" style={{ marginTop: 24 }}>
+                        <div className="profile-section-header">
+                            <h2 className="profile-section-title">Referral Program</h2>
+                        </div>
+                        <p className="profile-empty-text" style={{ paddingTop: 0 }}>
+                            Share your link. Your friend gets $5 off their next repair.
+                        </p>
+                        <div className="profile-referral-box">
+                            <input
+                                className="guru-input"
+                                type="text"
+                                value={referralCode ? `${window.location.origin}/repair?ref=${referralCode}` : ''}
+                                readOnly
+                            />
+                            <button
+                                type="button"
+                                className="guru-btn guru-btn--primary"
+                                onClick={handleCopyReferralLink}
+                                disabled={!referralCode}
+                            >
+                                {copiedReferral ? 'Copied!' : 'Copy Link'}
+                            </button>
+                        </div>
+                        <p className="sched-hint" style={{ marginTop: 10 }}>
+                            Successful referrals: <strong>{referralCount}</strong>
+                        </p>
                     </div>
 
                     {/* ─── Saved Devices Section ─────── */}

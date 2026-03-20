@@ -1,79 +1,63 @@
 import React, { useEffect, useRef } from 'react';
-import { TIME_SLOTS } from '@shared/constants';
 import GuruCalendar from '@shared/GuruCalendar';
 import '@shared/guru-calendar.css';
-import AddressSearch from '../AddressSearch';
+import AddressSearch, { SUPPORTED_TEXAS_CITIES } from '../AddressSearch';
 
 export default function ScheduleStep({
     scheduleDate,
-    scheduleTime,
     scheduleAddress,
     serviceAreaError,
-    allPartsInStock,
-    needsPartsOrder,
     minDateStr,
+    maxDateStr,
+    previewStartStr,
     availableDates,
-    availableSlotsByDate,
     onDateChange,
-    onTimeChange,
     onAddressChange,
     onServiceAreaError,
     onBack,
     onNext,
     savedAddresses = [],
+    suppressAutoAdvance = false,
+    canGoPrevWindow = false,
+    canGoNextWindow = false,
+    onPrevWindow,
+    onNextWindow,
+    dateSectionRef,
 }) {
     const autoAdvanceRef = useRef(null);
+    const todayLabel = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+    });
 
     // Auto-advance when all required fields are filled
     useEffect(() => {
         clearTimeout(autoAdvanceRef.current);
+        if (suppressAutoAdvance) return undefined;
 
         const hasDate = Boolean(scheduleDate);
         const hasAddress = Boolean(scheduleAddress);
-        const hasTime = Boolean(scheduleTime);
 
-        // If parts need ordering, time isn't required — advance when date + address are set
-        if (needsPartsOrder && hasDate && hasAddress && !serviceAreaError) {
-            autoAdvanceRef.current = setTimeout(() => onNext(), 600);
-        }
-        // If parts in stock, need all three
-        else if (hasDate && hasTime && hasAddress && !serviceAreaError) {
+        if (hasDate && hasAddress && !serviceAreaError) {
             autoAdvanceRef.current = setTimeout(() => onNext(), 600);
         }
 
         return () => clearTimeout(autoAdvanceRef.current);
-    }, [scheduleDate, scheduleTime, scheduleAddress, serviceAreaError, needsPartsOrder]);
+    }, [scheduleDate, scheduleAddress, serviceAreaError, suppressAutoAdvance]);
 
     return (
         <div className="quiz__panel animate-fade-in-up">
             <h2 className="quiz__title">When & where?</h2>
-
-            {/* Inventory status banner */}
-            {allPartsInStock === true ? (
-                <div className="quiz__inventory-banner quiz__inventory-banner--in-stock">
-                    <span className="quiz__inventory-banner-icon">✓</span>
-                    <div>
-                        <strong>All parts are in stock!</strong>
-                        <p>We have everything needed for your repair. Schedule at the earliest available time.</p>
-                    </div>
-                </div>
-            ) : needsPartsOrder ? (
-                <div className="quiz__inventory-banner quiz__inventory-banner--order">
-                    <span className="quiz__inventory-banner-icon">📦</span>
-                    <div>
-                        <strong>Some parts need to be ordered</strong>
-                        <p>We'll contact you to schedule a time of day once your parts arrive. Just pick a date and confirm your location.</p>
-                    </div>
-                </div>
-            ) : (
-                <p className="quiz__subtitle">
-                    Pick a date and time for your repair.
-                </p>
-            )}
+            <p className="quiz__subtitle">Pick your preferred date. We will confirm the exact time when your parts arrive.</p>
 
             {/* Address / Location — shown first so pre-filled address is visible */}
             <div className="sched-section">
                 <label className="sched-label">Your Location</label>
+                <p className="sched-hint sched-hint--above">
+                    Enter your home, office, or work address.
+                </p>
                 {savedAddresses.length > 0 && (
                     <div className="quiz__saved-addresses">
                         {savedAddresses.map((addr) => (
@@ -109,73 +93,46 @@ export default function ScheduleStep({
                         </div>
                     </div>
                 ) : (
-                    <p className="sched-hint">We come to your home, office, or wherever you are. Currently serving select cities in Texas.</p>
+                    <p className="sched-hint">We currently serve select Texas cities and are expanding soon.</p>
                 )}
+                <p className="sched-service-cities">
+                    Serving now: {SUPPORTED_TEXAS_CITIES.join(', ')}
+                </p>
             </div>
 
-            <div className="sched-section">
+            <div className="sched-section" ref={dateSectionRef}>
                 <label className="sched-label">Pick a Date</label>
-                <p className="sched-hint sched-hint--above">Available dates and times match our technicians' schedules.</p>
+                <p className="sched-hint sched-hint--above">Select from available dates in the current 2-week window.</p>
+                <div className="sched-window-nav">
+                    <button type="button" className="guru-btn guru-btn--ghost guru-btn--sm" onClick={onPrevWindow} disabled={!canGoPrevWindow}>
+                        ← Earlier
+                    </button>
+                    <button type="button" className="guru-btn guru-btn--ghost guru-btn--sm" onClick={onNextWindow} disabled={!canGoNextWindow}>
+                        Later →
+                    </button>
+                </div>
                 <GuruCalendar
                     value={scheduleDate}
                     onChange={onDateChange}
                     minDate={minDateStr}
+                    maxDate={maxDateStr}
+                    previewStartDate={previewStartStr}
                     availableDates={availableDates}
+                    showOnlyRange={true}
                 />
+                <p className="sched-hint">Today is {todayLabel}</p>
             </div>
-
-            {/* Time slot — only shown when parts are in stock */}
-            {!needsPartsOrder && (
-                <div className="sched-section">
-                    <label className="sched-label">Time Slot</label>
-                    <div className="sched-slots">
-                        {TIME_SLOTS.map((slot) => {
-                            const hasAvailabilityData = availableDates !== null;
-                            const dateSlots = availableSlotsByDate[scheduleDate];
-                            const slotDisabled = hasAvailabilityData && scheduleDate
-                                && (!dateSlots || !dateSlots.includes(slot.id));
-                            return (
-                                <button
-                                    key={slot.id}
-                                    className={`sched-slot ${scheduleTime === slot.id ? 'sched-slot--selected' : ''} ${slotDisabled ? 'sched-slot--disabled' : ''}`}
-                                    onClick={() => !slotDisabled && onTimeChange(slot.id)}
-                                    disabled={slotDisabled}
-                                >
-                                    <span className="sched-slot__icon">{slot.icon}</span>
-                                    <span className="sched-slot__label">{slot.label}</span>
-                                    <span className="sched-slot__range">{slot.range}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                    {!scheduleDate && (
-                        <p className="sched-hint">Select a date above to see available time slots.</p>
-                    )}
-                    {scheduleDate && availableDates && !availableSlotsByDate[scheduleDate] && (
-                        <p className="sched-hint sched-hint--warn">
-                            No time slots available on this date. Please select a different date.
-                        </p>
-                    )}
-                </div>
-            )}
-
-            {needsPartsOrder && (
-                <div className="sched-section">
-                    <div className="quiz__inventory-banner quiz__inventory-banner--info">
-                        <span className="quiz__inventory-banner-icon">🕐</span>
-                        <div>
-                            <strong>Time of day will be scheduled later</strong>
-                            <p>Once your parts arrive, we'll reach out to confirm a specific time slot that works for you.</p>
-                        </div>
-                    </div>
-                </div>
+            {scheduleDate && availableDates && !availableDates.has(scheduleDate) && (
+                <p className="sched-hint sched-hint--warn">
+                    No availability on this date. Please choose another date.
+                </p>
             )}
 
             <div className="quiz__actions">
                 <button className="guru-btn guru-btn--ghost" onClick={onBack}>← Back</button>
                 <button
                     className="guru-btn guru-btn--primary guru-btn--lg"
-                    disabled={!scheduleDate || (!needsPartsOrder && !scheduleTime) || !scheduleAddress}
+                    disabled={!scheduleDate || !scheduleAddress}
                     onClick={onNext}
                 >
                     Review & Book →

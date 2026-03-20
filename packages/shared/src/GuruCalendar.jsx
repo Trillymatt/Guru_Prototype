@@ -27,25 +27,67 @@ function toDateKey(date) {
     return `${y}-${m}-${d}`;
 }
 
+function buildRangeLabel(start, end) {
+    if (!start || !end) return '';
+    const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+    if (sameMonth) {
+        return `${MONTHS[start.getMonth()]} ${start.getDate()}-${end.getDate()}, ${start.getFullYear()}`;
+    }
+    return `${MONTHS[start.getMonth()]} ${start.getDate()} - ${MONTHS[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+}
+
 /**
  * @param {Object} props
  * @param {string} props.value - ISO date string (YYYY-MM-DD) or ''
  * @param {function} props.onChange - called with ISO date string
  * @param {string} [props.minDate] - ISO date string for minimum selectable date
+ * @param {string} [props.maxDate] - ISO date string for maximum selectable date
  * @param {Set<string>} [props.availableDates] - if provided, only these dates are selectable (ISO strings)
  * @param {Object<string, string[]>} [props.availableSlots] - map of date -> available slot ids
+ * @param {boolean} [props.showOnlyRange] - show only minDate..maxDate (not full month)
+ * @param {string} [props.previewStartDate] - ISO date used for range preview start
  */
-export default function GuruCalendar({ value, onChange, minDate, availableDates, availableSlots, disableUnavailable = true }) {
+export default function GuruCalendar({
+    value,
+    onChange,
+    minDate,
+    maxDate,
+    availableDates,
+    availableSlots,
+    disableUnavailable = true,
+    showOnlyRange = false,
+    previewStartDate,
+}) {
     const selected = value ? parseISODate(value) : null;
     const minDateObj = minDate ? parseISODate(minDate) : null;
+    const maxDateObj = maxDate ? parseISODate(maxDate) : null;
+    const previewStartObj = previewStartDate ? parseISODate(previewStartDate) : null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const initialMonth = selected || minDateObj || today;
     const [viewYear, setViewYear] = useState(initialMonth.getFullYear());
     const [viewMonth, setViewMonth] = useState(initialMonth.getMonth());
+    const useRangeMode = showOnlyRange && minDateObj && maxDateObj;
+    const rangeStartObj = useRangeMode ? (previewStartObj || minDateObj) : null;
+    const rangeLabel = useMemo(() => buildRangeLabel(rangeStartObj, maxDateObj), [rangeStartObj, maxDateObj]);
 
     const calendarDays = useMemo(() => {
+        if (useRangeMode) {
+            const days = [];
+            const startDate = rangeStartObj || minDateObj;
+            const startDow = startDate.getDay();
+            for (let i = 0; i < startDow; i++) {
+                days.push(null);
+            }
+            const cursor = new Date(startDate);
+            while (cursor <= maxDateObj) {
+                days.push(new Date(cursor));
+                cursor.setDate(cursor.getDate() + 1);
+            }
+            return days;
+        }
+
         const firstDay = new Date(viewYear, viewMonth, 1);
         const lastDay = new Date(viewYear, viewMonth + 1, 0);
         const startDow = firstDay.getDay();
@@ -64,9 +106,10 @@ export default function GuruCalendar({ value, onChange, minDate, availableDates,
         }
 
         return days;
-    }, [viewYear, viewMonth]);
+    }, [viewYear, viewMonth, useRangeMode, minDateObj, maxDateObj, rangeStartObj]);
 
     const goToPrevMonth = () => {
+        if (useRangeMode) return;
         if (viewMonth === 0) {
             setViewYear(viewYear - 1);
             setViewMonth(11);
@@ -76,6 +119,7 @@ export default function GuruCalendar({ value, onChange, minDate, availableDates,
     };
 
     const goToNextMonth = () => {
+        if (useRangeMode) return;
         if (viewMonth === 11) {
             setViewYear(viewYear + 1);
             setViewMonth(0);
@@ -85,17 +129,27 @@ export default function GuruCalendar({ value, onChange, minDate, availableDates,
     };
 
     const canGoPrev = () => {
+        if (useRangeMode) return false;
         if (!minDateObj) return true;
         const prevMonthLast = new Date(viewYear, viewMonth, 0);
         return prevMonthLast >= minDateObj;
     };
 
+    const canGoNext = () => {
+        if (useRangeMode) return false;
+        if (!maxDateObj) return true;
+        const nextMonthFirst = new Date(viewYear, viewMonth + 1, 1);
+        return nextMonthFirst <= maxDateObj;
+    };
+
     const isDateDisabled = (date) => {
         if (!date) return true;
         if (minDateObj && date < minDateObj) return true;
+        if (maxDateObj && date > maxDateObj) return true;
 
-        // If availableDates is provided and disabling is enabled, only those dates are selectable
-        if (disableUnavailable && availableDates && availableDates.size > 0) {
+        // If availableDates is provided and disabling is enabled, only those dates are selectable.
+        // Important: an empty set means no dates are selectable.
+        if (disableUnavailable && availableDates) {
             return !availableDates.has(toDateKey(date));
         }
 
@@ -134,26 +188,31 @@ export default function GuruCalendar({ value, onChange, minDate, availableDates,
     return (
         <div className="guru-calendar">
             <div className="guru-calendar__header">
-                <button
-                    type="button"
-                    className="guru-calendar__nav-btn"
-                    onClick={goToPrevMonth}
-                    disabled={!canGoPrev()}
-                    aria-label="Previous month"
-                >
-                    &lsaquo;
-                </button>
+                {!useRangeMode && (
+                    <button
+                        type="button"
+                        className="guru-calendar__nav-btn"
+                        onClick={goToPrevMonth}
+                        disabled={!canGoPrev()}
+                        aria-label="Previous month"
+                    >
+                        &lsaquo;
+                    </button>
+                )}
                 <div className="guru-calendar__month-year">
-                    {MONTHS[viewMonth]} {viewYear}
+                    {useRangeMode ? rangeLabel : `${MONTHS[viewMonth]} ${viewYear}`}
                 </div>
-                <button
-                    type="button"
-                    className="guru-calendar__nav-btn"
-                    onClick={goToNextMonth}
-                    aria-label="Next month"
-                >
-                    &rsaquo;
-                </button>
+                {!useRangeMode && (
+                    <button
+                        type="button"
+                        className="guru-calendar__nav-btn"
+                        onClick={goToNextMonth}
+                        disabled={!canGoNext()}
+                        aria-label="Next month"
+                    >
+                        &rsaquo;
+                    </button>
+                )}
             </div>
 
             <div className="guru-calendar__weekdays">

@@ -30,6 +30,10 @@ import AuthStep from '../components/quiz/AuthStep';
 import '../styles/repair-quiz.css';
 
 const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
+const SCHEDULE_TIME_PENDING = 'to_be_scheduled';
+const REFERRAL_STORAGE_KEY = 'guru_referral_code';
+const REFERRAL_DISCOUNT_AMOUNT = 5;
+const REFERRAL_CODE_REGEX = /^[A-Z0-9]{8}$/;
 
 const REPAIR_TYPES_ALWAYS_AVAILABLE = new Set(['screen', 'battery', 'camera-rear', 'camera-front']);
 const BACK_GLASS_SUPPORTED_DEVICE_IDS = new Set([
@@ -50,6 +54,22 @@ const BACK_GLASS_SUPPORTED_DEVICE_IDS = new Set([
     'iphone-17-pro-max',
 ]);
 
+const normalizeReferralCode = (value) => (value || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 8);
+
+const getReferralValidationError = (referralCode, ownReferralCode) => {
+    if (!referralCode) return '';
+    if (!REFERRAL_CODE_REGEX.test(referralCode)) {
+        return 'Referral code must be 8 letters or numbers.';
+    }
+    if (ownReferralCode && referralCode === ownReferralCode) {
+        return 'You cannot use your own referral code.';
+    }
+    return '';
+};
+
 export default function RepairQuiz() {
     const { user } = useAuth();
     const [step, setStep] = useState(0);
@@ -62,6 +82,10 @@ export default function RepairQuiz() {
     const [scheduleAddress, setScheduleAddress] = useState('');
     const [serviceAreaError, setServiceAreaError] = useState(null);
     const [repairNotes, setRepairNotes] = useState('');
+    const [referralCode, setReferralCode] = useState('');
+    const [referralCodeError, setReferralCodeError] = useState('');
+    const [ownReferralCode, setOwnReferralCode] = useState('');
+    const [bookedTotalEstimate, setBookedTotalEstimate] = useState(null);
 
     // Auth / Contact State
     const [contact, setContact] = useState({ name: '', email: '', phone: '' });
@@ -74,7 +98,6 @@ export default function RepairQuiz() {
     const [backGlassColor, setBackGlassColor] = useState('');
     const [confirmed, setConfirmed] = useState(false);
     const [availableDates, setAvailableDates] = useState(null);
-    const [availableSlotsByDate, setAvailableSlotsByDate] = useState({});
     const [inventoryData, setInventoryData] = useState([]);
     const [inventoryLoading, setInventoryLoading] = useState(false);
     const isLoggedIn = Boolean(user);
@@ -83,9 +106,30 @@ export default function RepairQuiz() {
     const [savedDevices, setSavedDevices] = useState([]);
     const [savedAddresses, setSavedAddresses] = useState([]);
     const [savedDataLoaded, setSavedDataLoaded] = useState(false);
+    const [suppressStep0AutoAdvance, setSuppressStep0AutoAdvance] = useState(false);
+    const [suppressStep1AutoAdvance, setSuppressStep1AutoAdvance] = useState(false);
+    const [pricePulseKey, setPricePulseKey] = useState(0);
+    const [scheduleWindowOffsetWeeks, setScheduleWindowOffsetWeeks] = useState(0);
+    const step0Ref = useRef(null);
+    const step1DateRef = useRef(null);
+    const step2ReviewRef = useRef(null);
 
     // Track quiz start
     useEffect(() => { analytics.quizStart(); }, []);
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const codeFromLink = normalizeReferralCode(urlParams.get('ref') || '');
+        const storedCode = normalizeReferralCode(window.localStorage.getItem(REFERRAL_STORAGE_KEY) || '');
+        const initialCode = codeFromLink || storedCode;
+
+        if (!initialCode) return;
+        setReferralCode(initialCode);
+
+        if (REFERRAL_CODE_REGEX.test(initialCode)) {
+            window.localStorage.setItem(REFERRAL_STORAGE_KEY, initialCode);
+        }
+    }, []);
 
     // Fetch saved devices and addresses for logged-in users
     useEffect(() => {
@@ -156,24 +200,19 @@ export default function RepairQuiz() {
                 .lte('schedule_date', endStr)
                 .eq('is_available', true);
 
-            if (!error && data && data.length > 0) {
-                const dates = new Set();
-                const slotsByDate = {};
-                data.forEach((row) => {
-                    dates.add(row.schedule_date);
-                    const slots = Array.isArray(row.time_slots) ? row.time_slots : [];
-                    if (!slotsByDate[row.schedule_date]) {
-                        slotsByDate[row.schedule_date] = new Set();
-                    }
-                    slots.forEach((s) => slotsByDate[row.schedule_date].add(s));
-                });
-                const slotsObj = {};
-                Object.entries(slotsByDate).forEach(([date, slotSet]) => {
-                    slotsObj[date] = [...slotSet];
-                });
-                setAvailableDates(dates);
-                setAvailableSlotsByDate(slotsObj);
+            if (error) {
+                setAvailableDates(new Set());
+                return;
             }
+
+            const dates = new Set();
+            (data || []).forEach((row) => {
+                const slots = Array.isArray(row.time_slots) ? row.time_slots.filter(Boolean) : [];
+                if (slots.length === 0) return; // only dates with at least one valid slot are bookable
+                dates.add(row.schedule_date);
+            });
+
+            setAvailableDates(dates);
         };
 
         fetchAvailability();
@@ -243,7 +282,11 @@ export default function RepairQuiz() {
         });
     }, [selectedIssues, issueTiers, inventoryData]);
 
+    // Declared before effects that reference it (TDZ: const cannot be used before this line)
+    const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
+
     const autoAdvanceTimerRef = useRef(null);
+    const previousStepRef = useRef(step);
 
     const goNext = () => {
         setStep((s) => {
@@ -252,11 +295,17 @@ export default function RepairQuiz() {
             return next;
         });
     };
-    const goBack = () => setStep((s) => Math.max(s - 1, 0));
+    const goBack = () => setStep((s) => {
+        const next = Math.max(s - 1, 0);
+        if (s === 1 && next === 0) setSuppressStep0AutoAdvance(true);
+        if (s === 2 && next === 1) setSuppressStep1AutoAdvance(true);
+        return next;
+    });
 
     // Auto-advance step 0 when all required selections are complete
     useEffect(() => {
         if (step !== 0) return;
+        if (suppressStep0AutoAdvance) return;
         if (selectedIssues.length === 0) return;
         if (isSoftwareOnly) return;
         // All issues must have tiers selected
@@ -272,7 +321,45 @@ export default function RepairQuiz() {
         }, 600);
 
         return () => clearTimeout(autoAdvanceTimerRef.current);
-    }, [step, selectedIssues, issueTiers, backGlassColor, isSoftwareOnly]);
+    }, [step, selectedIssues, issueTiers, backGlassColor, isSoftwareOnly, suppressStep0AutoAdvance]);
+
+    useEffect(() => {
+        if (selectedIssues.length > 0) {
+            setPricePulseKey((k) => k + 1);
+        }
+    }, [selectedDevice, selectedIssues, issueTiers]);
+
+    const smoothScrollToRef = (ref) => {
+        if (!ref?.current) return;
+        const navbarOffset = 100;
+        const top = ref.current.getBoundingClientRect().top + window.scrollY - navbarOffset;
+        window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        const prevStep = previousStepRef.current;
+        previousStepRef.current = step;
+
+        // Wait for next step DOM to mount before scrolling.
+        requestAnimationFrame(() => {
+            if (step === 0) {
+                smoothScrollToRef(step0Ref);
+                return;
+            }
+            if (step === 1) {
+                smoothScrollToRef(step1DateRef);
+                return;
+            }
+            if (step === 2) {
+                // When entering review, prioritize landing on the quote/price block.
+                if (prevStep === 1 || prevStep === 0) {
+                    smoothScrollToRef(step2ReviewRef);
+                } else {
+                    smoothScrollToRef(step2ReviewRef);
+                }
+            }
+        });
+    }, [step]);
 
     const availableRepairTypes = useMemo(() => {
         if (!selectedDevice) return REPAIR_TYPES.filter(type => REPAIR_TYPES_ALWAYS_AVAILABLE.has(type.id));
@@ -319,7 +406,7 @@ export default function RepairQuiz() {
 
             const { data: profile } = await supabase
                 .from('customers')
-                .select('full_name, email, phone')
+                .select('full_name, email, phone, referral_code')
                 .eq('id', user.id)
                 .maybeSingle();
 
@@ -328,12 +415,14 @@ export default function RepairQuiz() {
                 email: profile?.email || user.email || '',
                 phone: profile?.phone || '',
             });
+            setOwnReferralCode(normalizeReferralCode(profile?.referral_code || ''));
         }
 
         hydrateLoggedInContact();
     }, [user]);
 
     const toggleIssue = (id) => {
+        setSuppressStep0AutoAdvance(false);
         setSelectedIssues((prev) => {
             const next = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
             if (prev.includes(id)) {
@@ -349,7 +438,28 @@ export default function RepairQuiz() {
     };
 
     const setTierForIssue = (issueId, tier) => {
+        setSuppressStep0AutoAdvance(false);
         setIssueTiers((prev) => ({ ...prev, [issueId]: tier }));
+    };
+
+    const getBookingErrorMessage = (fallback, error) => {
+        if (!error) return fallback;
+        const message = error.message || '';
+        if (error.code === '42501') {
+            return 'Booking failed due to permissions. Please refresh and sign in again.';
+        }
+        if (error.code === '23503' && message.includes('customer_id')) {
+            return 'Your profile is still syncing. Please wait a few seconds and try again.';
+        }
+        return `${fallback} ${message ? `(${message})` : ''}`.trim();
+    };
+
+    const getReferralCodeForBooking = () => {
+        const normalized = normalizeReferralCode(referralCode);
+        const referralError = getReferralValidationError(normalized, ownReferralCode);
+        setReferralCodeError(referralError);
+        if (referralError) return { code: null, error: referralError };
+        return { code: normalized || null, error: '' };
     };
 
     const getIssuePrice = (issueId) => {
@@ -361,21 +471,89 @@ export default function RepairQuiz() {
         return SAMPLE_PRICING[issueId]?.[tier] || 0;
     };
 
-    const calculateTotal = () => {
+    const calculateBaseTotal = () => {
         const partsTotal = selectedIssues.reduce((sum, id) => sum + getIssuePrice(id), 0);
         return partsTotal + SERVICE_FEE + LABOR_FEE;
     };
 
-    const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
+    const referralDiscountPreview = useMemo(() => {
+        const normalized = normalizeReferralCode(referralCode);
+        const error = getReferralValidationError(normalized, ownReferralCode);
+        if (error) return 0;
+        return normalized ? REFERRAL_DISCOUNT_AMOUNT : 0;
+    }, [referralCode, ownReferralCode]);
+
+    const calculateTotal = () => Math.max(calculateBaseTotal() - referralDiscountPreview, 0);
 
     const schedulingLeadDays = allPartsInStock === true ? 1 : SCHEDULING_LEAD_DAYS;
-    const minDate = new Date();
-    minDate.setDate(minDate.getDate() + schedulingLeadDays);
+    const today = useMemo(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, []);
+    const minDate = useMemo(() => {
+        const d = new Date(today);
+        d.setDate(d.getDate() + schedulingLeadDays);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, [schedulingLeadDays, today]);
     const minDateStr = toLocalDateKey(minDate);
+
+    const previewWindowStartDate = useMemo(() => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - d.getDay() + (scheduleWindowOffsetWeeks * 7));
+        return d;
+    }, [today, scheduleWindowOffsetWeeks]);
+
+    const previewWindowEndDate = useMemo(() => {
+        const d = new Date(previewWindowStartDate);
+        d.setDate(d.getDate() + 13);
+        return d;
+    }, [previewWindowStartDate]);
+
+    const previewWindowStartStr = toLocalDateKey(previewWindowStartDate);
+    const previewWindowEndStr = toLocalDateKey(previewWindowEndDate);
+    const maxWindowOffsetWeeks = Math.max(0, Math.floor((SCHEDULING_WINDOW_DAYS - 14) / 7));
+
+    const filteredAvailableDates = useMemo(() => {
+        if (!availableDates) return null;
+        const next = new Set();
+        availableDates.forEach((date) => {
+            if (date >= previewWindowStartStr && date <= previewWindowEndStr) {
+                next.add(date);
+            }
+        });
+        return next;
+    }, [availableDates, previewWindowStartStr, previewWindowEndStr]);
+
+    useEffect(() => {
+        if (!scheduleDate) return;
+        const inVisibleWindow = scheduleDate >= previewWindowStartStr && scheduleDate <= previewWindowEndStr;
+        const dateHasSlots = filteredAvailableDates ? filteredAvailableDates.has(scheduleDate) : true;
+        if (!inVisibleWindow || !dateHasSlots) {
+            setScheduleDate('');
+            setScheduleTime('');
+        }
+    }, [scheduleDate, previewWindowStartStr, previewWindowEndStr, filteredAvailableDates]);
 
     // ─── Auth Handlers ───
     const handleContactChange = (field, value) => {
         setContact(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleReferralCodeChange = (value) => {
+        const normalized = normalizeReferralCode(value);
+        setReferralCode(normalized);
+        setReferralCodeError(getReferralValidationError(normalized, ownReferralCode));
+
+        if (!normalized) {
+            window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
+            return;
+        }
+
+        if (REFERRAL_CODE_REGEX.test(normalized)) {
+            window.localStorage.setItem(REFERRAL_STORAGE_KEY, normalized);
+        }
     };
 
     const handleSendOtp = async (e) => {
@@ -426,6 +604,10 @@ export default function RepairQuiz() {
         e.preventDefault();
         const fullCode = otpCode.join('');
         if (fullCode.length < 6) return;
+        if (!scheduleDate || !scheduleAddress || !filteredAvailableDates?.has(scheduleDate)) {
+            setAuthError('Please select an available date and address before booking.');
+            return;
+        }
 
         setIsVerifying(true);
         setAuthError('');
@@ -452,45 +634,66 @@ export default function RepairQuiz() {
                 }, { onConflict: 'id' });
 
                 if (profileError) {
-                    setAuthError('Failed to save your profile. Please try again.');
+                    setAuthError(getBookingErrorMessage('Failed to save your profile. Please try again.', profileError));
+                    console.error('Profile upsert failed during OTP booking:', profileError);
                     setIsVerifying(false);
                     return;
                 }
 
-                const { error: repairError } = await supabase.from('repairs').insert({
-                    customer_id: userId,
-                    device: selectedDevice?.name || 'Unknown Device',
-                    issues: selectedIssues,
-                    parts_tier: issueTiers,
-                    service_fee: SERVICE_FEE,
-                    total_estimate: calculateTotal(),
-                    schedule_date: scheduleDate,
-                    schedule_time: scheduleTime || null,
-                    address: scheduleAddress,
-                    status: 'pending',
-                    parts_in_stock: allPartsInStock === true,
-                    device_color: backGlassColor || null,
-                    notes: repairNotes.trim() || null,
+                const { code: referralCodeForBooking, error: referralError } = getReferralCodeForBooking();
+                if (referralError) {
+                    setAuthError(referralError);
+                    setIsVerifying(false);
+                    return;
+                }
+
+                const { data: bookingData, error: repairError } = await supabase.rpc('book_repair_with_referral', {
+                    p_device: selectedDevice?.name || 'Unknown Device',
+                    p_issues: selectedIssues,
+                    p_parts_tier: issueTiers,
+                    p_service_fee: SERVICE_FEE,
+                    p_labor_fee: LABOR_FEE,
+                    p_total_estimate_base: calculateBaseTotal(),
+                    p_schedule_date: scheduleDate,
+                    p_schedule_time: SCHEDULE_TIME_PENDING,
+                    p_address: scheduleAddress,
+                    p_parts_in_stock: allPartsInStock === true,
+                    p_device_color: backGlassColor || null,
+                    p_notes: repairNotes.trim() || null,
+                    p_referral_code: referralCodeForBooking,
                 });
 
                 if (repairError) {
-                    setAuthError('Failed to book your repair. Please try again.');
+                    if ((repairError.message || '').toLowerCase().includes('referral')) {
+                        setReferralCodeError(repairError.message);
+                    }
+                    setAuthError(getBookingErrorMessage('Failed to book your repair. Please try again.', repairError));
+                    console.error('Repair insert failed during OTP booking:', repairError);
                     setIsVerifying(false);
                     return;
                 }
+
+                const bookingRow = Array.isArray(bookingData) ? bookingData[0] : bookingData;
+                setBookedTotalEstimate(Number(bookingRow?.total_estimate ?? calculateTotal()));
             }
 
             setIsVerifying(false);
             setConfirmed(true);
+            window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
             analytics.quizComplete({ device: selectedDevice?.name, issues: selectedIssues });
         } catch (err) {
-            setAuthError('Verification failed. Please check your code and try again.');
+            setAuthError(`Verification failed. ${err?.message ? `(${err.message})` : 'Please check your code and try again.'}`);
+            console.error('OTP verification failed:', err);
             setIsVerifying(false);
         }
     };
 
     const handleBookLoggedIn = async () => {
         if (!user) return;
+        if (!scheduleDate || !scheduleAddress || !filteredAvailableDates?.has(scheduleDate)) {
+            setAuthError('Please select an available date and address before booking.');
+            return;
+        }
 
         setIsVerifying(true);
         setAuthError('');
@@ -510,32 +713,47 @@ export default function RepairQuiz() {
                 .upsert(profilePayload, { onConflict: 'id' });
 
             if (profileError) {
-                setAuthError('Failed to load your profile. Please try again.');
+                setAuthError(getBookingErrorMessage('Failed to load your profile. Please try again.', profileError));
+                console.error('Profile upsert failed for signed-in booking:', profileError);
                 setIsVerifying(false);
                 return;
             }
 
-            const { error: repairError } = await supabase.from('repairs').insert({
-                customer_id: user.id,
-                device: selectedDevice?.name || 'Unknown Device',
-                issues: selectedIssues,
-                parts_tier: issueTiers,
-                service_fee: SERVICE_FEE,
-                total_estimate: calculateTotal(),
-                schedule_date: scheduleDate,
-                schedule_time: scheduleTime || null,
-                address: scheduleAddress,
-                status: 'pending',
-                parts_in_stock: allPartsInStock === true,
-                device_color: backGlassColor || null,
-                notes: repairNotes.trim() || null,
+            const { code: referralCodeForBooking, error: referralError } = getReferralCodeForBooking();
+            if (referralError) {
+                setAuthError(referralError);
+                setIsVerifying(false);
+                return;
+            }
+
+            const { data: bookingData, error: repairError } = await supabase.rpc('book_repair_with_referral', {
+                p_device: selectedDevice?.name || 'Unknown Device',
+                p_issues: selectedIssues,
+                p_parts_tier: issueTiers,
+                p_service_fee: SERVICE_FEE,
+                p_labor_fee: LABOR_FEE,
+                p_total_estimate_base: calculateBaseTotal(),
+                p_schedule_date: scheduleDate,
+                p_schedule_time: SCHEDULE_TIME_PENDING,
+                p_address: scheduleAddress,
+                p_parts_in_stock: allPartsInStock === true,
+                p_device_color: backGlassColor || null,
+                p_notes: repairNotes.trim() || null,
+                p_referral_code: referralCodeForBooking,
             });
 
             if (repairError) {
-                setAuthError('Failed to book your repair. Please try again.');
+                if ((repairError.message || '').toLowerCase().includes('referral')) {
+                    setReferralCodeError(repairError.message);
+                }
+                setAuthError(getBookingErrorMessage('Failed to book your repair. Please try again.', repairError));
+                console.error('Repair insert failed for signed-in booking:', repairError);
                 setIsVerifying(false);
                 return;
             }
+
+            const bookingRow = Array.isArray(bookingData) ? bookingData[0] : bookingData;
+            setBookedTotalEstimate(Number(bookingRow?.total_estimate ?? calculateTotal()));
 
             // Auto-save address if it's new (not already in saved addresses)
             if (scheduleAddress && savedDataLoaded) {
@@ -553,22 +771,47 @@ export default function RepairQuiz() {
             setContact((prev) => ({ ...prev, name: profilePayload.full_name, email: profilePayload.email }));
             setConfirmed(true);
             setIsVerifying(false);
+            window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
             analytics.quizComplete({ device: selectedDevice?.name, issues: selectedIssues });
         } catch (err) {
-            setAuthError('Failed to book your repair. Please try again.');
+            setAuthError(`Failed to book your repair. ${err?.message ? `(${err.message})` : 'Please try again.'}`);
+            console.error('Unexpected booking error for signed-in user:', err);
             setIsVerifying(false);
         }
     };
 
     const handleDateChange = (date) => {
+        setSuppressStep1AutoAdvance(false);
         setScheduleDate(date);
-        if (scheduleTime && availableDates) {
-            const dateSlots = availableSlotsByDate[date];
-            if (!dateSlots || !dateSlots.includes(scheduleTime)) {
-                setScheduleTime('');
-            }
-        }
+        setScheduleTime('');
     };
+
+    const handleAddressChange = (address) => {
+        setSuppressStep1AutoAdvance(false);
+        setScheduleAddress(address);
+    };
+
+    const handleScheduleWindowNext = () => {
+        setSuppressStep1AutoAdvance(false);
+        setScheduleWindowOffsetWeeks((prev) => Math.min(prev + 1, maxWindowOffsetWeeks));
+    };
+
+    const handleScheduleWindowPrev = () => {
+        setSuppressStep1AutoAdvance(false);
+        setScheduleWindowOffsetWeeks((prev) => Math.max(prev - 1, 0));
+    };
+
+    const autoAdvanceHint = useMemo(() => {
+        if (step === 0) {
+            if (suppressStep0AutoAdvance) return 'Auto-advance paused while you review options';
+            return 'Nice picks - we will move you forward automatically';
+        }
+        if (step === 1) {
+            if (suppressStep1AutoAdvance) return 'Auto-advance paused while you review schedule details';
+            return 'Almost done - once details are complete we will move you ahead';
+        }
+        return 'Final step - lock in your repair';
+    }, [step, suppressStep0AutoAdvance, suppressStep1AutoAdvance]);
 
     const sortedGens = [...DEVICE_GENERATIONS].reverse();
 
@@ -591,18 +834,25 @@ export default function RepairQuiz() {
 
                     {/* ─── Step 0: What needs fixing? (Device + Issues + Quality) ─────── */}
                     {step === 0 && (
-                        <div className="quiz__panel animate-fade-in-up">
+                        <div ref={step0Ref} className="quiz__panel animate-fade-in-up">
                             <h2 className="quiz__title">What needs fixing?</h2>
                             <p className="quiz__subtitle">Select your device and what's broken.</p>
 
                             <DeviceStep
                                 activeGen={activeGen}
-                                onGenChange={setActiveGen}
+                                onGenChange={(gen) => {
+                                    setSuppressStep0AutoAdvance(false);
+                                    setActiveGen(gen);
+                                }}
                                 selectedDevice={selectedDevice}
-                                onSelectDevice={setSelectedDevice}
+                                onSelectDevice={(device) => {
+                                    setSuppressStep0AutoAdvance(false);
+                                    setSelectedDevice(device);
+                                }}
                                 sortedGens={sortedGens}
                                 savedDevices={savedDevices}
                                 onSelectSavedDevice={(saved) => {
+                                    setSuppressStep0AutoAdvance(false);
                                     const matchingDevice = DEVICE_GENERATIONS.reduce((found, gen) => {
                                         if (found) return found;
                                         return getDevicesByGeneration(gen).find(d => d.id === saved.device_id);
@@ -625,7 +875,10 @@ export default function RepairQuiz() {
                                     isSoftwareOnly={isSoftwareOnly}
                                     onToggleIssue={toggleIssue}
                                     onSetTier={setTierForIssue}
-                                    onSetBackGlassColor={setBackGlassColor}
+                                    onSetBackGlassColor={(color) => {
+                                        setSuppressStep0AutoAdvance(false);
+                                        setBackGlassColor(color);
+                                    }}
                                     isPartInStock={isPartInStock}
                                 />
                             )}
@@ -652,27 +905,30 @@ export default function RepairQuiz() {
                     {step === 1 && !confirmed && (
                         <ScheduleStep
                             scheduleDate={scheduleDate}
-                            scheduleTime={scheduleTime}
                             scheduleAddress={scheduleAddress}
                             serviceAreaError={serviceAreaError}
-                            allPartsInStock={allPartsInStock}
-                            needsPartsOrder={needsPartsOrder}
                             minDateStr={minDateStr}
-                            availableDates={availableDates}
-                            availableSlotsByDate={availableSlotsByDate}
+                            maxDateStr={previewWindowEndStr}
+                            previewStartStr={previewWindowStartStr}
+                            availableDates={filteredAvailableDates}
                             onDateChange={handleDateChange}
-                            onTimeChange={setScheduleTime}
-                            onAddressChange={setScheduleAddress}
+                            onAddressChange={handleAddressChange}
                             onServiceAreaError={setServiceAreaError}
                             onBack={goBack}
                             onNext={goNext}
                             savedAddresses={savedAddresses}
+                            suppressAutoAdvance={suppressStep1AutoAdvance}
+                            canGoPrevWindow={scheduleWindowOffsetWeeks > 0}
+                            canGoNextWindow={scheduleWindowOffsetWeeks < maxWindowOffsetWeeks}
+                            onPrevWindow={handleScheduleWindowPrev}
+                            onNextWindow={handleScheduleWindowNext}
+                            dateSectionRef={step1DateRef}
                         />
                     )}
 
                     {/* ─── Step 2: Confirm & book (Quote Review + Contact + Auth) ─────── */}
                     {step === 2 && !confirmed && (
-                        <div className="quiz__panel animate-fade-in-up">
+                        <div ref={step2ReviewRef} className="quiz__panel animate-fade-in-up">
                             {isLoggedIn ? (
                                 <ReviewStep
                                     isLoggedIn={true}
@@ -690,7 +946,12 @@ export default function RepairQuiz() {
                                     isVerifying={isVerifying}
                                     getIssuePrice={getIssuePrice}
                                     calculateTotal={calculateTotal}
+                                    referralDiscountPreview={referralDiscountPreview}
+                                    referralCode={referralCode}
+                                    ownReferralCode={ownReferralCode}
+                                    referralCodeError={referralCodeError}
                                     onRepairNotesChange={setRepairNotes}
+                                    onReferralCodeChange={handleReferralCodeChange}
                                     onContactChange={handleContactChange}
                                     onBack={goBack}
                                     onBook={handleBookLoggedIn}
@@ -711,7 +972,12 @@ export default function RepairQuiz() {
                                     isVerifying={isVerifying}
                                     getIssuePrice={getIssuePrice}
                                     calculateTotal={calculateTotal}
+                                    referralDiscountPreview={referralDiscountPreview}
+                                    referralCode={referralCode}
+                                    ownReferralCode={ownReferralCode}
+                                    referralCodeError={referralCodeError}
                                     onRepairNotesChange={setRepairNotes}
+                                    onReferralCodeChange={handleReferralCodeChange}
                                     onContactChange={handleContactChange}
                                     onBack={goBack}
                                     onSendOtp={handleSendOtp}
@@ -748,7 +1014,7 @@ export default function RepairQuiz() {
                                 </div>
                                 <div className="confirm__row">
                                     <span>🕐</span>
-                                    <span>{scheduleTime ? TIME_SLOTS.find(s => s.id === scheduleTime)?.range : 'To be scheduled after parts arrive'}</span>
+                                    <span>{TIME_SLOTS.find(s => s.id === scheduleTime)?.range || 'To be scheduled after parts arrive'}</span>
                                 </div>
                                 <div className="confirm__row">
                                     <span>📍</span>
@@ -760,7 +1026,7 @@ export default function RepairQuiz() {
                                 </div>
                                 <div className="confirm__row">
                                     <span>💰</span>
-                                    <span>Estimated ${calculateTotal()}</span>
+                                    <span>Estimated ${bookedTotalEstimate ?? calculateTotal()}</span>
                                 </div>
                             </div>
                             <p className="quiz__disclaimer">
@@ -783,8 +1049,9 @@ export default function RepairQuiz() {
                                     <span className="quiz__price-footer-items">
                                         {selectedIssues.length} repair{selectedIssues.length > 1 ? 's' : ''} + labor + service fee
                                     </span>
+                                    <span className="quiz__price-footer-hype">✨ {autoAdvanceHint}</span>
                                 </div>
-                                <div className="quiz__price-footer-amount">${calculateTotal()}</div>
+                                <div key={pricePulseKey} className="quiz__price-footer-amount quiz__price-footer-amount--pulse">${calculateTotal()}</div>
                             </div>
                         </div>
                     )}

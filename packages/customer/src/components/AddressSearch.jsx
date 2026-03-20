@@ -1,22 +1,29 @@
 import React, { useState } from 'react';
 
-const SUPPORTED_TEXAS_CITIES = new Set([
-    'denton',
-    'lewisville',
-    'corinth',
-    'lake dallas',
-    'plano',
-    'frisco',
-    'grapevine',
-    'southlake',
-    'trophy club',
-    'justin',
-    'northlake',
-    'north lake',
-    'argyle',
-    'lantana',
-    'the colony',
-]);
+export const SUPPORTED_TEXAS_CITIES = [
+    'Denton',
+    'Lewisville',
+    'Corinth',
+    'Lake Dallas',
+    'Plano',
+    'Frisco',
+    'Grapevine',
+    'Southlake',
+    'Trophy Club',
+    'Justin',
+    'Northlake',
+    'Argyle',
+    'Lantana',
+    'The Colony',
+];
+
+const SUPPORTED_TEXAS_CITIES_SET = new Set(
+    SUPPORTED_TEXAS_CITIES.flatMap((city) => {
+        const normalized = city.toLowerCase();
+        if (normalized === 'northlake') return [normalized, 'north lake'];
+        return [normalized];
+    })
+);
 
 function normalizeLocationValue(value) {
     return (value || '').toLowerCase().trim();
@@ -26,7 +33,7 @@ function isCitySupported(city, state) {
     const normalizedState = normalizeLocationValue(state);
     const normalizedCity = normalizeLocationValue(city);
     const isTexas = normalizedState === 'tx' || normalizedState === 'texas';
-    return isTexas && SUPPORTED_TEXAS_CITIES.has(normalizedCity);
+    return isTexas && SUPPORTED_TEXAS_CITIES_SET.has(normalizedCity);
 }
 
 export default function AddressSearch({ value, onChange, onServiceError }) {

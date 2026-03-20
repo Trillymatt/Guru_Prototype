@@ -8,6 +8,7 @@ import CustomersPage from './pages/CustomersPage';
 import CustomerDetailPage from './pages/CustomerDetailPage';
 import RevenuePage from './pages/RevenuePage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import ReferralsPage from './pages/ReferralsPage';
 
 export default function App() {
     const [user, setUser] = useState(null);
@@ -118,6 +119,7 @@ export default function App() {
                 <Route path="/customers/:id" element={<CustomerDetailPage />} />
                 <Route path="/revenue" element={<RevenuePage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/referrals" element={<ReferralsPage />} />
                 <Route path="*" element={<Navigate to="/jobs" replace />} />
             </Routes>
         </AdminLayout>

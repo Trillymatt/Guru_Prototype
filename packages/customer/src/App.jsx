@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from '@shared/ErrorBoundary';
 import { usePageTracking } from './hooks/usePageTracking';
 import ProtectedRoute from './components/ProtectedRoute';
+import VanLoader from './components/VanLoader';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const RepairQuiz = lazy(() => import('./pages/RepairQuiz'));
@@ -16,10 +17,7 @@ const InvoicePage = lazy(() => import('./pages/InvoicePage'));
 
 function PageLoader() {
     return (
-        <div className="protected-route-loading">
-            <div className="protected-route-loading__spinner" />
-            <span>Loading...</span>
-        </div>
+        <VanLoader text="Loading page..." />
     );
 }
 

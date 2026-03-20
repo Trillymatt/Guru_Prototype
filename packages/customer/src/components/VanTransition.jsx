@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../styles/van-transition.css';
 
 export default function VanTransition({ active, onComplete }) {
-    const [phase, setPhase] = useState('idle'); // 'idle' | 'van-enter' | 'van-center' | 'loading' | 'done'
+    const [phase, setPhase] = useState('idle'); // 'idle' | 'van-enter' | 'van-center' | 'done'
 
     useEffect(() => {
         if (!active) {
@@ -13,17 +13,14 @@ export default function VanTransition({ active, onComplete }) {
 
         // Van enters and pauses at center (0.8s)
         const centerTimer = setTimeout(() => setPhase('van-center'), 800);
-        // Crossfade to loading screen (1.4s)
-        const loadTimer = setTimeout(() => setPhase('loading'), 1400);
-        // Navigate (2.6s)
+        // Navigate (2.2s)
         const doneTimer = setTimeout(() => {
             setPhase('done');
             onComplete();
-        }, 2600);
+        }, 2200);
 
         return () => {
             clearTimeout(centerTimer);
-            clearTimeout(loadTimer);
             clearTimeout(doneTimer);
         };
     }, [active]);
@@ -31,9 +28,12 @@ export default function VanTransition({ active, onComplete }) {
     if (!active && phase === 'idle') return null;
 
     return (
-        <div className={`van-transition ${phase === 'loading' || phase === 'done' ? 'van-transition--loading' : ''}`}>
-            {/* Van stage - visible during van-enter and van-center */}
-            <div className={`van-transition__van-stage ${phase === 'loading' || phase === 'done' ? 'van-transition__van-stage--fade-out' : ''}`}>
+        <div className="van-transition">
+            <div className="van-transition__van-stage">
+                <div className="van-transition__overlay-copy">
+                    <div className="van-transition__logo">SEER</div>
+                    <div className="van-transition__tagline">Mobile Repair - Coming to You</div>
+                </div>
                 <div className="van-transition__road">
                     <div className="van-transition__road-line" />
                 </div>
@@ -71,15 +71,6 @@ export default function VanTransition({ active, onComplete }) {
                         <div className="van-transition__puff van-transition__puff--2" />
                         <div className="van-transition__puff van-transition__puff--3" />
                     </div>
-                </div>
-            </div>
-
-            {/* Loading stage - fades in */}
-            <div className={`van-transition__loading-stage ${phase === 'loading' || phase === 'done' ? 'van-transition__loading-stage--visible' : ''}`}>
-                <div className="van-transition__logo">SEER</div>
-                <div className="van-transition__tagline">Mobile Repair — Coming to You</div>
-                <div className="van-transition__loader">
-                    <div className="van-transition__loader-bar" />
                 </div>
             </div>
         </div>

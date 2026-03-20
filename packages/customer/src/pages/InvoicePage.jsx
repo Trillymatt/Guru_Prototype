@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import VanLoader from '../components/VanLoader';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
 import {
@@ -74,7 +75,7 @@ export default function InvoicePage() {
                 <Navbar />
                 <div className="invoice-page">
                     <div className="guru-container guru-container--narrow">
-                        <div className="invoice-loading">Loading invoice...</div>
+                        <VanLoader text="Loading invoice..." compact={true} />
                     </div>
                 </div>
             </>

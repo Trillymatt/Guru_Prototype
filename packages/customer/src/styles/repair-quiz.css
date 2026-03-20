@@ -408,6 +408,11 @@
     color: var(--guru-gray-700);
 }
 
+.quiz__quote-line--discount {
+    color: #166534;
+    font-weight: 600;
+}
+
 .quiz__quote-line-right {
     display: flex;
     align-items: center;
@@ -473,6 +478,20 @@
     border-radius: var(--radius-lg);
     padding: var(--space-3) var(--space-4);
     margin-top: var(--space-3);
+}
+
+.sched-window-nav {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.sched-service-cities {
+    margin-top: var(--space-3);
+    font-size: var(--font-size-xs);
+    color: var(--guru-gray-500);
+    line-height: 1.5;
 }
 
 .sched-slots {
@@ -798,11 +817,35 @@
     opacity: 0.9;
 }
 
+.quiz__price-footer-hype {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    opacity: 0.95;
+}
+
 .quiz__price-footer-amount {
     color: white;
     font-size: var(--font-size-3xl);
     font-weight: 800;
     letter-spacing: -0.02em;
+}
+
+.quiz__price-footer-amount--pulse {
+    animation: quiz-price-pulse 0.35s ease-out;
+}
+
+@keyframes quiz-price-pulse {
+    0% {
+        transform: scale(0.96);
+        opacity: 0.8;
+    }
+    55% {
+        transform: scale(1.08);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 @media (max-width: 768px) {

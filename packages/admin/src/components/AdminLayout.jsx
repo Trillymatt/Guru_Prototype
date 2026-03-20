@@ -54,6 +54,22 @@ export default function AdminLayout({ children, onLogout, userEmail }) {
                         </svg>
                         Analytics
                     </NavLink>
+                    <NavLink
+                        to="/referrals"
+                        className={({ isActive }) =>
+                            `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                        }
+                    >
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M8 7h8" />
+                            <path d="M8 12h8" />
+                            <path d="M8 17h8" />
+                            <circle cx="5" cy="7" r="1" />
+                            <circle cx="5" cy="12" r="1" />
+                            <circle cx="5" cy="17" r="1" />
+                        </svg>
+                        Referrals
+                    </NavLink>
                 </nav>
                 <div className="admin-sidebar__footer">
                     {userEmail && (

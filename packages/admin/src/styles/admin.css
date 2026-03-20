@@ -1032,9 +1032,34 @@ body {
     background: #06B6D4;
 }
 
+.admin-breakdown-item__bar--danger {
+    background: var(--admin-danger);
+}
+
 .admin-breakdown-item__name--mono {
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 13px;
+}
+
+.admin-outcome-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.admin-outcome-badge--accepted {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--admin-success);
+}
+
+.admin-outcome-badge--rejected {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--admin-danger);
 }
 
 .admin-chart-card__empty {

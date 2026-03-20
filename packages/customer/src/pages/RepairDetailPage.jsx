@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import VanLoader from '../components/VanLoader';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
 import RepairChat from '@shared/RepairChat';
@@ -45,6 +46,9 @@ export default function RepairDetailPage() {
     const [editAddress, setEditAddress] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState('');
+    const [isSavingTimeSelection, setIsSavingTimeSelection] = useState(false);
+    const [timeSelectionError, setTimeSelectionError] = useState('');
+    const [selectedArrivalTime, setSelectedArrivalTime] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [customerLocation, setCustomerLocation] = useState(null);
 
@@ -135,7 +139,7 @@ export default function RepairDetailPage() {
         if (!isEditing) {
             // Entering edit mode - populate with current values
             setEditDate(repair.schedule_date || '');
-            setEditTime(repair.schedule_time || '');
+            setEditTime(TIME_SLOT_LABELS[repair.schedule_time] ? repair.schedule_time : '');
             setEditAddress(repair.address || '');
             setSaveError('');
         }
@@ -207,6 +211,48 @@ export default function RepairDetailPage() {
         { id: 'evening', label: 'Evening', range: '4:00 PM – 7:00 PM', icon: '🌆' },
     ];
 
+    const hasScheduledTime = Boolean(TIME_SLOT_LABELS[repair?.schedule_time]);
+    const needsTimeSelection = repair?.status === REPAIR_STATUS.PARTS_RECEIVED && !hasScheduledTime;
+
+    useEffect(() => {
+        if (needsTimeSelection) {
+            setSelectedArrivalTime('');
+            setTimeSelectionError('');
+        }
+    }, [needsTimeSelection, repair?.id]);
+
+    const handleTimeSelectionSubmit = async () => {
+        if (!selectedArrivalTime) {
+            setTimeSelectionError('Please select a time window to continue.');
+            return;
+        }
+
+        setIsSavingTimeSelection(true);
+        setTimeSelectionError('');
+
+        const { error } = await supabase
+            .from('repairs')
+            .update({
+                schedule_time: selectedArrivalTime,
+                status: REPAIR_STATUS.SCHEDULED,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', id);
+
+        if (error) {
+            setTimeSelectionError('Unable to save your time right now. Please try again.');
+            setIsSavingTimeSelection(false);
+            return;
+        }
+
+        setRepair(prev => ({
+            ...prev,
+            schedule_time: selectedArrivalTime,
+            status: REPAIR_STATUS.SCHEDULED,
+        }));
+        setIsSavingTimeSelection(false);
+    };
+
     // Use conditional status flow based on whether parts were in stock
     const statusFlow = repair ? getRepairStatusFlow(repair.parts_in_stock) : REPAIR_STATUS_FLOW;
     const currentStepIndex = repair ? statusFlow.indexOf(repair.status) : 0;
@@ -217,7 +263,7 @@ export default function RepairDetailPage() {
                 <Navbar />
                 <div className="repair-detail">
                     <div className="guru-container guru-container--narrow">
-                        <div className="rd-loading">Loading repair details...</div>
+                        <VanLoader text="Loading repair details..." compact={true} />
                     </div>
                 </div>
             </>
@@ -273,9 +319,49 @@ export default function RepairDetailPage() {
                             <span>✓</span> All parts were in stock for this repair.
                         </div>
                     )}
-                    {repair.parts_in_stock === false && (
+                    {repair.parts_in_stock === false && repair.status === REPAIR_STATUS.PARTS_ORDERED && (
                         <div className="rd-inventory-banner rd-inventory-banner--order">
                             <span>📦</span> Parts are being ordered for this repair.
+                        </div>
+                    )}
+                    {repair.parts_in_stock === false && repair.status === REPAIR_STATUS.PARTS_RECEIVED && (
+                        <div className="rd-inventory-banner rd-inventory-banner--arrived">
+                            <span>🎉</span> Great news - your parts arrived.
+                        </div>
+                    )}
+
+                    {needsTimeSelection && (
+                        <div className="rd-time-prompt">
+                            <h3 className="rd-time-prompt__title">Choose your repair time</h3>
+                            <p className="rd-time-prompt__subtitle">
+                                Your parts are here. Pick a time window so we can lock in your appointment.
+                            </p>
+                            <div className="rd-time-prompt__slots">
+                                {timeSlots.map((slot) => (
+                                    <button
+                                        key={slot.id}
+                                        type="button"
+                                        className={`rd-time-option ${selectedArrivalTime === slot.id ? 'rd-time-option--selected' : ''}`}
+                                        onClick={() => setSelectedArrivalTime(slot.id)}
+                                        disabled={isSavingTimeSelection}
+                                    >
+                                        <span className="rd-time-option__icon">{slot.icon}</span>
+                                        <span className="rd-time-option__label">{slot.label}</span>
+                                        <span className="rd-time-option__range">{slot.range}</span>
+                                    </button>
+                                ))}
+                            </div>
+                            {timeSelectionError && (
+                                <p className="rd-time-prompt__error">{timeSelectionError}</p>
+                            )}
+                            <button
+                                type="button"
+                                className="guru-btn guru-btn--primary"
+                                onClick={handleTimeSelectionSubmit}
+                                disabled={isSavingTimeSelection}
+                            >
+                                {isSavingTimeSelection ? 'Saving...' : 'Confirm Time'}
+                            </button>
                         </div>
                     )}
 
@@ -479,7 +565,7 @@ export default function RepairDetailPage() {
                                 <div className="rd-detail-row">
                                     <span className="rd-detail-label">Time</span>
                                     <span className="rd-detail-value">
-                                        {TIME_SLOT_LABELS[repair.schedule_time]?.range || repair.schedule_time || '—'}
+                                        {TIME_SLOT_LABELS[repair.schedule_time]?.range || 'To be scheduled after parts arrive'}
                                     </span>
                                 </div>
                                 <div className="rd-detail-row">

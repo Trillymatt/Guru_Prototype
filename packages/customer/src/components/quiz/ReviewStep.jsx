@@ -18,6 +18,7 @@ function QuoteSummary({
     scheduleAddress,
     getIssuePrice,
     calculateTotal,
+    referralDiscount,
 }) {
     return (
         <div className="quiz__quote">
@@ -55,6 +56,12 @@ function QuoteSummary({
                     <span>🚗 On-site Service Fee</span>
                     <span className="quiz__quote-value">${SERVICE_FEE}</span>
                 </div>
+                {referralDiscount > 0 && (
+                    <div className="quiz__quote-line quiz__quote-line--discount">
+                        <span>🎁 Referral Discount</span>
+                        <span className="quiz__quote-value">-${referralDiscount}</span>
+                    </div>
+                )}
             </div>
             <div className="quiz__quote-section">
                 <div className="quiz__quote-label">Appointment</div>
@@ -62,7 +69,7 @@ function QuoteSummary({
                     <span>📅 {scheduleDate ? formatDisplayDate(scheduleDate) : ''}</span>
                 </div>
                 <div className="quiz__quote-line">
-                    <span>🕐 {scheduleTime ? TIME_SLOTS.find(s => s.id === scheduleTime)?.range : 'To be scheduled after parts arrive'}</span>
+                    <span>🕐 {TIME_SLOTS.find(s => s.id === scheduleTime)?.range || 'To be scheduled after parts arrive'}</span>
                 </div>
                 <div className="quiz__quote-line">
                     <span>📍 {scheduleAddress}</span>
@@ -72,6 +79,41 @@ function QuoteSummary({
                 <span>Estimated Total</span>
                 <span className="quiz__quote-total-price">${calculateTotal()}</span>
             </div>
+        </div>
+    );
+}
+
+function ReferralSection({
+    referralCode,
+    ownReferralCode,
+    referralCodeError,
+    onReferralCodeChange,
+}) {
+    return (
+        <div className="quiz__section">
+            <h3 className="quiz__section-title">Referral Code</h3>
+            <p className="quiz__subtitle" style={{ marginBottom: 8 }}>
+                Friend discount: <strong>$5 off</strong> their next repair.
+            </p>
+            <input
+                className="guru-input"
+                type="text"
+                inputMode="text"
+                autoCapitalize="characters"
+                maxLength={8}
+                placeholder="Enter 8-character code"
+                value={referralCode}
+                onChange={(e) => onReferralCodeChange(e.target.value)}
+                aria-label="Referral code"
+            />
+            {ownReferralCode && (
+                <p className="sched-hint" style={{ marginTop: 8 }}>
+                    Your referral code is <strong>{ownReferralCode}</strong>. You cannot use your own code.
+                </p>
+            )}
+            {referralCodeError && (
+                <p className="login-card__error" style={{ marginTop: 8 }}>{referralCodeError}</p>
+            )}
         </div>
     );
 }
@@ -116,7 +158,12 @@ export default function ReviewStep({
     isVerifying,
     getIssuePrice,
     calculateTotal,
+    referralDiscountPreview,
+    referralCode,
+    ownReferralCode,
+    referralCodeError,
     onRepairNotesChange,
+    onReferralCodeChange,
     onContactChange,
     onBack,
     onBook,
@@ -132,6 +179,7 @@ export default function ReviewStep({
         scheduleAddress,
         getIssuePrice,
         calculateTotal,
+        referralDiscount: referralDiscountPreview || 0,
     };
 
     if (isLoggedIn) {
@@ -142,6 +190,12 @@ export default function ReviewStep({
 
                 <QuoteSummary {...quoteProps} />
                 <NotesSection repairNotes={repairNotes} onRepairNotesChange={onRepairNotesChange} />
+                <ReferralSection
+                    referralCode={referralCode}
+                    ownReferralCode={ownReferralCode}
+                    referralCodeError={referralCodeError}
+                    onReferralCodeChange={onReferralCodeChange}
+                />
 
                 <div className="quiz__section">
                     <h3 className="quiz__section-title">Signed in account</h3>
@@ -178,6 +232,12 @@ export default function ReviewStep({
 
             <QuoteSummary {...quoteProps} />
             <NotesSection repairNotes={repairNotes} onRepairNotesChange={onRepairNotesChange} />
+            <ReferralSection
+                referralCode={referralCode}
+                ownReferralCode={ownReferralCode}
+                referralCodeError={referralCodeError}
+                onReferralCodeChange={onReferralCodeChange}
+            />
 
             <div className="quiz__section">
                 <h3 className="quiz__section-title">Your contact details</h3>

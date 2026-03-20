@@ -535,6 +535,94 @@
     color: #9A3412;
 }
 
+.rd-inventory-banner--arrived {
+    background: #ECFDF5;
+    border: 1px solid #A7F3D0;
+    color: #065F46;
+}
+
+/* ─── Parts Arrived Time Prompt ──────────────────────────────── */
+
+.rd-time-prompt {
+    background: linear-gradient(135deg, #F8FAFC, #EEF2FF);
+    border: 1px solid #CBD5E1;
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.rd-time-prompt__title {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--seer-black);
+    margin: 0 0 var(--space-2);
+}
+
+.rd-time-prompt__subtitle {
+    margin: 0 0 var(--space-4);
+    color: var(--seer-gray-600);
+    font-size: var(--font-size-sm);
+}
+
+.rd-time-prompt__slots {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.rd-time-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    width: 100%;
+    padding: var(--space-4);
+    background: var(--seer-white);
+    border: 2px solid var(--seer-gray-200);
+    border-radius: var(--radius-xl);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: left;
+}
+
+.rd-time-option:hover:not(:disabled) {
+    border-color: var(--seer-platinum-400);
+    transform: translateY(-1px);
+}
+
+.rd-time-option--selected {
+    border-color: var(--seer-platinum-700);
+    background: #F5F3FF;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.rd-time-option:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.rd-time-option__icon {
+    font-size: 1.1rem;
+}
+
+.rd-time-option__label {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--seer-gray-900);
+}
+
+.rd-time-option__range {
+    font-size: var(--font-size-xs);
+    color: var(--seer-gray-500);
+}
+
+.rd-time-prompt__error {
+    margin: 0 0 var(--space-3);
+    font-size: var(--font-size-sm);
+    color: #B91C1C;
+}
+
 /* ─── Cancel Section ──────────────────────────────────────────── */
 
 .rd-cancel-section {
@@ -613,5 +701,9 @@
 
     .rd-modal__actions {
         flex-direction: column;
+    }
+
+    .rd-time-prompt__slots {
+        grid-template-columns: 1fr;
     }
 }
