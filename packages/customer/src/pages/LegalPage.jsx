@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import SiteFooter from '../components/SiteFooter';
 import '../styles/legal.css';
 
 const SECTIONS = [
@@ -376,46 +377,7 @@ export default function LegalPage() {
                 </div>
             </section>
 
-            {/* ─── Footer ───────────────────────────────────────── */}
-            <footer className="footer">
-                <div className="guru-container">
-                    <div className="footer__grid">
-                        <div>
-                            <div className="footer__brand-name">SEER</div>
-                            <p className="footer__brand-desc">
-                                Premium mobile repair delivered to your door.
-                                Fast, transparent, and guaranteed.
-                            </p>
-                        </div>
-                        <div>
-                            <h4 className="footer__col-title">Company</h4>
-                            <ul className="footer__links">
-                                <li><Link to="/">About Us</Link></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="footer__col-title">Support</h4>
-                            <ul className="footer__links">
-                                <li><Link to="/faq">FAQ</Link></li>
-                                <li><a href="mailto:support@gururepair.com">Contact</a></li>
-                                <li><button className="footer__link-btn" onClick={() => setActiveSection('warranty')}>Warranty</button></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="footer__col-title">Legal</h4>
-                            <ul className="footer__links">
-                                <li><button className="footer__link-btn" onClick={() => setActiveSection('terms')}>Terms of Service</button></li>
-                                <li><button className="footer__link-btn" onClick={() => setActiveSection('privacy')}>Privacy Policy</button></li>
-                                <li><button className="footer__link-btn" onClick={() => setActiveSection('repair')}>Repair Agreement</button></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="footer__bottom">
-                        <span>© 2026 SEER Mobile Repair Solutions. All rights reserved.</span>
-                        <span>Built with purpose and care.</span>
-                    </div>
-                </div>
-            </footer>
+            <SiteFooter />
         </>
     );
 }

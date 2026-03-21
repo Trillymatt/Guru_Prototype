@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@shared/AuthProvider';
 
 export default function Navbar({ darkHero = false }) {
@@ -7,17 +7,6 @@ export default function Navbar({ darkHero = false }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const { user, loading, signOut } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
-
-    const scrollToSection = (sectionId) => {
-        closeMenu();
-        if (location.pathname === '/') {
-            const el = document.getElementById(sectionId);
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-        } else {
-            navigate('/', { state: { scrollTo: sectionId } });
-        }
-    };
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -57,17 +46,12 @@ export default function Navbar({ darkHero = false }) {
 
                 <div className={`navbar__links ${menuOpen ? 'navbar__links--open' : ''}`}>
                     <Link to="/" className="navbar__link" onClick={closeMenu}>Home</Link>
+                    <Link to="/how-it-works" className="navbar__link" onClick={closeMenu}>How It Works</Link>
+                    <Link to="/about" className="navbar__link" onClick={closeMenu}>About</Link>
                     {isLoggedIn && (
                         <Link to="/dashboard" className="navbar__link" onClick={closeMenu}>My Repairs</Link>
                     )}
-                    {!isLoggedIn && (
-                        <>
-                            <button className="navbar__link" onClick={() => scrollToSection('how-it-works')}>How It Works</button>
-                            <button className="navbar__link" onClick={() => scrollToSection('features')}>Features</button>
-                        </>
-                    )}
                     <Link to="/faq" className="navbar__link" onClick={closeMenu}>Support</Link>
-                    <Link to="/repair" className="navbar__link" onClick={closeMenu}>Start Repair</Link>
                     <div className="navbar__mobile-actions">
                         {isLoggedIn ? (
                             <>
@@ -78,7 +62,6 @@ export default function Navbar({ darkHero = false }) {
                         ) : (
                             <>
                                 <Link to="/login" className="guru-btn guru-btn--ghost guru-btn--full" onClick={closeMenu}>Sign In</Link>
-                                <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--full" onClick={closeMenu}>Get Started</Link>
                             </>
                         )}
                     </div>
@@ -99,7 +82,6 @@ export default function Navbar({ darkHero = false }) {
                     ) : (
                         <>
                             <Link to="/login" className="guru-btn guru-btn--ghost guru-btn--sm">Sign In</Link>
-                            <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--sm">Get Started</Link>
                         </>
                     )}
                 </div>

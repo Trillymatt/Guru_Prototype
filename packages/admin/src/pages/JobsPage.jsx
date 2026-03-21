@@ -255,40 +255,58 @@ export default function JobsPage() {
         return `$${parseFloat(amount).toFixed(2)}`;
     }
 
+    const activeJobs = jobs.filter(j => j.status !== 'complete' && j.status !== 'cancelled').length;
+    const pendingJobs = statusCounts.pending || 0;
+    const inProgressJobs = (statusCounts.in_progress || 0) + (statusCounts.en_route || 0) + (statusCounts.arrived || 0);
+    const completedJobs = statusCounts.complete || 0;
+
     return (
         <div className="admin-page">
             <div className="admin-page__header">
                 <div>
                     <h1 className="admin-page__title">Jobs</h1>
-                    <p className="admin-page__subtitle">{jobs.length} total repair jobs</p>
+                    <p className="admin-page__subtitle">Manage all repair orders</p>
                 </div>
                 <button onClick={openCreateModal} className="admin-btn admin-btn--primary">
                     + New Job
                 </button>
             </div>
 
-            {/* Filters */}
-            <div className="admin-filters">
-                <div className="admin-filters__tabs">
-                    <button
-                        className={`admin-filters__tab ${statusFilter === 'all' ? 'admin-filters__tab--active' : ''}`}
-                        onClick={() => setStatusFilter('all')}
-                    >
-                        All ({statusCounts.all})
-                    </button>
-                    {STATUSES.filter(s => statusCounts[s] > 0).map(s => (
-                        <button
-                            key={s}
-                            className={`admin-filters__tab ${statusFilter === s ? 'admin-filters__tab--active' : ''}`}
-                            onClick={() => setStatusFilter(s)}
-                        >
-                            {STATUS_LABELS[s]} ({statusCounts[s]})
-                        </button>
-                    ))}
+            {/* Summary Cards */}
+            <div className="admin-stats-row">
+                <div className="admin-stat-card admin-stat-card--small">
+                    <div className="admin-stat-card__value">{activeJobs}</div>
+                    <div className="admin-stat-card__label">Active Jobs</div>
                 </div>
+                <div className="admin-stat-card admin-stat-card--small">
+                    <div className="admin-stat-card__value" style={{ color: '#F59E0B' }}>{pendingJobs}</div>
+                    <div className="admin-stat-card__label">Pending</div>
+                </div>
+                <div className="admin-stat-card admin-stat-card--small">
+                    <div className="admin-stat-card__value" style={{ color: '#7C3AED' }}>{inProgressJobs}</div>
+                    <div className="admin-stat-card__label">In Progress</div>
+                </div>
+                <div className="admin-stat-card admin-stat-card--small">
+                    <div className="admin-stat-card__value" style={{ color: '#22C55E' }}>{completedJobs}</div>
+                    <div className="admin-stat-card__label">Completed</div>
+                </div>
+            </div>
+
+            {/* Compact Filters */}
+            <div className="admin-filters">
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="admin-filters__dropdown"
+                >
+                    <option value="all">All Statuses ({statusCounts.all})</option>
+                    {STATUSES.filter(s => statusCounts[s] > 0).map(s => (
+                        <option key={s} value={s}>{STATUS_LABELS[s]} ({statusCounts[s]})</option>
+                    ))}
+                </select>
                 <input
                     type="text"
-                    placeholder="Search by name, phone, or device..."
+                    placeholder="Search name, phone, or device..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="admin-filters__search"
@@ -306,14 +324,11 @@ export default function JobsPage() {
                         <thead>
                             <tr>
                                 <th>Customer</th>
-                                <th>Device</th>
                                 <th>Repair</th>
-                                <th>Tier</th>
                                 <th>Status</th>
                                 <th>Price</th>
-                                <th>Created</th>
-                                <th>Est. Completion</th>
-                                <th>Actions</th>
+                                <th>Date</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -322,31 +337,31 @@ export default function JobsPage() {
                                     <td>
                                         <div className="admin-table__customer">
                                             <span className="admin-table__name">{job.customers?.full_name || 'Unknown'}</span>
-                                            <span className="admin-table__phone">{job.customers?.phone || ''}</span>
+                                            <span className="admin-table__phone">{job.device || '—'}</span>
                                         </div>
                                     </td>
-                                    <td>{job.device || '—'}</td>
-                                    <td>{getRepairTypeName(job)}</td>
                                     <td>
-                                        <span className={`admin-tier admin-tier--${typeof job.parts_tier === 'object' ? job.parts_tier?.id : job.parts_tier}`}>
-                                            {getTierName(job)}
-                                        </span>
+                                        <div className="admin-table__repair-info">
+                                            <span>{getRepairTypeName(job)}</span>
+                                            <span className={`admin-tier admin-tier--${typeof job.parts_tier === 'object' ? job.parts_tier?.id : job.parts_tier}`}>
+                                                {getTierName(job)}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td>
                                         <select
                                             value={job.status}
                                             onChange={(e) => handleQuickStatus(job.id, e.target.value)}
                                             className="admin-status-select"
-                                            style={{ borderColor: STATUS_COLORS[job.status] }}
+                                            style={{ borderColor: STATUS_COLORS[job.status], color: STATUS_COLORS[job.status] }}
                                         >
                                             {STATUSES.map(s => (
                                                 <option key={s} value={s}>{STATUS_LABELS[s]}</option>
                                             ))}
                                         </select>
                                     </td>
-                                    <td>{formatCurrency(job.price_charged || job.total_estimate)}</td>
-                                    <td>{formatDate(job.created_at)}</td>
-                                    <td>{formatDate(job.estimated_completion)}</td>
+                                    <td className="admin-table__price">{formatCurrency(job.price_charged || job.total_estimate)}</td>
+                                    <td className="admin-table__date">{formatDate(job.created_at)}</td>
                                     <td>
                                         <div className="admin-table__actions">
                                             <button onClick={() => openEditModal(job)} className="admin-btn-icon" title="Edit">

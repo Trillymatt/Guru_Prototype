@@ -1,7 +1,16 @@
 import React from 'react';
 import { getDevicesByGeneration } from '@shared/constants';
 
-export default function DeviceStep({ activeGen, onGenChange, selectedDevice, onSelectDevice, sortedGens, savedDevices = [], onSelectSavedDevice }) {
+export default function DeviceStep({
+    activeGen,
+    onGenChange,
+    selectedDevice,
+    onSelectDevice,
+    sortedGens,
+    savedDevices = [],
+    onSelectSavedDevice,
+    onAutoAdvance,
+}) {
     return (
         <div className="quiz__section">
             <h3 className="quiz__section-title">Your iPhone</h3>
@@ -15,7 +24,10 @@ export default function DeviceStep({ activeGen, onGenChange, selectedDevice, onS
                             <button
                                 key={saved.id}
                                 className={`quiz__saved-device-btn ${selectedDevice?.id === saved.device_id ? 'quiz__saved-device-btn--selected' : ''}`}
-                                onClick={() => onSelectSavedDevice && onSelectSavedDevice(saved)}
+                                onClick={() => {
+                                    if (onSelectSavedDevice) onSelectSavedDevice(saved);
+                                    if (onAutoAdvance) onAutoAdvance();
+                                }}
                             >
                                 <span className="quiz__saved-device-icon">📱</span>
                                 <span className="quiz__saved-device-info">
@@ -52,7 +64,10 @@ export default function DeviceStep({ activeGen, onGenChange, selectedDevice, onS
                     <button
                         key={device.id}
                         className={`quiz__device-card ${selectedDevice?.id === device.id ? 'quiz__device-card--selected' : ''}`}
-                        onClick={() => onSelectDevice(device)}
+                        onClick={() => {
+                            onSelectDevice(device);
+                            if (onAutoAdvance) onAutoAdvance();
+                        }}
                     >
                         <div className="quiz__device-icon">📱</div>
                         <div className="quiz__device-name">{device.name}</div>

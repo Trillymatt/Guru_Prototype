@@ -19,39 +19,48 @@ export default function IssuesStep({
     onSetTier,
     onSetBackGlassColor,
     isPartInStock,
+    onAutoAdvance,
+    showIssueSelection = true,
+    showColorSelection = true,
+    showTierSelection = true,
 }) {
     return (
         <>
             {/* Issue Selection */}
-            <div className="quiz__section">
-                <h3 className="quiz__section-title">What's wrong with your {selectedDevice.name}?</h3>
-                <div className="quiz__issues">
-                    {availableRepairTypes.map((type) => (
-                        <button
-                            key={type.id}
-                            className={`quiz__issue-card ${selectedIssues.includes(type.id) ? 'quiz__issue-card--selected' : ''}`}
-                            onClick={() => onToggleIssue(type.id)}
-                        >
-                            <div className="quiz__issue-icon">{type.icon}</div>
-                            <div className="quiz__issue-info">
-                                <div className="quiz__issue-name">{type.name}</div>
-                                <div className="quiz__issue-desc">{type.description}</div>
-                            </div>
-                            <div className="quiz__issue-check">
-                                {selectedIssues.includes(type.id) ? '✓' : ''}
-                            </div>
-                        </button>
-                    ))}
-                </div>
-                {isSoftwareOnly && (
-                    <div className="quiz__alert-box">
-                        ⚠️ We do not offer on-site appointments for software-only issues. Please visit us in-store.
+            {showIssueSelection && (
+                <div className="quiz__section">
+                    <h3 className="quiz__section-title">What's wrong with your {selectedDevice?.name || 'iPhone'}?</h3>
+                    <div className="quiz__issues">
+                        {availableRepairTypes.map((type) => (
+                            <button
+                                key={type.id}
+                                className={`quiz__issue-card ${selectedIssues.includes(type.id) ? 'quiz__issue-card--selected' : ''}`}
+                                onClick={() => {
+                                    onToggleIssue(type.id);
+                                    if (onAutoAdvance) onAutoAdvance();
+                                }}
+                            >
+                                <div className="quiz__issue-icon">{type.icon}</div>
+                                <div className="quiz__issue-info">
+                                    <div className="quiz__issue-name">{type.name}</div>
+                                    <div className="quiz__issue-desc">{type.description}</div>
+                                </div>
+                                <div className="quiz__issue-check">
+                                    {selectedIssues.includes(type.id) ? '✓' : ''}
+                                </div>
+                            </button>
+                        ))}
                     </div>
-                )}
-            </div>
+                    {isSoftwareOnly && (
+                        <div className="quiz__alert-box">
+                            ⚠️ We do not offer on-site appointments for software-only issues. Please visit us in-store.
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Back Glass Color Selection */}
-            {selectedIssues.includes('back-glass') && BACK_GLASS_COLORS[selectedDevice.id] && (
+            {showColorSelection && selectedDevice && selectedIssues.includes('back-glass') && BACK_GLASS_COLORS[selectedDevice.id] && (
                 <div className="quiz__section">
                     <h3 className="quiz__section-title">Back Glass Color</h3>
                     <p className="quiz__quality-subtitle">
@@ -62,7 +71,10 @@ export default function IssuesStep({
                             <button
                                 key={color}
                                 className={`quiz__color-chip ${backGlassColor === color ? 'quiz__color-chip--selected' : ''}`}
-                                onClick={() => onSetBackGlassColor(color)}
+                                onClick={() => {
+                                    onSetBackGlassColor(color);
+                                    if (onAutoAdvance) onAutoAdvance();
+                                }}
                             >
                                 {backGlassColor === color && <span className="quiz__color-chip-check">✓</span>}
                                 {color}
@@ -73,7 +85,7 @@ export default function IssuesStep({
             )}
 
             {/* Quality Tier Selection */}
-            {selectedIssues.length > 0 && !isSoftwareOnly && (
+            {showTierSelection && selectedIssues.length > 0 && !isSoftwareOnly && (
                 <div className="quiz__section">
                     <h3 className="quiz__section-title">Choose Parts Quality</h3>
                     <p className="quiz__quality-subtitle">Select a quality tier for each repair. This affects pricing and part longevity.</p>
@@ -118,7 +130,10 @@ export default function IssuesStep({
                                                 <button
                                                     key={tier.id}
                                                     className={`pit-tier ${currentTier === tier.id ? 'pit-tier--selected' : ''}`}
-                                                    onClick={() => onSetTier(issueId, tier.id)}
+                                                    onClick={() => {
+                                                        onSetTier(issueId, tier.id);
+                                                        if (onAutoAdvance) onAutoAdvance();
+                                                    }}
                                                     style={currentTier === tier.id ? { borderColor: tier.color, background: `${tier.color}10` } : undefined}
                                                 >
                                                     <span className="pit-tier__label">{tier.name}</span>

@@ -11,5 +11,7 @@ export function usePageTracking() {
 
     useEffect(() => {
         analytics.pageView(location.pathname);
+        // Ensure each route starts at the top in SPA navigation.
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }, [location.pathname]);
 }

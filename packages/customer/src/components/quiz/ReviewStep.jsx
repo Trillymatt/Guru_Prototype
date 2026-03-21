@@ -164,7 +164,6 @@ export default function ReviewStep({
     referralCodeError,
     onRepairNotesChange,
     onReferralCodeChange,
-    onContactChange,
     onBack,
     onBook,
     onSendOtp,
@@ -242,37 +241,23 @@ export default function ReviewStep({
             <div className="quiz__section">
                 <h3 className="quiz__section-title">Your contact details</h3>
                 <form onSubmit={onSendOtp}>
-                    <div className="guru-input-group" style={{ marginBottom: 16 }}>
-                        <label className="sched-label">Full Name</label>
-                        <input
-                            className="guru-input"
-                            type="text"
-                            placeholder="Jane Doe"
-                            value={contact.name}
-                            onChange={(e) => onContactChange('name', e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div className="guru-input-group" style={{ marginBottom: 16 }}>
-                        <label className="sched-label">Email Address</label>
-                        <input
-                            className="guru-input"
-                            type="email"
-                            placeholder="jane@example.com"
-                            value={contact.email}
-                            onChange={(e) => onContactChange('email', e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div className="guru-input-group" style={{ marginBottom: 24 }}>
-                        <label className="sched-label">Phone Number <span style={{ color: 'var(--guru-gray-400)', fontWeight: 400 }}>(optional)</span></label>
-                        <input
-                            className="guru-input"
-                            type="tel"
-                            placeholder="(555) 123-4567"
-                            value={contact.phone}
-                            onChange={(e) => onContactChange('phone', e.target.value)}
-                        />
+                    <div className="quiz__quote" style={{ marginBottom: 16 }}>
+                        <div className="quiz__quote-line">
+                            <span>Name</span>
+                            <span>{contact.name || 'Not provided'}</span>
+                        </div>
+                        <div className="quiz__quote-line">
+                            <span>Email</span>
+                            <span>{contact.email || 'Not provided'}</span>
+                        </div>
+                        <div className="quiz__quote-line">
+                            <span>Primary Phone</span>
+                            <span>{contact.phone || 'Not provided'}</span>
+                        </div>
+                        <div className="quiz__quote-line">
+                            <span>Backup Phone</span>
+                            <span>{contact.backupPhone || 'Not provided'}</span>
+                        </div>
                     </div>
                     {authError && (
                         <p className="login-card__error">{authError}</p>

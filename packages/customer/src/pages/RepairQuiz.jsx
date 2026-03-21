@@ -8,9 +8,7 @@ import { formatPhoneE164 } from '@shared/validation';
 import {
     DEVICE_GENERATIONS,
     REPAIR_TYPES,
-    PARTS_TIERS,
     SAMPLE_PRICING,
-    DEVICE_REPAIR_PRICING,
     getAvailableTiersForRepair,
     getDeviceRepairPrice,
     getDevicesByGeneration,
@@ -29,7 +27,15 @@ import ReviewStep from '../components/quiz/ReviewStep';
 import AuthStep from '../components/quiz/AuthStep';
 import '../styles/repair-quiz.css';
 
-const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
+const STEP_CONTACT = 0;
+const STEP_PHONE = 1;
+const STEP_DEVICE = 2;
+const STEP_ISSUES = 3;
+const STEP_QUALITY = 4;
+const STEP_ADDRESS = 5;
+const STEP_DATE = 6;
+const STEP_REVIEW = 7;
+const STEP_VERIFY = 8;
 const SCHEDULE_TIME_PENDING = 'to_be_scheduled';
 const REFERRAL_STORAGE_KEY = 'guru_referral_code';
 const REFERRAL_DISCOUNT_AMOUNT = 5;
@@ -88,7 +94,7 @@ export default function RepairQuiz() {
     const [bookedTotalEstimate, setBookedTotalEstimate] = useState(null);
 
     // Auth / Contact State
-    const [contact, setContact] = useState({ name: '', email: '', phone: '' });
+    const [contact, setContact] = useState({ name: '', email: '', phone: '', backupPhone: '' });
     const [otpSent, setOtpSent] = useState(false);
     const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
     const [isVerifying, setIsVerifying] = useState(false);
@@ -99,20 +105,23 @@ export default function RepairQuiz() {
     const [confirmed, setConfirmed] = useState(false);
     const [availableDates, setAvailableDates] = useState(null);
     const [inventoryData, setInventoryData] = useState([]);
-    const [inventoryLoading, setInventoryLoading] = useState(false);
     const isLoggedIn = Boolean(user);
 
     // Saved devices & addresses
     const [savedDevices, setSavedDevices] = useState([]);
     const [savedAddresses, setSavedAddresses] = useState([]);
     const [savedDataLoaded, setSavedDataLoaded] = useState(false);
-    const [suppressStep0AutoAdvance, setSuppressStep0AutoAdvance] = useState(false);
-    const [suppressStep1AutoAdvance, setSuppressStep1AutoAdvance] = useState(false);
     const [pricePulseKey, setPricePulseKey] = useState(0);
     const [scheduleWindowOffsetWeeks, setScheduleWindowOffsetWeeks] = useState(0);
-    const step0Ref = useRef(null);
-    const step1DateRef = useRef(null);
-    const step2ReviewRef = useRef(null);
+    const [clickCount, setClickCount] = useState(0);
+    const autoAdvanceTimeoutRef = useRef(null);
+    const canContinueFromContactRef = useRef(false);
+    const canContinueFromPhoneRef = useRef(false);
+    const canContinueFromDeviceRef = useRef(false);
+    const canContinueFromIssuesRef = useRef(false);
+    const canContinueFromQualityRef = useRef(false);
+    const canContinueFromAddressRef = useRef(false);
+    const canContinueFromDateRef = useRef(false);
 
     // Track quiz start
     useEffect(() => { analytics.quizStart(); }, []);
@@ -226,7 +235,6 @@ export default function RepairQuiz() {
         }
 
         const fetchInventory = async () => {
-            setInventoryLoading(true);
             const { data, error } = await supabase
                 .from('parts_inventory')
                 .select('repair_type, parts_tier, quantity')
@@ -235,7 +243,6 @@ export default function RepairQuiz() {
             if (!error && data) {
                 setInventoryData(data);
             }
-            setInventoryLoading(false);
         };
 
         fetchInventory();
@@ -272,94 +279,45 @@ export default function RepairQuiz() {
         });
     }, [selectedIssues, issueTiers, inventoryData]);
 
-    const needsPartsOrder = useMemo(() => {
-        if (selectedIssues.length === 0) return false;
-        if (inventoryData.length === 0) return true;
-        return selectedIssues.some(issueId => {
-            const tier = issueTiers[issueId];
-            if (!tier) return true;
-            return !isPartInStock(issueId, tier);
-        });
-    }, [selectedIssues, issueTiers, inventoryData]);
-
     // Declared before effects that reference it (TDZ: const cannot be used before this line)
     const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
+    const quizSteps = useMemo(() => (
+        isLoggedIn
+            ? ['Your name & email', 'Phone number', 'Choose device', 'Choose repairs', 'Choose quality', 'Add address', 'Pick date', 'Review & book']
+            : ['Your name & email', 'Phone number', 'Choose device', 'Choose repairs', 'Choose quality', 'Add address', 'Pick date', 'Review details', 'Verify code']
+    ), [isLoggedIn]);
+    const maxStepIndex = quizSteps.length - 1;
 
-    const autoAdvanceTimerRef = useRef(null);
-    const previousStepRef = useRef(step);
-
-    const goNext = () => {
-        setStep((s) => {
-            const next = Math.min(s + 1, STEPS.length - 1);
-            analytics.quizStep(STEPS[next], { from: s, to: next });
-            return next;
-        });
+    const goBack = () => setStep((s) => Math.max(s - 1, 0));
+    const queueAutoAdvance = (expectedStep, canAdvance) => {
+        if (autoAdvanceTimeoutRef.current) {
+            window.clearTimeout(autoAdvanceTimeoutRef.current);
+        }
+        autoAdvanceTimeoutRef.current = window.setTimeout(() => {
+            setStep((current) => {
+                if (current !== expectedStep || !canAdvance()) return current;
+                const next = Math.min(current + 1, maxStepIndex);
+                analytics.quizStep(quizSteps[next], { from: current, to: next, click_count: clickCount });
+                return next;
+            });
+        }, 170);
     };
-    const goBack = () => setStep((s) => {
-        const next = Math.max(s - 1, 0);
-        if (s === 1 && next === 0) setSuppressStep0AutoAdvance(true);
-        if (s === 2 && next === 1) setSuppressStep1AutoAdvance(true);
-        return next;
-    });
 
-    // Auto-advance step 0 when all required selections are complete
     useEffect(() => {
-        if (step !== 0) return;
-        if (suppressStep0AutoAdvance) return;
-        if (selectedIssues.length === 0) return;
-        if (isSoftwareOnly) return;
-        // All issues must have tiers selected
-        const allTiersSelected = selectedIssues.every(id => issueTiers[id]);
-        if (!allTiersSelected) return;
-        // If back-glass is selected, color must be chosen
-        if (selectedIssues.includes('back-glass') && !backGlassColor) return;
+        setStep((current) => Math.min(current, maxStepIndex));
+    }, [maxStepIndex]);
 
-        // Auto-advance after a short delay so the user sees their selection
-        clearTimeout(autoAdvanceTimerRef.current);
-        autoAdvanceTimerRef.current = setTimeout(() => {
-            goNext();
-        }, 600);
-
-        return () => clearTimeout(autoAdvanceTimerRef.current);
-    }, [step, selectedIssues, issueTiers, backGlassColor, isSoftwareOnly, suppressStep0AutoAdvance]);
+    useEffect(() => () => {
+        if (autoAdvanceTimeoutRef.current) {
+            window.clearTimeout(autoAdvanceTimeoutRef.current);
+        }
+    }, []);
 
     useEffect(() => {
         if (selectedIssues.length > 0) {
             setPricePulseKey((k) => k + 1);
         }
     }, [selectedDevice, selectedIssues, issueTiers]);
-
-    const smoothScrollToRef = (ref) => {
-        if (!ref?.current) return;
-        const navbarOffset = 100;
-        const top = ref.current.getBoundingClientRect().top + window.scrollY - navbarOffset;
-        window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
-    };
-
-    useEffect(() => {
-        const prevStep = previousStepRef.current;
-        previousStepRef.current = step;
-
-        // Wait for next step DOM to mount before scrolling.
-        requestAnimationFrame(() => {
-            if (step === 0) {
-                smoothScrollToRef(step0Ref);
-                return;
-            }
-            if (step === 1) {
-                smoothScrollToRef(step1DateRef);
-                return;
-            }
-            if (step === 2) {
-                // When entering review, prioritize landing on the quote/price block.
-                if (prevStep === 1 || prevStep === 0) {
-                    smoothScrollToRef(step2ReviewRef);
-                } else {
-                    smoothScrollToRef(step2ReviewRef);
-                }
-            }
-        });
-    }, [step]);
 
     const availableRepairTypes = useMemo(() => {
         if (!selectedDevice) return REPAIR_TYPES.filter(type => REPAIR_TYPES_ALWAYS_AVAILABLE.has(type.id));
@@ -414,6 +372,7 @@ export default function RepairQuiz() {
                 name: profile?.full_name || user.user_metadata?.full_name || '',
                 email: profile?.email || user.email || '',
                 phone: profile?.phone || '',
+                backupPhone: '',
             });
             setOwnReferralCode(normalizeReferralCode(profile?.referral_code || ''));
         }
@@ -422,7 +381,6 @@ export default function RepairQuiz() {
     }, [user]);
 
     const toggleIssue = (id) => {
-        setSuppressStep0AutoAdvance(false);
         setSelectedIssues((prev) => {
             const next = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
             if (prev.includes(id)) {
@@ -438,7 +396,6 @@ export default function RepairQuiz() {
     };
 
     const setTierForIssue = (issueId, tier) => {
-        setSuppressStep0AutoAdvance(false);
         setIssueTiers((prev) => ({ ...prev, [issueId]: tier }));
     };
 
@@ -484,6 +441,17 @@ export default function RepairQuiz() {
     }, [referralCode, ownReferralCode]);
 
     const calculateTotal = () => Math.max(calculateBaseTotal() - referralDiscountPreview, 0);
+
+    const buildBookingNotes = () => {
+        const customNotes = repairNotes.trim();
+        const backupPhone = contact.backupPhone.trim();
+        if (!customNotes && !backupPhone) return null;
+
+        const segments = [];
+        if (customNotes) segments.push(customNotes);
+        if (backupPhone) segments.push(`Backup phone: ${backupPhone}`);
+        return segments.join('\n\n');
+    };
 
     const schedulingLeadDays = allPartsInStock === true ? 1 : SCHEDULING_LEAD_DAYS;
     const today = useMemo(() => {
@@ -571,6 +539,7 @@ export default function RepairQuiz() {
             }
             setIsVerifying(false);
             setOtpSent(true);
+            setStep(STEP_VERIFY);
         } catch (err) {
             setAuthError('Something went wrong. Please try again.');
             setIsVerifying(false);
@@ -659,7 +628,7 @@ export default function RepairQuiz() {
                     p_address: scheduleAddress,
                     p_parts_in_stock: allPartsInStock === true,
                     p_device_color: backGlassColor || null,
-                    p_notes: repairNotes.trim() || null,
+                    p_notes: buildBookingNotes(),
                     p_referral_code: referralCodeForBooking,
                 });
 
@@ -680,7 +649,7 @@ export default function RepairQuiz() {
             setIsVerifying(false);
             setConfirmed(true);
             window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
-            analytics.quizComplete({ device: selectedDevice?.name, issues: selectedIssues });
+            analytics.quizComplete({ device: selectedDevice?.name, issues: selectedIssues, click_count: clickCount });
         } catch (err) {
             setAuthError(`Verification failed. ${err?.message ? `(${err.message})` : 'Please check your code and try again.'}`);
             console.error('OTP verification failed:', err);
@@ -738,7 +707,7 @@ export default function RepairQuiz() {
                 p_address: scheduleAddress,
                 p_parts_in_stock: allPartsInStock === true,
                 p_device_color: backGlassColor || null,
-                p_notes: repairNotes.trim() || null,
+                p_notes: buildBookingNotes(),
                 p_referral_code: referralCodeForBooking,
             });
 
@@ -772,7 +741,7 @@ export default function RepairQuiz() {
             setConfirmed(true);
             setIsVerifying(false);
             window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
-            analytics.quizComplete({ device: selectedDevice?.name, issues: selectedIssues });
+            analytics.quizComplete({ device: selectedDevice?.name, issues: selectedIssues, click_count: clickCount });
         } catch (err) {
             setAuthError(`Failed to book your repair. ${err?.message ? `(${err.message})` : 'Please try again.'}`);
             console.error('Unexpected booking error for signed-in user:', err);
@@ -781,220 +750,358 @@ export default function RepairQuiz() {
     };
 
     const handleDateChange = (date) => {
-        setSuppressStep1AutoAdvance(false);
         setScheduleDate(date);
         setScheduleTime('');
+        queueAutoAdvance(STEP_DATE, () => Boolean(date) && (!filteredAvailableDates || filteredAvailableDates.has(date)));
     };
 
     const handleAddressChange = (address) => {
-        setSuppressStep1AutoAdvance(false);
         setScheduleAddress(address);
+        queueAutoAdvance(STEP_ADDRESS, () => canContinueFromAddressRef.current);
     };
 
     const handleScheduleWindowNext = () => {
-        setSuppressStep1AutoAdvance(false);
         setScheduleWindowOffsetWeeks((prev) => Math.min(prev + 1, maxWindowOffsetWeeks));
     };
 
     const handleScheduleWindowPrev = () => {
-        setSuppressStep1AutoAdvance(false);
         setScheduleWindowOffsetWeeks((prev) => Math.max(prev - 1, 0));
     };
 
-    const autoAdvanceHint = useMemo(() => {
-        if (step === 0) {
-            if (suppressStep0AutoAdvance) return 'Auto-advance paused while you review options';
-            return 'Nice picks - we will move you forward automatically';
-        }
-        if (step === 1) {
-            if (suppressStep1AutoAdvance) return 'Auto-advance paused while you review schedule details';
-            return 'Almost done - once details are complete we will move you ahead';
-        }
-        return 'Final step - lock in your repair';
-    }, [step, suppressStep0AutoAdvance, suppressStep1AutoAdvance]);
-
     const sortedGens = [...DEVICE_GENERATIONS].reverse();
+    const requiresBackGlassColor = selectedIssues.includes('back-glass');
+    const allTiersSelected = selectedIssues.length > 0 && selectedIssues.every((id) => issueTiers[id]);
+    const canContinueFromContact = Boolean(contact.name.trim()) && Boolean(contact.email.trim());
+    const canContinueFromPhone = true; // phone is optional, always can continue
+    const canContinueFromDevice = Boolean(selectedDevice);
+    const canContinueFromIssues = selectedIssues.length > 0 && !isSoftwareOnly;
+    const canContinueFromQuality = canContinueFromIssues && allTiersSelected && (!requiresBackGlassColor || Boolean(backGlassColor));
+    const canContinueFromAddress = Boolean(scheduleAddress) && !serviceAreaError;
+    const canContinueFromDate = Boolean(scheduleDate) && (!filteredAvailableDates || filteredAvailableDates.has(scheduleDate));
+    const progressPercent = ((Math.min(step, maxStepIndex) + 1) / quizSteps.length) * 100;
+
+    useEffect(() => {
+        canContinueFromContactRef.current = canContinueFromContact;
+        canContinueFromPhoneRef.current = canContinueFromPhone;
+        canContinueFromDeviceRef.current = canContinueFromDevice;
+        canContinueFromIssuesRef.current = canContinueFromIssues;
+        canContinueFromQualityRef.current = canContinueFromQuality;
+        canContinueFromAddressRef.current = canContinueFromAddress;
+        canContinueFromDateRef.current = canContinueFromDate;
+    }, [canContinueFromContact, canContinueFromPhone, canContinueFromDevice, canContinueFromIssues, canContinueFromQuality, canContinueFromAddress, canContinueFromDate]);
+
+    useEffect(() => {
+        if (step === STEP_DEVICE && canContinueFromDevice) {
+            queueAutoAdvance(STEP_DEVICE, () => canContinueFromDeviceRef.current);
+        }
+        if (step === STEP_ISSUES && canContinueFromIssues) {
+            queueAutoAdvance(STEP_ISSUES, () => canContinueFromIssuesRef.current);
+        }
+        if (step === STEP_QUALITY && canContinueFromQuality) {
+            queueAutoAdvance(STEP_QUALITY, () => canContinueFromQualityRef.current);
+        }
+        if (step === STEP_ADDRESS && canContinueFromAddress) {
+            queueAutoAdvance(STEP_ADDRESS, () => canContinueFromAddressRef.current);
+        }
+        if (step === STEP_DATE && canContinueFromDate) {
+            queueAutoAdvance(STEP_DATE, () => canContinueFromDateRef.current);
+        }
+    }, [
+        step,
+        canContinueFromDevice,
+        canContinueFromIssues,
+        canContinueFromQuality,
+        canContinueFromAddress,
+        canContinueFromDate,
+    ]);
 
     return (
         <>
             <Navbar />
-            <div className="quiz">
+            <div
+                className="quiz"
+                onClickCapture={(event) => {
+                    if (!(event.target instanceof Element)) return;
+                    if (!event.target.closest('button')) return;
+                    setClickCount((count) => count + 1);
+                }}
+            >
                 <div className="guru-container guru-container--narrow">
                     {/* ─── Progress Bar ─────────── */}
                     <div className="quiz__progress">
-                        {STEPS.map((name, i) => (
-                            <div key={name} className={`quiz__step ${i <= step ? 'quiz__step--active' : ''} ${i < step ? 'quiz__step--done' : ''}`}>
-                                <div className="quiz__step-indicator">
-                                    {i < step ? '✓' : i + 1}
-                                </div>
-                                <span className="quiz__step-label">{name}</span>
-                            </div>
-                        ))}
+                        <div className="quiz__progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressPercent)}>
+                            <div className="quiz__progress-fill" style={{ width: `${progressPercent}%` }} />
+                        </div>
+                        <span className="quiz__progress-label">{quizSteps[Math.min(step, maxStepIndex)]}</span>
+                        <span className="quiz__progress-label">Clicks this booking: {clickCount}</span>
                     </div>
 
-                    {/* ─── Step 0: What needs fixing? (Device + Issues + Quality) ─────── */}
-                    {step === 0 && (
-                        <div ref={step0Ref} className="quiz__panel animate-fade-in-up">
-                            <h2 className="quiz__title">What needs fixing?</h2>
-                            <p className="quiz__subtitle">Select your device and what's broken.</p>
+                    {!confirmed && (
+                        <div key={`step-${step}`} className="quiz__step-stage">
+                            {step === STEP_CONTACT && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">What's your name and email?</h2>
+                                    <p className="quiz__subtitle">So we can send you booking confirmations and updates.</p>
+                                    <div className="guru-input-group" style={{ marginBottom: 12 }}>
+                                        <label className="sched-label">Full Name</label>
+                                        <input
+                                            className="guru-input"
+                                            type="text"
+                                            placeholder="Jane Doe"
+                                            value={contact.name}
+                                            onChange={(e) => handleContactChange('name', e.target.value)}
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="guru-input-group">
+                                        <label className="sched-label">Email Address</label>
+                                        <input
+                                            className="guru-input"
+                                            type="email"
+                                            placeholder="jane@example.com"
+                                            value={contact.email}
+                                            onChange={(e) => handleContactChange('email', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="quiz__actions">
+                                        <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
+                                        <button
+                                            className="guru-btn guru-btn--primary guru-btn--lg"
+                                            disabled={!canContinueFromContact}
+                                            onClick={() => setStep(STEP_PHONE)}
+                                        >
+                                            Continue →
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-                            <DeviceStep
-                                activeGen={activeGen}
-                                onGenChange={(gen) => {
-                                    setSuppressStep0AutoAdvance(false);
-                                    setActiveGen(gen);
-                                }}
-                                selectedDevice={selectedDevice}
-                                onSelectDevice={(device) => {
-                                    setSuppressStep0AutoAdvance(false);
-                                    setSelectedDevice(device);
-                                }}
-                                sortedGens={sortedGens}
-                                savedDevices={savedDevices}
-                                onSelectSavedDevice={(saved) => {
-                                    setSuppressStep0AutoAdvance(false);
-                                    const matchingDevice = DEVICE_GENERATIONS.reduce((found, gen) => {
-                                        if (found) return found;
-                                        return getDevicesByGeneration(gen).find(d => d.id === saved.device_id);
-                                    }, null);
-                                    if (matchingDevice) {
-                                        setSelectedDevice(matchingDevice);
-                                        setActiveGen(matchingDevice.generation);
-                                        if (saved.device_color) setBackGlassColor(saved.device_color);
-                                    }
-                                }}
-                            />
+                            {step === STEP_PHONE && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">What's your phone number?</h2>
+                                    <p className="quiz__subtitle">So your technician can reach you on repair day.</p>
+                                    <div className="guru-input-group" style={{ marginBottom: 12 }}>
+                                        <label className="sched-label">Primary Phone <span style={{ color: 'var(--guru-gray-400)', fontWeight: 400 }}>(optional)</span></label>
+                                        <input
+                                            className="guru-input"
+                                            type="tel"
+                                            placeholder="(555) 123-4567"
+                                            value={contact.phone}
+                                            onChange={(e) => handleContactChange('phone', e.target.value)}
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="guru-input-group">
+                                        <label className="sched-label">Backup Phone <span style={{ color: 'var(--guru-gray-400)', fontWeight: 400 }}>(if we can't reach your primary)</span></label>
+                                        <input
+                                            className="guru-input"
+                                            type="tel"
+                                            placeholder="(555) 987-6543"
+                                            value={contact.backupPhone}
+                                            onChange={(e) => handleContactChange('backupPhone', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="quiz__actions">
+                                        <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                        <button
+                                            className="guru-btn guru-btn--primary guru-btn--lg"
+                                            onClick={() => setStep(STEP_DEVICE)}
+                                        >
+                                            Continue →
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-                            {selectedDevice && (
-                                <IssuesStep
-                                    selectedDevice={selectedDevice}
-                                    selectedIssues={selectedIssues}
-                                    issueTiers={issueTiers}
-                                    availableRepairTypes={availableRepairTypes}
-                                    backGlassColor={backGlassColor}
-                                    isSoftwareOnly={isSoftwareOnly}
-                                    onToggleIssue={toggleIssue}
-                                    onSetTier={setTierForIssue}
-                                    onSetBackGlassColor={(color) => {
-                                        setSuppressStep0AutoAdvance(false);
-                                        setBackGlassColor(color);
-                                    }}
-                                    isPartInStock={isPartInStock}
+                            {step === STEP_DEVICE && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">Choose your iPhone</h2>
+                                    <p className="quiz__subtitle">Pick the device you need repaired.</p>
+
+                                    <DeviceStep
+                                        activeGen={activeGen}
+                                        onGenChange={setActiveGen}
+                                        selectedDevice={selectedDevice}
+                                        onSelectDevice={setSelectedDevice}
+                                        sortedGens={sortedGens}
+                                        savedDevices={savedDevices}
+                                        onSelectSavedDevice={(saved) => {
+                                            const matchingDevice = DEVICE_GENERATIONS.reduce((found, gen) => {
+                                                if (found) return found;
+                                                return getDevicesByGeneration(gen).find(d => d.id === saved.device_id);
+                                            }, null);
+                                            if (matchingDevice) {
+                                                setSelectedDevice(matchingDevice);
+                                                setActiveGen(matchingDevice.generation);
+                                                if (saved.device_color) setBackGlassColor(saved.device_color);
+                                            }
+                                        }}
+                                        onAutoAdvance={() => queueAutoAdvance(STEP_DEVICE, () => canContinueFromDeviceRef.current)}
+                                    />
+
+                                    <div className="quiz__actions">
+                                        <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === STEP_ISSUES && selectedDevice && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">What needs fixing?</h2>
+                                    <p className="quiz__subtitle">Select the repair types for your device.</p>
+                                    <IssuesStep
+                                        selectedDevice={selectedDevice}
+                                        selectedIssues={selectedIssues}
+                                        issueTiers={issueTiers}
+                                        availableRepairTypes={availableRepairTypes}
+                                        backGlassColor={backGlassColor}
+                                        isSoftwareOnly={isSoftwareOnly}
+                                        onToggleIssue={toggleIssue}
+                                        onSetTier={setTierForIssue}
+                                        onSetBackGlassColor={setBackGlassColor}
+                                        isPartInStock={isPartInStock}
+                                        onAutoAdvance={() => queueAutoAdvance(STEP_ISSUES, () => canContinueFromIssuesRef.current)}
+                                        showIssueSelection={true}
+                                        showColorSelection={false}
+                                        showTierSelection={false}
+                                    />
+                                    <div className="quiz__actions">
+                                        <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === STEP_QUALITY && selectedDevice && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">Choose parts quality</h2>
+                                    <p className="quiz__subtitle">Pick quality tiers for each selected repair.</p>
+                                    <IssuesStep
+                                        selectedDevice={selectedDevice}
+                                        selectedIssues={selectedIssues}
+                                        issueTiers={issueTiers}
+                                        availableRepairTypes={availableRepairTypes}
+                                        backGlassColor={backGlassColor}
+                                        isSoftwareOnly={isSoftwareOnly}
+                                        onToggleIssue={toggleIssue}
+                                        onSetTier={setTierForIssue}
+                                        onSetBackGlassColor={setBackGlassColor}
+                                        isPartInStock={isPartInStock}
+                                        onAutoAdvance={() => queueAutoAdvance(STEP_QUALITY, () => canContinueFromQualityRef.current)}
+                                        showIssueSelection={false}
+                                        showColorSelection={true}
+                                        showTierSelection={true}
+                                    />
+                                    <div className="quiz__actions">
+                                        <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === STEP_ADDRESS && (
+                                <ScheduleStep
+                                    scheduleDate={scheduleDate}
+                                    scheduleAddress={scheduleAddress}
+                                    serviceAreaError={serviceAreaError}
+                                    minDateStr={minDateStr}
+                                    maxDateStr={previewWindowEndStr}
+                                    previewStartStr={previewWindowStartStr}
+                                    availableDates={filteredAvailableDates}
+                                    onDateChange={handleDateChange}
+                                    onAddressChange={handleAddressChange}
+                                    onServiceAreaError={setServiceAreaError}
+                                    onBack={goBack}
+                                    savedAddresses={savedAddresses}
+                                    canGoPrevWindow={scheduleWindowOffsetWeeks > 0}
+                                    canGoNextWindow={scheduleWindowOffsetWeeks < maxWindowOffsetWeeks}
+                                    onPrevWindow={handleScheduleWindowPrev}
+                                    onNextWindow={handleScheduleWindowNext}
+                                    showAddressSection={true}
+                                    showDateSection={false}
+                                    onAutoAdvance={() => queueAutoAdvance(STEP_ADDRESS, () => canContinueFromAddressRef.current)}
+                                    title="Where should we meet you?"
+                                    subtitle="Enter a service address in our current Texas coverage area."
+                                    showNextButton={false}
                                 />
                             )}
 
-                            <div className="quiz__actions">
-                                <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
-                                <button
-                                    className="guru-btn guru-btn--primary"
-                                    disabled={
-                                        selectedIssues.length === 0 ||
-                                        isSoftwareOnly ||
-                                        selectedIssues.some(id => !issueTiers[id]) ||
-                                        (selectedIssues.includes('back-glass') && !backGlassColor)
-                                    }
-                                    onClick={goNext}
-                                >
-                                    Continue →
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ─── Step 1: When & where? (Schedule) ─────── */}
-                    {step === 1 && !confirmed && (
-                        <ScheduleStep
-                            scheduleDate={scheduleDate}
-                            scheduleAddress={scheduleAddress}
-                            serviceAreaError={serviceAreaError}
-                            minDateStr={minDateStr}
-                            maxDateStr={previewWindowEndStr}
-                            previewStartStr={previewWindowStartStr}
-                            availableDates={filteredAvailableDates}
-                            onDateChange={handleDateChange}
-                            onAddressChange={handleAddressChange}
-                            onServiceAreaError={setServiceAreaError}
-                            onBack={goBack}
-                            onNext={goNext}
-                            savedAddresses={savedAddresses}
-                            suppressAutoAdvance={suppressStep1AutoAdvance}
-                            canGoPrevWindow={scheduleWindowOffsetWeeks > 0}
-                            canGoNextWindow={scheduleWindowOffsetWeeks < maxWindowOffsetWeeks}
-                            onPrevWindow={handleScheduleWindowPrev}
-                            onNextWindow={handleScheduleWindowNext}
-                            dateSectionRef={step1DateRef}
-                        />
-                    )}
-
-                    {/* ─── Step 2: Confirm & book (Quote Review + Contact + Auth) ─────── */}
-                    {step === 2 && !confirmed && (
-                        <div ref={step2ReviewRef} className="quiz__panel animate-fade-in-up">
-                            {isLoggedIn ? (
-                                <ReviewStep
-                                    isLoggedIn={true}
-                                    selectedDevice={selectedDevice}
-                                    selectedIssues={selectedIssues}
-                                    issueTiers={issueTiers}
-                                    backGlassColor={backGlassColor}
+                            {step === STEP_DATE && (
+                                <ScheduleStep
                                     scheduleDate={scheduleDate}
-                                    scheduleTime={scheduleTime}
                                     scheduleAddress={scheduleAddress}
-                                    repairNotes={repairNotes}
-                                    contact={contact}
-                                    userEmail={user.email}
-                                    authError={authError}
-                                    isVerifying={isVerifying}
-                                    getIssuePrice={getIssuePrice}
-                                    calculateTotal={calculateTotal}
-                                    referralDiscountPreview={referralDiscountPreview}
-                                    referralCode={referralCode}
-                                    ownReferralCode={ownReferralCode}
-                                    referralCodeError={referralCodeError}
-                                    onRepairNotesChange={setRepairNotes}
-                                    onReferralCodeChange={handleReferralCodeChange}
-                                    onContactChange={handleContactChange}
+                                    serviceAreaError={serviceAreaError}
+                                    minDateStr={minDateStr}
+                                    maxDateStr={previewWindowEndStr}
+                                    previewStartStr={previewWindowStartStr}
+                                    availableDates={filteredAvailableDates}
+                                    onDateChange={handleDateChange}
+                                    onAddressChange={handleAddressChange}
+                                    onServiceAreaError={setServiceAreaError}
                                     onBack={goBack}
-                                    onBook={handleBookLoggedIn}
+                                    savedAddresses={savedAddresses}
+                                    canGoPrevWindow={scheduleWindowOffsetWeeks > 0}
+                                    canGoNextWindow={scheduleWindowOffsetWeeks < maxWindowOffsetWeeks}
+                                    onPrevWindow={handleScheduleWindowPrev}
+                                    onNextWindow={handleScheduleWindowNext}
+                                    showAddressSection={false}
+                                    showDateSection={true}
+                                    onAutoAdvance={() => queueAutoAdvance(STEP_DATE, () => canContinueFromDateRef.current)}
+                                    title="Pick your preferred date"
+                                    subtitle="Choose an available day and we will confirm your exact arrival window."
+                                    showNextButton={false}
+                                    dateSectionRef={null}
                                 />
-                            ) : !otpSent ? (
-                                <ReviewStep
-                                    isLoggedIn={false}
-                                    selectedDevice={selectedDevice}
-                                    selectedIssues={selectedIssues}
-                                    issueTiers={issueTiers}
-                                    backGlassColor={backGlassColor}
-                                    scheduleDate={scheduleDate}
-                                    scheduleTime={scheduleTime}
-                                    scheduleAddress={scheduleAddress}
-                                    repairNotes={repairNotes}
-                                    contact={contact}
-                                    authError={authError}
-                                    isVerifying={isVerifying}
-                                    getIssuePrice={getIssuePrice}
-                                    calculateTotal={calculateTotal}
-                                    referralDiscountPreview={referralDiscountPreview}
-                                    referralCode={referralCode}
-                                    ownReferralCode={ownReferralCode}
-                                    referralCodeError={referralCodeError}
-                                    onRepairNotesChange={setRepairNotes}
-                                    onReferralCodeChange={handleReferralCodeChange}
-                                    onContactChange={handleContactChange}
-                                    onBack={goBack}
-                                    onSendOtp={handleSendOtp}
-                                />
-                            ) : (
-                                <AuthStep
-                                    contactEmail={contact.email}
-                                    otpCode={otpCode}
-                                    authError={authError}
-                                    isVerifying={isVerifying}
-                                    otpRefs={otpRefs}
-                                    onOtpChange={handleOtpChange}
-                                    onOtpKeyDown={handleOtpKeyDown}
-                                    onOtpPaste={handleOtpPaste}
-                                    onEditInfo={() => { setOtpSent(false); setOtpCode(['', '', '', '', '', '']); }}
-                                    onVerify={handleVerifyAndBook}
-                                />
+                            )}
+
+                            {step === STEP_REVIEW && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <ReviewStep
+                                        isLoggedIn={isLoggedIn}
+                                        selectedDevice={selectedDevice}
+                                        selectedIssues={selectedIssues}
+                                        issueTiers={issueTiers}
+                                        backGlassColor={backGlassColor}
+                                        scheduleDate={scheduleDate}
+                                        scheduleTime={scheduleTime}
+                                        scheduleAddress={scheduleAddress}
+                                        repairNotes={repairNotes}
+                                        contact={contact}
+                                        userEmail={user?.email}
+                                        authError={authError}
+                                        isVerifying={isVerifying}
+                                        getIssuePrice={getIssuePrice}
+                                        calculateTotal={calculateTotal}
+                                        referralDiscountPreview={referralDiscountPreview}
+                                        referralCode={referralCode}
+                                        ownReferralCode={ownReferralCode}
+                                        referralCodeError={referralCodeError}
+                                        onRepairNotesChange={setRepairNotes}
+                                        onReferralCodeChange={handleReferralCodeChange}
+                                        onBack={goBack}
+                                        onBook={handleBookLoggedIn}
+                                        onSendOtp={handleSendOtp}
+                                    />
+                                </div>
+                            )}
+
+                            {step === STEP_VERIFY && !isLoggedIn && otpSent && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <AuthStep
+                                        contactEmail={contact.email}
+                                        otpCode={otpCode}
+                                        authError={authError}
+                                        isVerifying={isVerifying}
+                                        otpRefs={otpRefs}
+                                        onOtpChange={handleOtpChange}
+                                        onOtpKeyDown={handleOtpKeyDown}
+                                        onOtpPaste={handleOtpPaste}
+                                        onEditInfo={() => {
+                                            setOtpSent(false);
+                                            setOtpCode(['', '', '', '', '', '']);
+                                            setStep(STEP_REVIEW);
+                                        }}
+                                        onVerify={handleVerifyAndBook}
+                                    />
+                                </div>
                             )}
                         </div>
                     )}
@@ -1041,7 +1148,7 @@ export default function RepairQuiz() {
                     )}
 
                     {/* ─── Live Pricing Footer ─────── */}
-                    {selectedIssues.length > 0 && !confirmed && step < 2 && (
+                    {selectedIssues.length > 0 && !confirmed && step >= STEP_DEVICE && step <= STEP_DATE && (
                         <div className="quiz__price-footer">
                             <div className="quiz__price-footer-inner">
                                 <div className="quiz__price-footer-label">
@@ -1049,7 +1156,7 @@ export default function RepairQuiz() {
                                     <span className="quiz__price-footer-items">
                                         {selectedIssues.length} repair{selectedIssues.length > 1 ? 's' : ''} + labor + service fee
                                     </span>
-                                    <span className="quiz__price-footer-hype">✨ {autoAdvanceHint}</span>
+                                    <span className="quiz__price-footer-hype">One step at a time - review before booking.</span>
                                 </div>
                                 <div key={pricePulseKey} className="quiz__price-footer-amount quiz__price-footer-amount--pulse">${calculateTotal()}</div>
                             </div>

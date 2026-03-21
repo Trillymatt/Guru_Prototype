@@ -415,8 +415,32 @@ body {
     border-color: var(--admin-primary);
 }
 
+.admin-filters__dropdown {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    color: var(--admin-text);
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--admin-transition);
+    min-width: 180px;
+}
+
+.admin-filters__dropdown:focus {
+    border-color: var(--admin-primary);
+}
+
+.admin-filters__dropdown option {
+    background: var(--admin-surface);
+    color: var(--admin-text);
+}
+
 .admin-filters__search {
-    width: 280px;
+    flex: 1;
+    max-width: 320px;
     padding: 8px 14px;
     font-size: 13px;
     background: var(--admin-surface);
@@ -510,6 +534,26 @@ body {
     font-size: 13px;
 }
 
+.admin-table__repair-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-table__repair-info > span:first-child {
+    font-weight: 500;
+}
+
+.admin-table__price {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-table__date {
+    color: var(--admin-text-secondary);
+    white-space: nowrap;
+}
+
 .admin-table__actions {
     display: flex;
     gap: 4px;
@@ -518,15 +562,16 @@ body {
 /* ─── Status Select (inline) ─────────────────────────────────────────────── */
 
 .admin-status-select {
-    padding: 4px 8px;
+    padding: 5px 10px;
     font-size: 12px;
     font-weight: 600;
     background: var(--admin-bg);
     color: var(--admin-text);
     border: 1px solid;
-    border-radius: 4px;
+    border-radius: 20px;
     cursor: pointer;
     outline: none;
+    transition: all var(--admin-transition);
 }
 
 .admin-status-select option {
