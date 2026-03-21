@@ -21,6 +21,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow-x: clip;
 }
 
 .app-content {
@@ -45,6 +46,13 @@ body {
     .guru-container {
         padding-left: var(--space-8);
         padding-right: var(--space-8);
+    }
+}
+
+@media (max-width: 480px) {
+    .guru-container {
+        padding-left: var(--space-4);
+        padding-right: var(--space-4);
     }
 }
 
@@ -371,6 +379,7 @@ body {
 
 .hero--single-screen {
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     padding-top: 96px;
     padding-bottom: 0;
@@ -669,8 +678,23 @@ body {
 }
 
 @media (max-width: 480px) {
+    .navbar__logo-tagline {
+        display: none;
+    }
+
+    .navbar__logo-name {
+        font-size: var(--font-size-lg);
+    }
+
+    .navbar__logo-icon {
+        width: 32px;
+        height: 32px;
+        font-size: var(--font-size-base);
+    }
+
     .hero--single-screen {
         padding-top: 72px;
+        min-height: 100dvh;
     }
 
     .hero__title {
@@ -2637,6 +2661,7 @@ body {
 /* ─── Ads Landing Page ─────────────────────────────────────── */
 .ads-landing {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2837,5 +2862,15 @@ body {
     .ads-landing__cta {
         width: 100%;
         min-width: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .not-found-page h1 {
+        font-size: 4rem;
+    }
+
+    .not-found-page p {
+        font-size: var(--font-size-base);
     }
 }

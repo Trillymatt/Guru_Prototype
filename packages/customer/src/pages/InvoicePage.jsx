@@ -195,7 +195,7 @@ export default function InvoicePage() {
                                 <thead>
                                     <tr>
                                         <th>Description</th>
-                                        <th style={{ width: 100, textAlign: 'right' }}>Amount</th>
+                                        <th style={{ textAlign: 'right' }}>Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody>

@@ -317,6 +317,29 @@
         flex-direction: column;
         align-items: stretch;
     }
+
+    .invoice-items {
+        table-layout: fixed;
+    }
+
+    .invoice-items th:first-child,
+    .invoice-items td:first-child {
+        padding-right: var(--space-2);
+    }
+
+    .invoice-item__name {
+        display: inline-block;
+        overflow-wrap: anywhere;
+    }
+
+    .invoice-items th:last-child,
+    .invoice-items td:last-child {
+        width: 84px;
+    }
+
+    .invoice-payment-note {
+        align-items: flex-start;
+    }
 }
 
 /* ─── Print Styles ─────────────────────────────────────────────── */
