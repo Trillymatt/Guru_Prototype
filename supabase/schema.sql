@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS repairs (
   device_color TEXT,
   notes TEXT,
   labor_fee DECIMAL(10, 2) DEFAULT 10,
-  payment_method TEXT CHECK (payment_method IN ('cash', 'stripe')),
+  payment_method TEXT CHECK (payment_method IN ('cash', 'zelle', 'cashapp', 'venmo', 'split')),
   payment_status TEXT DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'pending', 'completed')),
   tip_amount DECIMAL(10, 2) DEFAULT 0,
   stripe_payment_intent_id TEXT,

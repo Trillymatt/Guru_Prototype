@@ -715,12 +715,14 @@ function invoiceReady(data: any): { subject: string; html: string } {
   const orderId = (data.repair_id || "").slice(-8).toUpperCase();
   const subject = `Your Invoice — Guru Mobile Repair #${orderId}`;
 
-  const paymentMethodLabel =
-    data.payment_method === "square"
-      ? "Square (Card / Tap to Pay)"
-      : data.payment_method === "cash"
-      ? "Cash"
-      : data.payment_method || "Paid";
+  const paymentMethodLabels: Record<string, string> = {
+    cash: "Cash",
+    zelle: "Zelle",
+    cashapp: "CashApp",
+    venmo: "Venmo",
+    split: "Split Payment",
+  };
+  const paymentMethodLabel = paymentMethodLabels[data.payment_method] || data.payment_method || "Paid";
 
   const paidDate = data.paid_at
     ? new Date(data.paid_at).toLocaleDateString("en-US", {
