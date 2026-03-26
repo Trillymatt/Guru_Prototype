@@ -5,9 +5,9 @@
 -- Labor fee — flat $10 charge per repair
 ALTER TABLE repairs ADD COLUMN IF NOT EXISTS labor_fee DECIMAL(10, 2) DEFAULT 10;
 
--- Payment method — cash or stripe
+-- Payment method — cash, zelle, cashapp, venmo, or split
 ALTER TABLE repairs ADD COLUMN IF NOT EXISTS payment_method TEXT
-  CHECK (payment_method IN ('cash', 'stripe'));
+  CHECK (payment_method IN ('cash', 'zelle', 'cashapp', 'venmo', 'split'));
 
 -- Payment status tracking
 ALTER TABLE repairs ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'unpaid'

@@ -3,14 +3,13 @@ import { useReducer, useCallback } from 'react';
 const initialState = {
     showModal: false,
     step: 'tip',           // 'tip' | 'payment' | 'signature'
-    method: null,           // null | 'cash' | 'square-qr' | 'square-tap'
+    method: null,           // null | 'cash' | 'zelle' | 'cashapp' | 'venmo'
     tipAmount: 0,
     processing: false,
     error: '',
-    squarePhase: 'idle',   // 'idle' | 'loading' | 'ready' | 'waiting'
-    squarePaymentUrl: null,
     cashReceived: '',
     splitCashAmount: 0,
+    peerConfirmed: false,   // tech confirms peer-to-peer payment received
 };
 
 function paymentReducer(state, action) {
@@ -39,11 +38,8 @@ function paymentReducer(state, action) {
         case 'PAYMENT_ERROR':
             return { ...state, error: action.payload, processing: false };
 
-        case 'SET_SQUARE_PHASE':
-            return { ...state, squarePhase: action.payload };
-
-        case 'SET_SQUARE_URL':
-            return { ...state, squarePaymentUrl: action.payload };
+        case 'SET_PEER_CONFIRMED':
+            return { ...state, peerConfirmed: action.payload };
 
         case 'SET_CASH_RECEIVED': {
             const val = action.payload.replace(/[^0-9.]/g, '');
@@ -64,9 +60,8 @@ function paymentReducer(state, action) {
             return {
                 ...state,
                 method: null,
-                squarePaymentUrl: null,
-                squarePhase: 'idle',
                 cashReceived: '',
+                peerConfirmed: false,
             };
 
         default:
@@ -85,8 +80,7 @@ export default function usePaymentFlow() {
     const startProcessing = useCallback(() => dispatch({ type: 'START_PROCESSING' }), []);
     const stopProcessing = useCallback(() => dispatch({ type: 'STOP_PROCESSING' }), []);
     const setError = useCallback((msg) => dispatch({ type: 'PAYMENT_ERROR', payload: msg }), []);
-    const setSquarePhase = useCallback((phase) => dispatch({ type: 'SET_SQUARE_PHASE', payload: phase }), []);
-    const setSquareUrl = useCallback((url) => dispatch({ type: 'SET_SQUARE_URL', payload: url }), []);
+    const setPeerConfirmed = useCallback((val) => dispatch({ type: 'SET_PEER_CONFIRMED', payload: val }), []);
     const setCashReceived = useCallback((val) => dispatch({ type: 'SET_CASH_RECEIVED', payload: val }), []);
     const setSplitCash = useCallback((amount) => dispatch({ type: 'SET_SPLIT_CASH', payload: amount }), []);
     const backToTip = useCallback(() => dispatch({ type: 'BACK_TO_TIP' }), []);
@@ -102,8 +96,7 @@ export default function usePaymentFlow() {
         startProcessing,
         stopProcessing,
         setError,
-        setSquarePhase,
-        setSquareUrl,
+        setPeerConfirmed,
         setCashReceived,
         setSplitCash,
         backToTip,

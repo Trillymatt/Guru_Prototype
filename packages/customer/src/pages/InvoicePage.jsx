@@ -15,9 +15,10 @@ import '../styles/invoice.css';
 
 const PAYMENT_METHOD_LABELS = {
     cash: 'Cash',
-    square: 'Square (Card / Tap to Pay)',
-    split: 'Cash + Card (Split Payment)',
-    stripe: 'Credit / Debit Card',
+    zelle: 'Zelle',
+    cashapp: 'CashApp',
+    venmo: 'Venmo',
+    split: 'Split Payment',
 };
 
 function formatCurrency(amount) {
@@ -246,7 +247,7 @@ export default function InvoicePage() {
                             {/* Payment method */}
                             <div className="invoice-payment-note">
                                 <span className="invoice-payment-note__icon">
-                                    {repair.payment_method === 'cash' ? '💵' : '💳'}
+                                    {repair.payment_method === 'cash' ? '💵' : repair.payment_method === 'zelle' ? '🏦' : repair.payment_method === 'cashapp' ? '💲' : repair.payment_method === 'venmo' ? '💜' : '💳'}
                                 </span>
                                 <span>
                                     Payment received via{' '}

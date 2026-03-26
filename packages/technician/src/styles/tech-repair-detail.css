@@ -874,6 +874,36 @@
   transform: translateY(-1px);
 }
 
+.payment-actions__btn--zelle {
+  background: linear-gradient(135deg, #6D1ED4 0%, #5A17B3 100%);
+  color: #fff;
+}
+
+.payment-actions__btn--zelle:hover {
+  box-shadow: 0 4px 16px rgba(109, 30, 212, 0.35);
+  transform: translateY(-1px);
+}
+
+.payment-actions__btn--cashapp {
+  background: linear-gradient(135deg, #00D632 0%, #00B82B 100%);
+  color: #fff;
+}
+
+.payment-actions__btn--cashapp:hover {
+  box-shadow: 0 4px 16px rgba(0, 214, 50, 0.35);
+  transform: translateY(-1px);
+}
+
+.payment-actions__btn--venmo {
+  background: linear-gradient(135deg, #3D95CE 0%, #2678B1 100%);
+  color: #fff;
+}
+
+.payment-actions__btn--venmo:hover {
+  box-shadow: 0 4px 16px rgba(61, 149, 206, 0.35);
+  transform: translateY(-1px);
+}
+
 .payment-actions__icon {
   font-size: 1.25rem;
   line-height: 1;
