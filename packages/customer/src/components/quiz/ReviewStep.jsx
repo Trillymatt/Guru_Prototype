@@ -142,6 +142,15 @@ function NotesSection({ repairNotes, onRepairNotesChange }) {
     );
 }
 
+function PaymentNotice() {
+    return (
+        <div className="quiz__warranty-notice" style={{ marginBottom: 16 }}>
+            <strong>Payment Notice:</strong> We are currently accepting <strong>cash, Zelle, Cash App, and Venmo only</strong>.
+            Card payments are coming soon as we prepare for launch.
+        </div>
+    );
+}
+
 export default function ReviewStep({
     isLoggedIn,
     selectedDevice,
@@ -204,6 +213,7 @@ export default function ReviewStep({
                     {authError && (
                         <p className="login-card__error">{authError}</p>
                     )}
+                    <PaymentNotice />
                     <div className="quiz__warranty-notice" style={{ marginBottom: 16 }}>
                         <strong>Note:</strong> Repairs do not include a warranty on parts or service.
                         Prices are estimates. Final pricing confirmed after technician diagnosis.
@@ -262,6 +272,7 @@ export default function ReviewStep({
                     {authError && (
                         <p className="login-card__error">{authError}</p>
                     )}
+                    <PaymentNotice />
                     <div className="quiz__warranty-notice" style={{ marginBottom: 16 }}>
                         <strong>Note:</strong> Repairs do not include a warranty on parts or service.
                         Prices are estimates. Final pricing confirmed after technician diagnosis.

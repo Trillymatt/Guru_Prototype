@@ -1,11 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function SiteFooter() {
     const year = new Date().getFullYear();
+    const footerRef = useRef(null);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const el = footerRef.current;
+        if (!el) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) setVisible(true);
+            },
+            { threshold: 0.05 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
 
     return (
-        <footer className="footer">
+        <footer ref={footerRef} className={`footer ${visible ? 'footer--visible' : ''}`}>
             <div className="guru-container">
                 <div className="footer__grid">
                     <div>

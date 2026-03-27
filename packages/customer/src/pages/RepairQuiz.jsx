@@ -1141,6 +1141,10 @@ export default function RepairQuiz() {
                                     ? 'All parts are in stock! We\'ll confirm your appointment shortly. You\'ll receive updates via email or text.'
                                     : 'We\'ll confirm your appointment and begin ordering the needed parts. You\'ll receive updates via email or text.'}
                             </p>
+                            <div className="quiz__warranty-notice confirm__payment-notice">
+                                <strong>Payment reminder:</strong> We currently accept cash, Zelle, Cash App, and Venmo only.
+                                Card payments are coming soon. This applies when payment is collected after your repair is completed.
+                            </div>
                             <Link to="/dashboard" className="guru-btn guru-btn--primary guru-btn--lg" style={{ marginTop: 16 }}>
                                 View My Repairs
                             </Link>

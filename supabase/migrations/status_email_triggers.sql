@@ -1,5 +1,5 @@
 -- ============================================================================
--- GURU MOBILE REPAIR SOLUTIONS — Full Repair Lifecycle Email Notifications
+-- SEER MOBILE REPAIR SOLUTIONS — Full Repair Lifecycle Email Notifications
 -- Extends email_notifications.sql with emails for every status transition.
 --
 -- Run this AFTER email_notifications.sql.

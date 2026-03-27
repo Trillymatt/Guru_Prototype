@@ -577,6 +577,12 @@
     color: var(--guru-gray-700);
 }
 
+.confirm__payment-notice {
+    margin-top: var(--space-4);
+    margin-bottom: 0;
+    text-align: left;
+}
+
 /* Actions */
 .quiz__actions {
     display: flex;

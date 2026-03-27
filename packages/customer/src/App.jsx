@@ -5,17 +5,20 @@ import { usePageTracking } from './hooks/usePageTracking';
 import ProtectedRoute from './components/ProtectedRoute';
 import VanLoader from './components/VanLoader';
 
-const LandingPage = lazy(() => import('./pages/LandingPage'));
+// Eagerly load lightweight marketing pages for instant navigation
+import LandingPage from './pages/LandingPage';
+import HowItWorksPage from './pages/HowItWorksPage';
+import AboutPage from './pages/AboutPage';
+import FAQPage from './pages/FAQPage';
+import LegalPage from './pages/LegalPage';
+
+// Lazy load heavier pages (forms, dashboards, auth)
 const AdsLandingPage = lazy(() => import('./pages/AdsLandingPage'));
-const HowItWorksPage = lazy(() => import('./pages/HowItWorksPage'));
-const AboutPage = lazy(() => import('./pages/AboutPage'));
 const RepairQuiz = lazy(() => import('./pages/RepairQuiz'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const RepairDetailPage = lazy(() => import('./pages/RepairDetailPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const FAQPage = lazy(() => import('./pages/FAQPage'));
-const LegalPage = lazy(() => import('./pages/LegalPage'));
 const InvoicePage = lazy(() => import('./pages/InvoicePage'));
 
 function PageLoader() {
