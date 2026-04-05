@@ -592,6 +592,31 @@
     border-top: 1px solid var(--guru-gray-100);
 }
 
+@media (max-width: 480px) {
+    .quiz__panel {
+        padding: var(--space-6);
+    }
+
+    .quiz__title {
+        font-size: var(--font-size-2xl);
+    }
+
+    .quiz__actions {
+        gap: var(--space-3);
+        padding-top: var(--space-4);
+    }
+
+    /* Step down --lg buttons to base size in action rows */
+    .quiz__actions .guru-btn--lg {
+        padding: var(--space-3) var(--space-5);
+        font-size: var(--font-size-base);
+    }
+
+    .quiz__actions .guru-btn {
+        flex: 1;
+    }
+}
+
 .quiz__disclaimer {
     margin-top: var(--space-6);
     font-size: var(--font-size-xs);

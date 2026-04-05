@@ -129,6 +129,17 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
+const TIME_WINDOW_LABELS: Record<string, string> = {
+  morning: "Morning (8:00 AM – 12:00 PM)",
+  afternoon: "Afternoon (12:00 PM – 4:00 PM)",
+  evening: "Evening (4:00 PM – 7:00 PM)",
+};
+
+function formatTimeWindow(value: string | null | undefined): string {
+  if (!value || value === "to_be_scheduled") return "To be scheduled";
+  return TIME_WINDOW_LABELS[value] || value;
+}
+
 function formatCurrency(amount: number | string | null | undefined): string {
   if (amount === null || amount === undefined) return "TBD";
   return `$${Number(amount).toFixed(2)}`;
@@ -303,7 +314,7 @@ ${detailCard(
     detailRow("Device", data.device || "N/A") +
     detailRow("Service(s)", formatIssues(data.issues)) +
     detailRow("Scheduled", formatDate(data.schedule_date)) +
-    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
     detailRow("Location", data.address || "TBD")
 )}
 
@@ -351,7 +362,7 @@ ${detailCard(
     detailRow("Device", data.device || "N/A") +
     detailRow("Service(s)", formatIssues(data.issues)) +
     detailRow("Scheduled", formatDate(data.schedule_date)) +
-    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
     detailRow("Location", data.address || "TBD") +
     detailRow("Technician", data.technician_name || "To be assigned")
 )}
@@ -393,7 +404,7 @@ ${detailCard(
     detailRow("Device", data.device || "N/A") +
     detailRow("Service(s)", formatIssues(data.issues)) +
     detailRow("Scheduled", formatDate(data.schedule_date)) +
-    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
     detailRow("Location", data.address || "TBD")
 )}
 
@@ -434,7 +445,7 @@ ${detailCard(
     detailRow("Device", data.device || "N/A") +
     detailRow("Service(s)", formatIssues(data.issues)) +
     detailRow("Scheduled", formatDate(data.schedule_date)) +
-    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
     detailRow("Location", data.address || "TBD") +
     detailRow("Technician", data.technician_name || "To be assigned")
 )}
@@ -479,7 +490,7 @@ ${detailCard(
     detailRow("Device", data.device || "N/A") +
     detailRow("Service(s)", formatIssues(data.issues)) +
     detailRow("Date", formatDate(data.schedule_date)) +
-    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
     detailRow("Location", data.address || "TBD") +
     detailRow("Technician", data.technician_name || "To be assigned")
 )}
@@ -501,7 +512,7 @@ ${ctaButton("View Repair Details", `${APP_URL}/repair/${data.repair_id}`)}
     subject,
     html: wrapEmail(
       content,
-      `Your ${data.device} repair is scheduled for ${formatDate(data.schedule_date)} — ${data.schedule_time || "your time window"}.`
+      `Your ${data.device} repair is scheduled for ${formatDate(data.schedule_date)} — ${formatTimeWindow(data.schedule_time)}.`
     ),
   };
 }
@@ -557,7 +568,7 @@ ${detailCard(
   "Today's Appointment",
   detailRow("Device", data.device || "N/A") +
     detailRow("Service(s)", formatIssues(data.issues)) +
-    detailRow("Time Window", data.schedule_time || "TBD") +
+    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
     detailRow("Location", data.address || "TBD") +
     detailRow("Technician", data.technician_name || "To be assigned")
 )}
@@ -580,7 +591,7 @@ ${ctaButton("View Repair Details", `${APP_URL}/repair/${data.repair_id}`)}
     subject,
     html: wrapEmail(
       content,
-      `Reminder: Your ${data.device} repair is today at ${data.schedule_time || "your scheduled time"}. Be ready!`
+      `Reminder: Your ${data.device} repair is today at ${formatTimeWindow(data.schedule_time)}. Be ready!`
     ),
   };
 }
