@@ -406,11 +406,11 @@ body {
 }
 
 .hero--single-screen {
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
     padding-top: 96px;
-    padding-bottom: 0;
+    padding-bottom: var(--space-6);
 }
 
 .hero__bg {
@@ -462,6 +462,7 @@ body {
     align-items: center;
     flex: 1;
     align-content: center;
+    box-sizing: border-box;
 }
 
 .hero__text {
@@ -475,6 +476,8 @@ body {
     padding: var(--space-7);
     box-shadow: 0 22px 45px rgba(17, 24, 39, 0.08);
     backdrop-filter: blur(12px);
+    min-width: 0;
+    overflow-wrap: break-word;
 }
 
 .hero__badge {
@@ -587,7 +590,7 @@ body {
 .hero__van-mockup {
     position: relative;
     width: 100%;
-    max-width: 480px;
+    max-width: 420px;
     cursor: pointer;
     animation: float 6s ease-in-out infinite;
     transition: transform var(--transition-base);
@@ -660,6 +663,9 @@ body {
         grid-template-columns: 1fr;
         text-align: center;
         gap: var(--space-6);
+        max-width: 560px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .hero__subtitle {
@@ -694,7 +700,7 @@ body {
     }
 
     .hero__van-mockup {
-        max-width: 280px;
+        max-width: 260px;
     }
 
     .hero__footer-inner {
@@ -723,6 +729,7 @@ body {
     .hero--single-screen {
         padding-top: 72px;
         min-height: 100dvh;
+        padding-bottom: var(--space-4);
     }
 
     .hero__title {

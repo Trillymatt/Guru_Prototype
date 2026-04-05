@@ -115,6 +115,7 @@ export default function RepairQuiz() {
     const [scheduleWindowOffsetWeeks, setScheduleWindowOffsetWeeks] = useState(0);
     const [clickCount, setClickCount] = useState(0);
     const autoAdvanceTimeoutRef = useRef(null);
+    const justWentBackRef = useRef(false);
     const canContinueFromContactRef = useRef(false);
     const canContinueFromPhoneRef = useRef(false);
     const canContinueFromDeviceRef = useRef(false);
@@ -288,7 +289,13 @@ export default function RepairQuiz() {
     ), [isLoggedIn]);
     const maxStepIndex = quizSteps.length - 1;
 
-    const goBack = () => setStep((s) => Math.max(s - 1, 0));
+    const goBack = () => {
+        justWentBackRef.current = true;
+        if (autoAdvanceTimeoutRef.current) {
+            window.clearTimeout(autoAdvanceTimeoutRef.current);
+        }
+        setStep((s) => Math.max(s - 1, 0));
+    };
     const queueAutoAdvance = (expectedStep, canAdvance) => {
         if (autoAdvanceTimeoutRef.current) {
             window.clearTimeout(autoAdvanceTimeoutRef.current);
@@ -791,6 +798,10 @@ export default function RepairQuiz() {
     }, [canContinueFromContact, canContinueFromPhone, canContinueFromDevice, canContinueFromIssues, canContinueFromQuality, canContinueFromAddress, canContinueFromDate]);
 
     useEffect(() => {
+        if (justWentBackRef.current) {
+            justWentBackRef.current = false;
+            return;
+        }
         if (step === STEP_DEVICE && canContinueFromDevice) {
             queueAutoAdvance(STEP_DEVICE, () => canContinueFromDeviceRef.current);
         }
@@ -833,7 +844,6 @@ export default function RepairQuiz() {
                             <div className="quiz__progress-fill" style={{ width: `${progressPercent}%` }} />
                         </div>
                         <span className="quiz__progress-label">{quizSteps[Math.min(step, maxStepIndex)]}</span>
-                        <span className="quiz__progress-label">Clicks this booking: {clickCount}</span>
                     </div>
 
                     {!confirmed && (

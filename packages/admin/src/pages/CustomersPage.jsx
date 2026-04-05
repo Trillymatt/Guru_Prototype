@@ -97,7 +97,7 @@ export default function CustomersPage() {
                         className={`admin-filters__tab ${filterGuru === 'plus' ? 'admin-filters__tab--active' : ''}`}
                         onClick={() => setFilterGuru('plus')}
                     >
-                        Guru Plus ({customers.filter(c => c.guru_plus_subscriber).length})
+                        SEER Plus ({customers.filter(c => c.guru_plus_subscriber).length})
                     </button>
                     <button
                         className={`admin-filters__tab ${filterGuru === 'standard' ? 'admin-filters__tab--active' : ''}`}
@@ -129,7 +129,7 @@ export default function CustomersPage() {
                                 <th>Email</th>
                                 <th>Jobs</th>
                                 <th>Active</th>
-                                <th>Guru Plus</th>
+                                <th>SEER Plus</th>
                                 <th>Joined</th>
                                 <th>Actions</th>
                             </tr>

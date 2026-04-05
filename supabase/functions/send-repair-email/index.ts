@@ -37,10 +37,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const FROM_EMAIL =
   Deno.env.get("FROM_EMAIL") ||
-  "SEER Mobile Repair <noreply@seermobilerepair.com>";
-const APP_URL = Deno.env.get("APP_URL") || "https://seermobilerepair.com";
+  "SEER Mobile Repair <noreply@seermrt.com>";
+const APP_URL = Deno.env.get("APP_URL") || "https://seermrt.com";
 const SURVEY_URL =
-  Deno.env.get("SURVEY_URL") || "https://seermobilerepair.com/review";
+  Deno.env.get("SURVEY_URL") || "https://seermrt.com/review";
 
 // ─── EMAIL_THEME — Design tokens from packages/shared/src/theme.css ─────────
 // Single source of truth for email styling. Mirrors the SEER design system.
@@ -257,7 +257,7 @@ ${content}
 <p style="font-size:13px;color:${EMAIL_THEME.text.primary};margin:0 0 4px;font-weight:600;">SEER Mobile Repair Solutions</p>
 <p style="font-size:12px;color:${EMAIL_THEME.text.muted};margin:0 0 16px;">Professional iPhone repair at your doorstep</p>
 <p style="font-size:12px;margin:0 0 4px;">
-<a href="mailto:support@seermobilerepair.com" style="color:${EMAIL_THEME.brand.accent};text-decoration:none;">support@seermobilerepair.com</a>
+<a href="mailto:support@seermrt.com" style="color:${EMAIL_THEME.brand.accent};text-decoration:none;">support@seermrt.com</a>
 </p>
 <p style="margin-top:16px;font-size:11px;color:${EMAIL_THEME.text.light};">
 &copy; ${year} SEER Mobile Repair Solutions. All rights reserved.
@@ -734,7 +734,7 @@ ${ctaButton("Leave a Review", `${SURVEY_URL}?repair_id=${data.repair_id}`, EMAIL
 
 <p style="font-size:14px;color:${EMAIL_THEME.text.secondary};line-height:1.6;margin:0 0 20px;">It only takes 30 seconds and means the world to our team. Thank you!</p>
 
-<p style="font-size:13px;color:${EMAIL_THEME.text.light};line-height:1.6;margin:0;">If you experienced any issues with your repair, please <a href="mailto:support@seermobilerepair.com" style="color:${EMAIL_THEME.brand.accent};text-decoration:none;">contact our support team</a> directly so we can make it right.</p>`;
+<p style="font-size:13px;color:${EMAIL_THEME.text.light};line-height:1.6;margin:0;">If you experienced any issues with your repair, please <a href="mailto:support@seermrt.com" style="color:${EMAIL_THEME.brand.accent};text-decoration:none;">contact our support team</a> directly so we can make it right.</p>`;
 
   return {
     subject,

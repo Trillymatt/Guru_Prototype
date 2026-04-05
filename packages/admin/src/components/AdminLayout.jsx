@@ -6,7 +6,7 @@ export default function AdminLayout({ children, onLogout, userEmail }) {
         <div className="admin-layout">
             <aside className="admin-sidebar">
                 <div className="admin-sidebar__header">
-                    <span className="admin-sidebar__logo">GURU</span>
+                    <span className="admin-sidebar__logo">SEER</span>
                     <span className="admin-sidebar__badge">Admin</span>
                 </div>
                 <nav className="admin-sidebar__nav">

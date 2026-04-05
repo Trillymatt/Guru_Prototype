@@ -37,7 +37,7 @@ export default function LoginPage() {
             <div className="tech-login__card animate-scale-in">
                 <div className="tech-login__logo">
                     <div className="tech-login__logo-icon">
-                        G
+                        S
                     </div>
                     <span className="tech-login__logo-text">SEER</span>
                     <span className="tech-nav__logo-badge">Tech</span>
@@ -54,7 +54,7 @@ export default function LoginPage() {
                             id="tech-email"
                             className="guru-input"
                             type="email"
-                            placeholder="technician@guru.repair"
+                            placeholder="technician@seer.repair"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required

@@ -25,7 +25,7 @@ export default function LoginGate({ onLogin, error: externalError }) {
     return (
         <div className="admin-login">
             <div className="admin-login__card">
-                <div className="admin-login__logo">GURU</div>
+                <div className="admin-login__logo">SEER</div>
                 <h1 className="admin-login__title">Admin Dashboard</h1>
                 <p className="admin-login__subtitle">Sign in with your admin account</p>
                 <p className="admin-login__hint">

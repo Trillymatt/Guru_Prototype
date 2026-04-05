@@ -51,7 +51,7 @@ export default function App() {
         return (
             <div className="admin-login">
                 <div className="admin-login__card">
-                    <div className="admin-login__logo">GURU</div>
+                    <div className="admin-login__logo">SEER</div>
                     <h1 className="admin-login__title">Admin Setup Required</h1>
                     <p className="admin-login__subtitle">
                         Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to{' '}
@@ -99,7 +99,7 @@ export default function App() {
         return (
             <div className="admin-login">
                 <div className="admin-login__card">
-                    <div className="admin-login__logo">GURU</div>
+                    <div className="admin-login__logo">SEER</div>
                     <p className="admin-login__subtitle">Loading...</p>
                 </div>
             </div>

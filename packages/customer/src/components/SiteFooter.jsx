@@ -43,7 +43,7 @@ export default function SiteFooter() {
                         <h4 className="footer__col-title">Support</h4>
                         <ul className="footer__links">
                             <li><Link to="/faq">FAQ</Link></li>
-                            <li><a href="mailto:support@seermobilerepair.com">support@seermobilerepair.com</a></li>
+                            <li><a href="mailto:support@seermrt.com">support@seermrt.com</a></li>
                             <li><span>Mon-Sat, 8:00 AM - 7:00 PM CST</span></li>
                         </ul>
                     </div>

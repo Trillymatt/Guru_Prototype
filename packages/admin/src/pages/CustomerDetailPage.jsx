@@ -110,7 +110,7 @@ export default function CustomerDetailPage() {
                     </div>
                 </div>
                 {customer.guru_plus_subscriber && (
-                    <span className="admin-badge admin-badge--guru-plus">Guru Plus</span>
+                    <span className="admin-badge admin-badge--guru-plus">SEER Plus</span>
                 )}
             </div>
 

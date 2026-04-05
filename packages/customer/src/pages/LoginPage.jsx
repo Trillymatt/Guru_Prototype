@@ -96,7 +96,7 @@ export default function LoginPage() {
             <div className="login-page">
                 <div className="login-card animate-scale-in">
                     <div className="login-card__logo">
-                        <div className="login-card__logo-icon">G</div>
+                        <div className="login-card__logo-icon">S</div>
                     </div>
 
                     {step === 1 ? (

@@ -88,7 +88,7 @@ function TermsOfService() {
             <h3>10. Contact</h3>
             <p>
                 Questions about these Terms? Contact us at{' '}
-                <a href="mailto:legal@gururepair.com">legal@gururepair.com</a>.
+                <a href="mailto:legal@seermrt.com">legal@seermrt.com</a>.
             </p>
         </div>
     );
@@ -167,7 +167,7 @@ function PrivacyPolicy() {
             <h3>8. Contact</h3>
             <p>
                 For privacy concerns or data requests, contact us at{' '}
-                <a href="mailto:privacy@gururepair.com">privacy@gururepair.com</a>.
+                <a href="mailto:privacy@seermrt.com">privacy@seermrt.com</a>.
             </p>
         </div>
     );
@@ -282,7 +282,7 @@ function WarrantyPolicy() {
             <h3>Questions?</h3>
             <p>
                 If you have questions about this policy, contact us at{' '}
-                <a href="mailto:support@gururepair.com">support@gururepair.com</a> before booking your repair.
+                <a href="mailto:support@seermrt.com">support@seermrt.com</a> before booking your repair.
             </p>
         </div>
     );
@@ -362,7 +362,7 @@ export default function LegalPage() {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
                                 </svg>
-                                <p>Questions? Email <a href="mailto:legal@gururepair.com">legal@gururepair.com</a></p>
+                                <p>Questions? Email <a href="mailto:legal@seermrt.com">legal@seermrt.com</a></p>
                             </div>
                         </aside>
 

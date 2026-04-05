@@ -234,8 +234,8 @@ export default function FAQPage() {
                             <p className="support-card__desc">
                                 Best for billing, policies, or detailed questions.
                             </p>
-                            <a href="mailto:support@seermobilerepair.com" className="support-card__link">
-                                support@seermobilerepair.com
+                            <a href="mailto:support@seermrt.com" className="support-card__link">
+                                support@seermrt.com
                             </a>
                         </div>
 

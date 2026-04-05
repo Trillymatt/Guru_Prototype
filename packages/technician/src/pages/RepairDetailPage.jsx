@@ -11,7 +11,7 @@ import '@shared/repair-chat.css';
 import '@shared/live-tracking.css';
 import '../styles/tech-repair-detail.css';
 
-const AGREEMENT_TEXT = `GURU MOBILE REPAIR AGREEMENT
+const AGREEMENT_TEXT = `SEER MOBILE REPAIR AGREEMENT
 
 By signing below, I authorize SEER Mobile Repair Solutions ("SEER") to perform the repair service(s) described in this work order on my device.
 
