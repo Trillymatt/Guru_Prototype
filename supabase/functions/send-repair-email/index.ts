@@ -145,6 +145,41 @@ function formatCurrency(amount: number | string | null | undefined): string {
   return `$${Number(amount).toFixed(2)}`;
 }
 
+// ─── Data Normalizer ──────────────────────────────────────────────────────────
+// Transforms raw DB values into display-safe strings before any template sees
+// them. Add new DB fields here rather than handling them inside each template.
+
+function normalizeData(raw: any): any {
+  return {
+    ...raw,
+    // Human-readable name, never an empty string
+    customer_name: raw.customer_name?.trim() || "Valued Customer",
+    technician_name: raw.technician_name?.trim() || "Your technician",
+    // Device string stored as device ID or label
+    device: raw.device?.trim() || "your device",
+    // Address
+    address: raw.address?.trim() || "TBD",
+    // Formatted date — replaces raw YYYY-MM-DD or null
+    schedule_date_display: formatDate(raw.schedule_date ?? null),
+    // Formatted time window — replaces raw slot ID or to_be_scheduled sentinel
+    schedule_time_display: formatTimeWindow(raw.schedule_time),
+    // Repair issues array — keep original for formatIssues()
+    issues: raw.issues ?? [],
+    // Currency fields as numbers (some triggers send strings)
+    total_estimate: raw.total_estimate != null ? Number(raw.total_estimate) : null,
+    service_fee: raw.service_fee != null ? Number(raw.service_fee) : null,
+    tip_amount: raw.tip_amount != null ? Number(raw.tip_amount) : 0,
+    // Payment method — map DB enum to display label
+    payment_method_display: ({
+      cash: "Cash",
+      zelle: "Zelle",
+      cashapp: "CashApp",
+      venmo: "Venmo",
+      split: "Split Payment",
+    } as Record<string, string>)[raw.payment_method] ?? raw.payment_method ?? "Paid",
+  };
+}
+
 // ─── Reusable Email Components ────────────────────────────────────────────────
 
 function detailRow(label: string, value: string): string {
@@ -299,7 +334,7 @@ function repairConfirmed(data: any): { subject: string; html: string } {
 
   const partsLabor =
     data.total_estimate && data.service_fee
-      ? formatCurrency(Number(data.total_estimate) - Number(data.service_fee))
+      ? formatCurrency((data.total_estimate ?? 0) - (data.service_fee ?? 0))
       : "TBD";
 
   const content = `
@@ -311,11 +346,11 @@ ${statusBadge("Confirmed", EMAIL_THEME.status.success)}
 ${detailCard(
   "Repair Details",
   detailRow("Order", `#${orderId}`) +
-    detailRow("Device", data.device || "N/A") +
+    detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
-    detailRow("Scheduled", formatDate(data.schedule_date)) +
-    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
-    detailRow("Location", data.address || "TBD")
+    detailRow("Scheduled", data.schedule_date_display) +
+    detailRow("Time Window", data.schedule_time_display) +
+    detailRow("Location", data.address)
 )}
 
 ${detailCard(
@@ -339,7 +374,7 @@ ${ctaButton("View Your Repair", `${APP_URL}/repair/${data.repair_id}`)}
     subject,
     html: wrapEmail(
       content,
-      `Your ${data.device} repair has been confirmed for ${formatDate(data.schedule_date)}. Order #${orderId}`
+      `Your ${data.device} repair has been confirmed for ${data.schedule_date_display}. Order #${orderId}`
     ),
   };
 }
@@ -359,11 +394,11 @@ ${statusBadge("Accepted", EMAIL_THEME.status.success)}
 ${detailCard(
   "Repair Details",
   detailRow("Order", `#${orderId}`) +
-    detailRow("Device", data.device || "N/A") +
+    detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
-    detailRow("Scheduled", formatDate(data.schedule_date)) +
-    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
-    detailRow("Location", data.address || "TBD") +
+    detailRow("Scheduled", data.schedule_date_display) +
+    detailRow("Time Window", data.schedule_time_display) +
+    detailRow("Location", data.address) +
     detailRow("Technician", data.technician_name || "To be assigned")
 )}
 
@@ -394,18 +429,18 @@ function partsOrdered(data: any): { subject: string; html: string } {
 
   const content = `
 <p style="font-size:22px;font-weight:600;color:${EMAIL_THEME.text.primary};margin:0 0 8px;">Hi ${data.customer_name},</p>
-<p style="font-size:16px;color:${EMAIL_THEME.text.secondary};margin:0 0 24px;line-height:1.5;">We've placed an order for the parts needed to fix your <strong style="color:${EMAIL_THEME.text.primary};">${data.device || "device"}</strong>. Parts typically arrive within 1–3 business days.</p>
+<p style="font-size:16px;color:${EMAIL_THEME.text.secondary};margin:0 0 24px;line-height:1.5;">We've placed an order for the parts needed to fix your <strong style="color:${EMAIL_THEME.text.primary};">${data.device}</strong>. Parts typically arrive within 1–3 business days.</p>
 
 ${statusBadge("Parts Ordered", EMAIL_THEME.status.warning)}
 
 ${detailCard(
   "Repair Details",
   detailRow("Order", `#${orderId}`) +
-    detailRow("Device", data.device || "N/A") +
+    detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
-    detailRow("Scheduled", formatDate(data.schedule_date)) +
-    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
-    detailRow("Location", data.address || "TBD")
+    detailRow("Scheduled", data.schedule_date_display) +
+    detailRow("Time Window", data.schedule_time_display) +
+    detailRow("Location", data.address)
 )}
 
 ${highlightBox(
@@ -435,18 +470,18 @@ function partsReceived(data: any): { subject: string; html: string } {
 
   const content = `
 <p style="font-size:22px;font-weight:600;color:${EMAIL_THEME.text.primary};margin:0 0 8px;">Hi ${data.customer_name},</p>
-<p style="font-size:16px;color:${EMAIL_THEME.text.secondary};margin:0 0 24px;line-height:1.5;">Great news — the parts for your <strong style="color:${EMAIL_THEME.text.primary};">${data.device || "device"}</strong> repair have arrived. Your technician is fully stocked and ready to go on your scheduled date!</p>
+<p style="font-size:16px;color:${EMAIL_THEME.text.secondary};margin:0 0 24px;line-height:1.5;">Great news — the parts for your <strong style="color:${EMAIL_THEME.text.primary};">${data.device}</strong> repair have arrived. Your technician is fully stocked and ready to go on your scheduled date!</p>
 
 ${statusBadge("Parts Received", EMAIL_THEME.status.success)}
 
 ${detailCard(
   "Your Upcoming Appointment",
   detailRow("Order", `#${orderId}`) +
-    detailRow("Device", data.device || "N/A") +
+    detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
-    detailRow("Scheduled", formatDate(data.schedule_date)) +
-    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
-    detailRow("Location", data.address || "TBD") +
+    detailRow("Scheduled", data.schedule_date_display) +
+    detailRow("Time Window", data.schedule_time_display) +
+    detailRow("Location", data.address) +
     detailRow("Technician", data.technician_name || "To be assigned")
 )}
 
@@ -459,7 +494,7 @@ ${highlightBox(
   EMAIL_THEME.status.successBg
 )}
 
-${ctaButton("View Repair Details", `${APP_URL}/repair/${data.repair_id}`)}
+${ctaButton("Choose Your Repair Time", `${APP_URL}/repair/${data.repair_id}`)}
 
 <p style="font-size:13px;color:${EMAIL_THEME.text.muted};line-height:1.6;margin:0;">Need to adjust your appointment? Contact us soon so we can accommodate your request.</p>`;
 
@@ -487,11 +522,11 @@ ${statusBadge("Scheduled", EMAIL_THEME.brand.accent)}
 ${detailCard(
   "Appointment Details",
   detailRow("Order", `#${orderId}`) +
-    detailRow("Device", data.device || "N/A") +
+    detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
-    detailRow("Date", formatDate(data.schedule_date)) +
-    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
-    detailRow("Location", data.address || "TBD") +
+    detailRow("Date", data.schedule_date_display) +
+    detailRow("Time Window", data.schedule_time_display) +
+    detailRow("Location", data.address) +
     detailRow("Technician", data.technician_name || "To be assigned")
 )}
 
@@ -512,7 +547,7 @@ ${ctaButton("View Repair Details", `${APP_URL}/repair/${data.repair_id}`)}
     subject,
     html: wrapEmail(
       content,
-      `Your ${data.device} repair is scheduled for ${formatDate(data.schedule_date)} — ${formatTimeWindow(data.schedule_time)}.`
+      `Your ${data.device} repair is scheduled for ${data.schedule_date_display} — ${data.schedule_time_display}.`
     ),
   };
 }
@@ -524,16 +559,16 @@ function repairInProgress(data: any): { subject: string; html: string } {
 
   const content = `
 <p style="font-size:22px;font-weight:600;color:${EMAIL_THEME.text.primary};margin:0 0 8px;">Hi ${data.customer_name},</p>
-<p style="font-size:16px;color:${EMAIL_THEME.text.secondary};margin:0 0 24px;line-height:1.5;">Your technician <strong style="color:${EMAIL_THEME.text.primary};">${data.technician_name}</strong> has started working on your <strong style="color:${EMAIL_THEME.text.primary};">${data.device || "device"}</strong>. We'll let you know as soon as it's ready.</p>
+<p style="font-size:16px;color:${EMAIL_THEME.text.secondary};margin:0 0 24px;line-height:1.5;">Your technician <strong style="color:${EMAIL_THEME.text.primary};">${data.technician_name}</strong> has started working on your <strong style="color:${EMAIL_THEME.text.primary};">${data.device}</strong>. We'll let you know as soon as it's ready.</p>
 
 ${statusBadge("In Progress", EMAIL_THEME.status.warning)}
 
 ${detailCard(
   "Repair Details",
   detailRow("Technician", data.technician_name || "N/A") +
-    detailRow("Device", data.device || "N/A") +
+    detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
-    detailRow("Location", data.address || "N/A")
+    detailRow("Location", data.address)
 )}
 
 ${highlightBox(
@@ -566,10 +601,10 @@ function dayOfReminder(data: any): { subject: string; html: string } {
 
 ${detailCard(
   "Today's Appointment",
-  detailRow("Device", data.device || "N/A") +
+  detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
-    detailRow("Time Window", formatTimeWindow(data.schedule_time)) +
-    detailRow("Location", data.address || "TBD") +
+    detailRow("Time Window", data.schedule_time_display) +
+    detailRow("Location", data.address) +
     detailRow("Technician", data.technician_name || "To be assigned")
 )}
 
@@ -591,7 +626,7 @@ ${ctaButton("View Repair Details", `${APP_URL}/repair/${data.repair_id}`)}
     subject,
     html: wrapEmail(
       content,
-      `Reminder: Your ${data.device} repair is today at ${formatTimeWindow(data.schedule_time)}. Be ready!`
+      `Reminder: Your ${data.device} repair is today at ${data.schedule_time_display}. Be ready!`
     ),
   };
 }
@@ -610,9 +645,9 @@ ${statusBadge("En Route", EMAIL_THEME.brand.accent)}
 ${detailCard(
   "Appointment Details",
   detailRow("Technician", data.technician_name) +
-    detailRow("Device", data.device || "N/A") +
+    detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
-    detailRow("Location", data.address || "N/A")
+    detailRow("Location", data.address)
 )}
 
 ${highlightBox(
@@ -651,7 +686,7 @@ ${statusBadge("Arrived", EMAIL_THEME.status.success)}
 ${detailCard(
   "Service Details",
   detailRow("Technician", data.technician_name) +
-    detailRow("Device", data.device || "N/A") +
+    detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues))
 )}
 
@@ -681,7 +716,7 @@ function repairComplete(data: any): { subject: string; html: string } {
 
   const partsLabor =
     data.total_estimate && data.service_fee
-      ? formatCurrency(Number(data.total_estimate) - Number(data.service_fee))
+      ? formatCurrency((data.total_estimate ?? 0) - (data.service_fee ?? 0))
       : "TBD";
 
   const content = `
@@ -692,7 +727,7 @@ ${statusBadge("Complete", EMAIL_THEME.status.success)}
 
 ${detailCard(
   "Repair Summary",
-  detailRow("Device", data.device || "N/A") +
+  detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
     detailRow("Technician", data.technician_name)
 )}
@@ -762,14 +797,7 @@ function invoiceReady(data: any): { subject: string; html: string } {
   const orderId = (data.repair_id || "").slice(-8).toUpperCase();
   const subject = `Your Invoice — SEER Mobile Repair #${orderId}`;
 
-  const paymentMethodLabels: Record<string, string> = {
-    cash: "Cash",
-    zelle: "Zelle",
-    cashapp: "CashApp",
-    venmo: "Venmo",
-    split: "Split Payment",
-  };
-  const paymentMethodLabel = paymentMethodLabels[data.payment_method] || data.payment_method || "Paid";
+  const paymentMethodLabel = data.payment_method_display;
 
   const paidDate = data.paid_at
     ? new Date(data.paid_at).toLocaleDateString("en-US", {
@@ -780,8 +808,8 @@ function invoiceReady(data: any): { subject: string; html: string } {
       })
     : "Today";
 
-  const totalEstimate = Number(data.total_estimate || 0);
-  const tipAmount = Number(data.tip_amount || 0);
+  const totalEstimate = data.total_estimate ?? 0;
+  const tipAmount = data.tip_amount;
   const totalPaid = totalEstimate + tipAmount;
 
   const tipRow =
@@ -791,7 +819,7 @@ function invoiceReady(data: any): { subject: string; html: string } {
 
   const content = `
 <p style="font-size:22px;font-weight:600;color:${EMAIL_THEME.text.primary};margin:0 0 8px;">Hi ${data.customer_name},</p>
-<p style="font-size:16px;color:${EMAIL_THEME.text.secondary};margin:0 0 24px;line-height:1.5;">Thank you for your payment! Here is your invoice for the repair services completed on your ${data.device || "device"}.</p>
+<p style="font-size:16px;color:${EMAIL_THEME.text.secondary};margin:0 0 24px;line-height:1.5;">Thank you for your payment! Here is your invoice for the repair services completed on your ${data.device}.</p>
 
 ${statusBadge("Paid", EMAIL_THEME.status.success)}
 
@@ -799,7 +827,7 @@ ${detailCard(
   "Invoice Details",
   detailRow("Invoice #", `#${orderId}`) +
     detailRow("Date Paid", paidDate) +
-    detailRow("Device", data.device || "N/A") +
+    detailRow("Device", data.device) +
     detailRow("Service(s)", formatIssues(data.issues)) +
     detailRow("Payment Method", paymentMethodLabel)
 )}
@@ -825,7 +853,7 @@ ${ctaButton("View & Print Invoice", `${APP_URL}/invoice/${data.repair_id}`, EMAI
     subject,
     html: wrapEmail(
       content,
-      `Your invoice for ${data.device || "your repair"} is ready. Total paid: ${formatCurrency(totalPaid)}.`
+      `Your invoice for your ${data.device} repair is ready. Total paid: ${formatCurrency(totalPaid)}.`
     ),
   };
 }
@@ -836,7 +864,8 @@ ${ctaButton("View & Print Invoice", `${APP_URL}/invoice/${data.repair_id}`, EMAI
 
 type EmailResult = { subject: string; html: string };
 
-function generateEmail(emailType: string, data: any): EmailResult | null {
+function generateEmail(emailType: string, rawData: any): EmailResult | null {
+  const data = normalizeData(rawData);
   switch (emailType) {
     case "repair_confirmed":
       return repairConfirmed(data);

@@ -11,7 +11,7 @@ body {
     background-image:
         radial-gradient(ellipse 120% 80% at 50% 0%, var(--seer-platinum-100) 0%, transparent 70%),
         linear-gradient(180deg, var(--seer-gray-50) 0%, var(--seer-white) 50%, var(--seer-gray-50) 100%);
-    background-attachment: fixed;
+    /* Removed background-attachment: fixed — it disables GPU compositing and causes full repaints on scroll */
     background-size: 100% 100%;
     min-height: 100vh;
     /* Eliminate black bar on iPhones with home indicator */
@@ -423,36 +423,36 @@ body {
 .hero__bg-orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(100px);
-    opacity: 0.35;
+    filter: blur(60px);
+    opacity: 0.3;
     z-index: -1;
+    /* Promote to GPU layer to avoid repaint on parent changes */
+    will-change: transform;
+    transform: translateZ(0);
 }
 
 .hero__bg-orb--1 {
-    width: 700px;
-    height: 700px;
+    width: 600px;
+    height: 600px;
     background: var(--seer-platinum-300);
-    top: -250px;
-    right: -150px;
-    animation: float 10s ease-in-out infinite;
+    top: -200px;
+    right: -100px;
 }
 
 .hero__bg-orb--2 {
-    width: 500px;
-    height: 500px;
+    width: 450px;
+    height: 450px;
     background: var(--seer-platinum-400);
-    bottom: -100px;
-    left: -200px;
-    animation: float 8s ease-in-out infinite reverse;
+    bottom: -80px;
+    left: -150px;
 }
 
 .hero__bg-orb--3 {
-    width: 300px;
-    height: 300px;
+    width: 280px;
+    height: 280px;
     background: var(--seer-platinum-200);
     top: 40%;
     left: 50%;
-    animation: float 12s ease-in-out infinite 2s;
 }
 
 .hero__content {
@@ -2725,9 +2725,11 @@ body {
 .ads-landing__glow {
     position: absolute;
     border-radius: 50%;
-    filter: blur(90px);
-    opacity: 0.35;
+    filter: blur(70px);
+    opacity: 0.3;
     pointer-events: none;
+    will-change: transform;
+    transform: translateZ(0);
 }
 
 .ads-landing__glow--one {
@@ -2736,7 +2738,6 @@ body {
     background: rgba(124, 58, 237, 0.38);
     top: 9%;
     left: 10%;
-    animation: adsFloat 10s ease-in-out infinite;
 }
 
 .ads-landing__glow--two {
@@ -2745,7 +2746,6 @@ body {
     background: rgba(30, 31, 46, 0.22);
     bottom: 5%;
     right: 8%;
-    animation: adsFloat 12s ease-in-out infinite reverse;
 }
 
 .ads-landing__panel {
