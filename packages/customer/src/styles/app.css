@@ -473,7 +473,7 @@ body {
     background: rgba(255, 255, 255, 0.62);
     border: 1px solid rgba(199, 200, 208, 0.55);
     border-radius: var(--radius-2xl);
-    padding: var(--space-7);
+    padding: var(--space-5);
     box-shadow: 0 22px 45px rgba(17, 24, 39, 0.08);
     backdrop-filter: blur(12px);
     min-width: 0;
@@ -484,7 +484,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-3) var(--space-5);
+    padding: var(--space-2) var(--space-4);
     background: var(--seer-platinum-100);
     color: var(--seer-platinum-800);
     font-size: var(--font-size-sm);
