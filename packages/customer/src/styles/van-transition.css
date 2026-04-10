@@ -1,0 +1,271 @@
+/* ─── Van Transition Animation ────────────────────────────────── */
+
+.van-transition {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--seer-white);
+    animation: vtFadeIn 0.3s ease-out;
+}
+
+@keyframes vtFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ─── Van Stage ─── */
+.van-transition__van-stage {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--seer-gray-50) 0%, var(--seer-platinum-100) 100%);
+    transition: opacity 0.5s ease-in-out;
+}
+
+.van-transition__road {
+    position: absolute;
+    bottom: 30%;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--seer-gray-300);
+}
+
+.van-transition__road-line {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: repeating-linear-gradient(
+        90deg,
+        var(--seer-gray-400) 0px,
+        var(--seer-gray-400) 20px,
+        transparent 20px,
+        transparent 40px
+    );
+    animation: roadScroll 0.5s linear infinite;
+}
+
+@keyframes roadScroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-40px); }
+}
+
+.van-transition__van {
+    position: absolute;
+    bottom: calc(30% + 3px);
+    width: 200px;
+    animation: vanEnter 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.van-transition__van--center {
+    animation: none;
+    left: calc(50% - 100px);
+    transform: translateY(-2px) scale(1.05);
+    transition: transform 0.4s ease-out;
+}
+
+@keyframes vanEnter {
+    0% {
+        left: -220px;
+        transform: translateY(0) scale(1);
+    }
+    60% {
+        left: calc(50% - 120px);
+        transform: translateY(-4px) scale(1.02);
+    }
+    80% {
+        left: calc(50% - 100px);
+        transform: translateY(-2px) scale(1.05);
+    }
+    100% {
+        left: calc(50% - 100px);
+        transform: translateY(-2px) scale(1.05);
+    }
+}
+
+.van-transition__van-svg {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+}
+
+.van-transition__overlay-copy {
+    position: absolute;
+    top: 18%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    z-index: 2;
+    text-align: center;
+}
+
+/* Exhaust puffs */
+.van-transition__exhaust {
+    position: absolute;
+    left: -10px;
+    bottom: 8px;
+    display: flex;
+    gap: 6px;
+}
+
+.van-transition__puff {
+    width: 12px;
+    height: 12px;
+    background: var(--seer-gray-300);
+    border-radius: 50%;
+    opacity: 0;
+    animation: puffAnim 0.8s ease-out infinite;
+}
+
+.van-transition__puff--1 { animation-delay: 0s; }
+.van-transition__puff--2 { animation-delay: 0.2s; width: 8px; height: 8px; }
+.van-transition__puff--3 { animation-delay: 0.4s; width: 6px; height: 6px; }
+
+@keyframes puffAnim {
+    0% {
+        opacity: 0.6;
+        transform: translate(0, 0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-30px, -10px) scale(2);
+    }
+}
+
+/* ─── Loading Stage ─── */
+.van-transition__loading-stage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.van-transition__loading-stage--visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.van-transition__logo {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--seer-black);
+    letter-spacing: 0.1em;
+    animation: logoReveal 0.6s ease-out 0.1s both;
+}
+
+@keyframes logoReveal {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.van-transition__tagline {
+    font-size: var(--font-size-base);
+    color: var(--seer-gray-500);
+    font-weight: 500;
+    margin-bottom: var(--space-2);
+    animation: fadeInUp 0.5s ease-out 0.2s both;
+}
+
+.van-transition__loader {
+    width: 200px;
+    height: 3px;
+    background: var(--seer-gray-200);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-top: var(--space-4);
+    animation: fadeInUp 0.5s ease-out 0.3s both;
+}
+
+.van-transition__loader-bar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--seer-platinum-500), var(--seer-platinum-800));
+    border-radius: var(--radius-full);
+    animation: loaderFill 1.2s ease-in-out forwards;
+}
+
+@keyframes loaderFill {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(0); }
+}
+
+/* ─── Shared Van Loader ───────────────────────────────────────── */
+.van-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    min-height: 45vh;
+    text-align: center;
+}
+
+.van-loader--compact {
+    min-height: 220px;
+}
+
+.van-loader__text {
+    font-size: var(--font-size-base);
+    color: var(--seer-gray-500);
+    font-weight: 600;
+    margin: 0;
+}
+
+.van-loader__van-wrap {
+    position: relative;
+    width: 200px;
+    padding-top: 8px;
+}
+
+.van-loader__road {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 8px;
+    height: 2px;
+    background: repeating-linear-gradient(
+        90deg,
+        var(--seer-gray-300) 0px,
+        var(--seer-gray-300) 20px,
+        transparent 20px,
+        transparent 40px
+    );
+    animation: roadScroll 0.8s linear infinite;
+}
+
+.van-loader__van-svg {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.14));
+    animation: vanBounce 1.1s ease-in-out infinite;
+}
+
+@keyframes vanBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}

@@ -6,15 +6,18 @@
   "workspaces": [
     "packages/shared",
     "packages/customer",
-    "packages/technician"
+    "packages/technician",
+    "packages/admin"
   ],
   "scripts": {
     "dev:customer": "npm run dev --workspace=packages/customer",
     "dev:tech": "npm run dev --workspace=packages/technician",
-    "dev": "npm run dev:customer & npm run dev:tech",
+    "dev:admin": "npm run dev --workspace=packages/admin",
+    "dev": "npm run dev:customer & npm run dev:tech & npm run dev:admin",
     "build:customer": "npm run build --workspace=packages/customer",
     "build:tech": "npm run build --workspace=packages/technician",
-    "build": "npm run build:customer && npm run build:tech"
+    "build:admin": "npm run build --workspace=packages/admin",
+    "build": "npm run build:customer && npm run build:tech && npm run build:admin"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3"

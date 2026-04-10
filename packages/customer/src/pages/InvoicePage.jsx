@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import VanLoader from '../components/VanLoader';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
 import {
@@ -14,9 +15,10 @@ import '../styles/invoice.css';
 
 const PAYMENT_METHOD_LABELS = {
     cash: 'Cash',
-    square: 'Square (Card / Tap to Pay)',
-    split: 'Cash + Card (Split Payment)',
-    stripe: 'Credit / Debit Card',
+    zelle: 'Zelle',
+    cashapp: 'CashApp',
+    venmo: 'Venmo',
+    split: 'Split Payment',
 };
 
 function formatCurrency(amount) {
@@ -74,7 +76,7 @@ export default function InvoicePage() {
                 <Navbar />
                 <div className="invoice-page">
                     <div className="guru-container guru-container--narrow">
-                        <div className="invoice-loading">Loading invoice...</div>
+                        <VanLoader text="Loading invoice..." compact={true} />
                     </div>
                 </div>
             </>
@@ -146,7 +148,7 @@ export default function InvoicePage() {
                         <div className="invoice-header">
                             <div className="invoice-brand">
                                 <div className="invoice-brand__name">GURU</div>
-                                <div className="invoice-brand__tagline">Mobile Repair Solutions</div>
+                                <div className="invoice-brand__tagline">Wherever you are</div>
                             </div>
                             <div className="invoice-meta">
                                 <div className="invoice-meta__title">Invoice</div>
@@ -194,7 +196,7 @@ export default function InvoicePage() {
                                 <thead>
                                     <tr>
                                         <th>Description</th>
-                                        <th style={{ width: 100, textAlign: 'right' }}>Amount</th>
+                                        <th style={{ textAlign: 'right' }}>Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -245,7 +247,7 @@ export default function InvoicePage() {
                             {/* Payment method */}
                             <div className="invoice-payment-note">
                                 <span className="invoice-payment-note__icon">
-                                    {repair.payment_method === 'cash' ? '💵' : '💳'}
+                                    {repair.payment_method === 'cash' ? '💵' : repair.payment_method === 'zelle' ? '🏦' : repair.payment_method === 'cashapp' ? '💲' : repair.payment_method === 'venmo' ? '💜' : '💳'}
                                 </span>
                                 <span>
                                     Payment received via{' '}
@@ -258,10 +260,10 @@ export default function InvoicePage() {
 
                             {/* Footer */}
                             <div className="invoice-footer">
-                                <div className="invoice-footer__brand">Guru Mobile Repair Solutions</div>
-                                <div>support@gurumobilerepair.com</div>
+                                <div className="invoice-footer__brand">SEER Mobile Repair Solutions</div>
+                                <div>support@seermrt.com</div>
                                 <div style={{ marginTop: 8 }}>
-                                    Thank you for choosing Guru. Your repair is covered by our standard parts warranty.
+                                    Thank you for choosing SEER. Your repair is covered by our standard parts warranty.
                                 </div>
                             </div>
 

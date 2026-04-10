@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import SiteFooter from '../components/SiteFooter';
 import '../styles/legal.css';
 
 const SECTIONS = [
@@ -16,13 +17,13 @@ function TermsOfService() {
             <p className="legal-updated">Last updated: January 1, 2026</p>
 
             <p className="legal-intro">
-                Welcome to Guru Mobile Repair Solutions ("Guru," "we," "us," or "our"). By booking a repair
+                Welcome to SEER Mobile Repair Solutions ("Guru," "we," "us," or "our"). By booking a repair
                 or using our platform, you agree to these Terms of Service. Please read them carefully.
             </p>
 
             <h3>1. Services</h3>
             <p>
-                Guru provides on-site iPhone repair services performed by Apple Certified technicians at locations
+                SEER provides on-site iPhone repair services performed by Apple Certified technicians at locations
                 designated by the customer. Services are currently available in the Dallas–Fort Worth metroplex.
                 We reserve the right to decline any repair request at our discretion.
             </p>
@@ -44,31 +45,31 @@ function TermsOfService() {
 
             <h3>4. Cancellations & Rescheduling</h3>
             <p>
-                You may cancel or reschedule an appointment with at least 24 hours' notice at no additional charge.
-                Cancellations within 24 hours of the scheduled appointment may result in forfeiture of
-                the $29 service fee, as parts will have already been ordered. Guru reserves the right to
-                reschedule appointments due to technician unavailability or circumstances beyond our control.
+                You may cancel or reschedule an appointment with at least 24 hours&apos; notice before the
+                scheduled appointment. SEER reserves the right to reschedule appointments due to technician
+                unavailability or circumstances beyond our control.
             </p>
 
             <h3>5. Pricing & Payment</h3>
             <p>
                 All pricing is disclosed before confirmation. Your total is calculated as: parts cost
                 (based on your selected quality tier) + $29 service fee + applicable Texas state sales tax
-                (8.25%). Payment is collected upon completion of the repair. We reserve the right to update
+                (8.25%). Payment is collected upon completion of the repair. We currently accept cash, Zelle,
+                Cash App, and Venmo. We do not accept credit or debit cards yet. We reserve the right to update
                 pricing with reasonable notice.
             </p>
 
             <h3>6. Device Condition & Liability</h3>
             <p>
                 You represent that you are the lawful owner of the device or have authorization to have it repaired.
-                Guru is not liable for data loss, pre-existing conditions, or damage unrelated to the repair
-                performed. We recommend backing up your device before any repair. Guru's liability is limited
+                SEER is not liable for data loss, pre-existing conditions, or damage unrelated to the repair
+                performed. We recommend backing up your device before any repair. SEER's liability is limited
                 to the cost of the repair performed.
             </p>
 
             <h3>7. Intellectual Property</h3>
             <p>
-                All content, logos, and branding on the Guru platform are the property of Guru Mobile Repair
+                All content, logos, and branding on the SEER platform are the property of SEER Mobile Repair
                 Solutions and may not be reproduced without written permission.
             </p>
 
@@ -87,7 +88,7 @@ function TermsOfService() {
             <h3>10. Contact</h3>
             <p>
                 Questions about these Terms? Contact us at{' '}
-                <a href="mailto:legal@gururepair.com">legal@gururepair.com</a>.
+                <a href="mailto:legal@seermrt.com">legal@seermrt.com</a>.
             </p>
         </div>
     );
@@ -99,16 +100,16 @@ function PrivacyPolicy() {
             <p className="legal-updated">Last updated: January 1, 2026</p>
 
             <p className="legal-intro">
-                Guru Mobile Repair Solutions ("Guru," "we," "us," or "our") is committed to protecting your
+                SEER Mobile Repair Solutions ("Guru," "we," "us," or "our") is committed to protecting your
                 personal information. This Privacy Policy explains how we collect, use, and safeguard your data.
             </p>
 
             <h3>1. Information We Collect</h3>
-            <p>We collect the following information when you use Guru:</p>
+            <p>We collect the following information when you use SEER:</p>
             <ul>
                 <li><strong>Account information:</strong> Name, email address, phone number.</li>
                 <li><strong>Service information:</strong> Device model, repair type, parts selection, service address, appointment time.</li>
-                <li><strong>Payment information:</strong> Processed securely through our payment provider. We do not store full card numbers.</li>
+                <li><strong>Payment information:</strong> We do not accept credit or debit cards at this time. Payments are made using cash or supported digital methods (e.g. Zelle, Cash App, Venmo) as described at booking. We do not store full card numbers.</li>
                 <li><strong>Usage data:</strong> Pages visited, features used, and app interactions for improving our service.</li>
                 <li><strong>Location data:</strong> Address you provide for the repair. We do not collect continuous background location.</li>
             </ul>
@@ -129,7 +130,7 @@ function PrivacyPolicy() {
             </p>
             <ul>
                 <li><strong>Assigned technicians:</strong> Only what is needed to perform your repair (name, address, device info).</li>
-                <li><strong>Payment processors:</strong> Secure third-party payment providers.</li>
+                <li><strong>Payment partners:</strong> If we add card or other electronic processing, those providers may receive only what is needed to complete the transaction.</li>
                 <li><strong>Service providers:</strong> Email and notification systems used to contact you about your repair.</li>
                 <li><strong>Legal requirements:</strong> When required by law or to protect the rights and safety of Guru and its customers.</li>
             </ul>
@@ -138,7 +139,7 @@ function PrivacyPolicy() {
             <p>
                 We use industry-standard encryption and security practices to protect your data. Our platform
                 is built on Supabase with Row-Level Security policies ensuring your data is only accessible
-                to you and authorized Guru personnel.
+                to you and authorized SEER personnel.
             </p>
 
             <h3>5. Data Retention</h3>
@@ -166,7 +167,7 @@ function PrivacyPolicy() {
             <h3>8. Contact</h3>
             <p>
                 For privacy concerns or data requests, contact us at{' '}
-                <a href="mailto:privacy@gururepair.com">privacy@gururepair.com</a>.
+                <a href="mailto:privacy@seermrt.com">privacy@seermrt.com</a>.
             </p>
         </div>
     );
@@ -179,7 +180,7 @@ function RepairAgreement() {
 
             <p className="legal-intro">
                 This Repair Agreement ("Agreement") is entered into between you ("Customer") and Guru Mobile
-                Repair Solutions ("Guru") at the time of repair completion and customer sign-off. By signing
+                Repair Solutions ("SEER") at the time of repair completion and customer sign-off. By signing
                 the digital completion form, you agree to the following terms.
             </p>
 
@@ -193,7 +194,7 @@ function RepairAgreement() {
 
             <h3>2. Pre-Existing Conditions</h3>
             <p>
-                Guru is not responsible for pre-existing damage or conditions present before the repair.
+                SEER is not responsible for pre-existing damage or conditions present before the repair.
                 Your technician may photograph pre-existing damage before beginning work. This documentation
                 is available to you upon request.
             </p>
@@ -201,20 +202,20 @@ function RepairAgreement() {
             <h3>3. Data & Personal Information</h3>
             <p>
                 Repairs may require access to your device. The customer is solely responsible for backing
-                up data before the repair. Guru technicians will not access personal files, photos, messages,
-                or applications. Guru is not liable for data loss resulting from the repair process.
+                up data before the repair. SEER technicians will not access personal files, photos, messages,
+                or applications. SEER is not liable for data loss resulting from the repair process.
             </p>
 
             <h3>4. Device Ownership</h3>
             <p>
                 By booking a repair, you represent that you are the rightful owner of the device or have
-                explicit written authorization from the owner to have the device repaired. Guru reserves the
+                explicit written authorization from the owner to have the device repaired. SEER reserves the
                 right to refuse service if ownership cannot be reasonably established.
             </p>
 
             <h3>5. Right to Refuse</h3>
             <p>
-                Guru technicians reserve the right to refuse or halt any repair if they determine the repair
+                SEER technicians reserve the right to refuse or halt any repair if they determine the repair
                 poses a safety risk, the device is unsupported, or conditions make safe repair impossible
                 (e.g., severe structural damage, undisclosed liquid damage). In such cases, the service fee
                 may still apply for the technician's time and travel.
@@ -230,7 +231,7 @@ function RepairAgreement() {
 
             <h3>7. Third-Party Software</h3>
             <p>
-                Guru is not responsible for software issues (iOS updates, app crashes, operating system
+                SEER is not responsible for software issues (iOS updates, app crashes, operating system
                 errors) unrelated to the hardware repair performed. Software diagnosis and optimization
                 are separate services.
             </p>
@@ -244,44 +245,44 @@ function WarrantyPolicy() {
             <p className="legal-updated">Last updated: February 21, 2026</p>
 
             <p className="legal-intro">
-                Please read this policy carefully before booking a repair with Guru Mobile Repair Solutions.
+                Please read this policy carefully before booking a repair with SEER Mobile Repair Solutions.
             </p>
 
             <h3>No Warranty on Repairs</h3>
             <p>
                 All repairs performed by Guru are provided <strong>as-is</strong> and do not include any
                 warranty on parts or labor. Once a repair is completed and signed off by the customer,
-                Guru assumes no further responsibility for the repaired component or device.
+                SEER assumes no further responsibility for the repaired component or device.
             </p>
 
             <h3>Customer Acknowledgment</h3>
             <p>
-                By booking a repair with Guru, you acknowledge and agree to the following:
+                By booking a repair with SEER, you acknowledge and agree to the following:
             </p>
             <ul>
                 <li>No warranty of any kind — express or implied — is provided on any repair, part, or service.</li>
                 <li>All sales and services are final once the repair completion form is signed.</li>
-                <li>Guru is not responsible for issues that arise after the repair has been completed and accepted.</li>
+                <li>SEER is not responsible for issues that arise after the repair has been completed and accepted.</li>
                 <li>Prices shown during booking are estimates. Final pricing is confirmed after technician diagnosis.</li>
             </ul>
 
             <h3>Third-Party Parts</h3>
             <p>
-                Guru sources parts from third-party suppliers at various quality tiers (Economy, Premium, and
-                Genuine Apple). While we strive to use reliable parts, Guru does not guarantee the longevity
+                SEER sources parts from third-party suppliers at various quality tiers (Economy, Premium, and
+                Genuine Apple). While we strive to use reliable parts, SEER does not guarantee the longevity
                 or performance of any replacement component after installation.
             </p>
 
             <h3>Limitation of Liability</h3>
             <p>
-                Guru is not liable for any consequential, incidental, or indirect damages arising from any
+                SEER is not liable for any consequential, incidental, or indirect damages arising from any
                 repair service. Our maximum liability is limited to the original cost of the repair performed.
             </p>
 
             <h3>Questions?</h3>
             <p>
                 If you have questions about this policy, contact us at{' '}
-                <a href="mailto:support@gururepair.com">support@gururepair.com</a> before booking your repair.
+                <a href="mailto:support@seermrt.com">support@seermrt.com</a> before booking your repair.
             </p>
         </div>
     );
@@ -295,12 +296,13 @@ const SECTION_COMPONENTS = {
 };
 
 export default function LegalPage() {
-    const location = useLocation();
-    const params = new URLSearchParams(location.search);
-    const initialSection = params.get('section') || 'terms';
-    const [activeSection, setActiveSection] = useState(
-        SECTIONS.find(s => s.id === initialSection) ? initialSection : 'terms'
-    );
+    const [searchParams, setSearchParams] = useSearchParams();
+    const sectionParam = searchParams.get('section') || 'terms';
+    const activeSection = SECTIONS.find(s => s.id === sectionParam) ? sectionParam : 'terms';
+
+    const setActiveSection = (id) => {
+        setSearchParams(id === 'terms' ? {} : { section: id });
+    };
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -325,7 +327,7 @@ export default function LegalPage() {
                         <h1 className="legal-hero__title">Your rights. Our commitments.</h1>
                         <p className="legal-hero__subtitle">
                             We believe in full transparency. Read our policies to understand exactly
-                            what to expect when you choose Guru.
+                            what to expect when you choose SEER.
                         </p>
                     </div>
                 </div>
@@ -360,7 +362,7 @@ export default function LegalPage() {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
                                 </svg>
-                                <p>Questions? Email <a href="mailto:legal@gururepair.com">legal@gururepair.com</a></p>
+                                <p>Questions? Email <a href="mailto:legal@seermrt.com">legal@seermrt.com</a></p>
                             </div>
                         </aside>
 
@@ -375,47 +377,7 @@ export default function LegalPage() {
                 </div>
             </section>
 
-            {/* ─── Footer ───────────────────────────────────────── */}
-            <footer className="footer">
-                <div className="guru-container">
-                    <div className="footer__grid">
-                        <div>
-                            <div className="footer__brand-name">Guru</div>
-                            <p className="footer__brand-desc">
-                                Premium mobile repair delivered to your door.
-                                Fast, transparent, and guaranteed.
-                            </p>
-                        </div>
-                        <div>
-                            <h4 className="footer__col-title">Company</h4>
-                            <ul className="footer__links">
-                                <li><Link to="/">About Us</Link></li>
-                                <li><a href="http://localhost:5174" target="_blank" rel="noopener noreferrer">Technician Portal →</a></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="footer__col-title">Support</h4>
-                            <ul className="footer__links">
-                                <li><Link to="/faq">FAQ</Link></li>
-                                <li><a href="mailto:support@gururepair.com">Contact</a></li>
-                                <li><button className="footer__link-btn" onClick={() => setActiveSection('warranty')}>Warranty</button></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="footer__col-title">Legal</h4>
-                            <ul className="footer__links">
-                                <li><button className="footer__link-btn" onClick={() => setActiveSection('terms')}>Terms of Service</button></li>
-                                <li><button className="footer__link-btn" onClick={() => setActiveSection('privacy')}>Privacy Policy</button></li>
-                                <li><button className="footer__link-btn" onClick={() => setActiveSection('repair')}>Repair Agreement</button></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="footer__bottom">
-                        <span>© 2026 Guru Mobile Repair Solutions. All rights reserved.</span>
-                        <span>Built with faith, purpose, and care.</span>
-                    </div>
-                </div>
-            </footer>
+            <SiteFooter />
         </>
     );
 }

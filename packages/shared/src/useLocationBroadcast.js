@@ -55,7 +55,7 @@ export function useLocationBroadcast({ repairId, technicianId, isActive }) {
             .upsert(locationData, { onConflict: 'repair_id' });
 
         if (upsertError) {
-            console.error('Location push failed:', upsertError.message);
+            // upsert failed silently; next interval will retry
         }
     }, [repairId, technicianId]);
 
@@ -82,7 +82,6 @@ export function useLocationBroadcast({ repairId, technicianId, isActive }) {
                 });
             },
             (err) => {
-                console.error('Geolocation error:', err.message);
                 if (err.code === 1) {
                     setError('Location permission denied. Please enable location access.');
                     setPermissionState('denied');

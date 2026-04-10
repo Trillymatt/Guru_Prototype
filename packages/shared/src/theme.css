@@ -1,36 +1,72 @@
 /* ═══════════════════════════════════════════════════════════════
-   Guru Prototype - Shared Theme
+   SEER — Shared Theme
    Design tokens for consistent styling across customer & tech apps
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ─── Brand Colors ──────────────────────────────────────────── */
-  --guru-purple-50: #faf5ff;
-  --guru-purple-100: #f3e8ff;
-  --guru-purple-200: #e9d5ff;
-  --guru-purple-300: #d8b4fe;
-  --guru-purple-400: #c084fc;
-  --guru-purple-500: #a855f7;
-  --guru-purple-600: #7c3aed;
-  --guru-purple-700: #6d28d9;
-  --guru-purple-800: #5b21b6;
-  --guru-purple-900: #4c1d95;
+  /* ─── Brand Colors (Platinum/Silver/Black) ─────────────────── */
+  --seer-platinum-50: #fafafa;
+  --seer-platinum-100: #f0f0f2;
+  --seer-platinum-200: #e0e1e6;
+  --seer-platinum-300: #c7c8d0;
+  --seer-platinum-400: #a8aab6;
+  --seer-platinum-500: #8b8d9a;
+  --seer-platinum-600: #6e707e;
+  --seer-platinum-700: #525462;
+  --seer-platinum-800: #373848;
+  --seer-platinum-900: #1e1f2e;
+
+  /* ─── Accent Color (Cool Cyan) ─────────────────────────────── */
+  --seer-accent-50: #ecfeff;
+  --seer-accent-100: #cffafe;
+  --seer-accent-200: #a5f3fc;
+  --seer-accent-300: #67e8f9;
+  --seer-accent-400: #22d3ee;
+  --seer-accent-500: #06b6d4;
+  --seer-accent-600: #0891b2;
+  --seer-accent-700: #0e7490;
+  --seer-accent-800: #155e75;
+  --seer-accent-900: #164e63;
 
   /* ─── Grayscale ─────────────────────────────────────────────── */
-  --guru-gray-50: #f9fafb;
-  --guru-gray-100: #f3f4f6;
-  --guru-gray-200: #e5e7eb;
-  --guru-gray-300: #d1d5db;
-  --guru-gray-400: #9ca3af;
-  --guru-gray-500: #6b7280;
-  --guru-gray-600: #4b5563;
-  --guru-gray-700: #374151;
-  --guru-gray-800: #1f2937;
-  --guru-gray-900: #111827;
+  --seer-gray-50: #f9fafb;
+  --seer-gray-100: #f3f4f6;
+  --seer-gray-200: #e5e7eb;
+  --seer-gray-300: #d1d5db;
+  --seer-gray-400: #9ca3af;
+  --seer-gray-500: #6b7280;
+  --seer-gray-600: #4b5563;
+  --seer-gray-700: #374151;
+  --seer-gray-800: #1f2937;
+  --seer-gray-900: #111827;
 
   /* ─── Base Colors ───────────────────────────────────────────── */
-  --guru-white: #ffffff;
-  --guru-black: #0a0a0a;
+  --seer-white: #ffffff;
+  --seer-black: #0a0a0a;
+
+  /* ─── Legacy aliases (backward compat during transition) ───── */
+  --guru-purple-50: var(--seer-platinum-50);
+  --guru-purple-100: var(--seer-platinum-100);
+  --guru-purple-200: var(--seer-platinum-200);
+  --guru-purple-300: var(--seer-platinum-300);
+  --guru-purple-400: var(--seer-platinum-400);
+  --guru-purple-500: var(--seer-platinum-500);
+  --guru-purple-600: var(--seer-platinum-700);
+  --guru-purple-700: var(--seer-platinum-800);
+  --guru-purple-800: var(--seer-platinum-800);
+  --guru-purple-900: var(--seer-platinum-900);
+  --guru-gray-50: var(--seer-gray-50);
+  --guru-gray-100: var(--seer-gray-100);
+  --guru-gray-200: var(--seer-gray-200);
+  --guru-gray-300: var(--seer-gray-300);
+  --guru-gray-400: var(--seer-gray-400);
+  --guru-gray-500: var(--seer-gray-500);
+  --guru-gray-600: var(--seer-gray-600);
+  --guru-gray-700: var(--seer-gray-700);
+  --guru-gray-800: var(--seer-gray-800);
+  --guru-gray-900: var(--seer-gray-900);
+  --guru-white: var(--seer-white);
+  --guru-black: var(--seer-black);
 
   /* ─── Spacing Scale ─────────────────────────────────────────── */
   --space-1: 0.25rem;   /* 4px */
@@ -99,16 +135,57 @@
   --dark-border-medium: #404040;
   --dark-border-strong: #525252;
 
-  /* Purple in dark context (slightly brighter for visibility) */
-  --dark-purple-400: #c084fc;
-  --dark-purple-500: #a855f7;
-  --dark-purple-600: #9333ea;
+  /* Platinum/Silver in dark context */
+  --dark-platinum-400: #a8aab6;
+  --dark-platinum-500: #8b8d9a;
+  --dark-platinum-600: #6e707e;
+
+  /* Accent in dark context */
+  --dark-accent-400: #22d3ee;
+  --dark-accent-500: #06b6d4;
+  --dark-accent-600: #0891b2;
 
   /* Status colors for dark mode */
   --dark-success: #22c55e;
   --dark-warning: #f59e0b;
   --dark-error: #ef4444;
   --dark-info: #3b82f6;
+
+  /* ─── Font Weights ────────────────────────────────────────────── */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* ─── Line Heights ────────────────────────────────────────────── */
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ─── Breakpoints (for reference in media queries) ────────────── */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  /* ─── Status Colors ───────────────────────────────────────────── */
+  --color-success: #22C55E;
+  --color-success-bg: #D1FAE5;
+  --color-success-border: #A7F3D0;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FEF3C7;
+  --color-warning-border: #FDE68A;
+  --color-warning-text: #92400E;
+  --color-error: #EF4444;
+  --color-error-bg: #FEE2E2;
+  --color-error-text: #991B1B;
+  --color-info: #3B82F6;
+  --color-info-bg: #DBEAFE;
+
+  /* ─── Opacity ─────────────────────────────────────────────────── */
+  --opacity-disabled: 0.5;
+  --opacity-hover: 0.8;
 }
 
 /* ─── Global Reset & Base Styles ──────────────────────────────── */
@@ -134,8 +211,8 @@ html {
 }
 
 body {
-  color: var(--guru-gray-900);
-  background: var(--guru-white);
+  color: var(--seer-gray-900);
+  background: var(--seer-white);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -187,14 +264,14 @@ body {
 
 /* Button Variants */
 .guru-btn--primary {
-  background: linear-gradient(135deg, var(--guru-purple-600), var(--guru-purple-700));
-  color: var(--guru-white);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+  background: linear-gradient(135deg, var(--seer-platinum-800), var(--seer-black));
+  color: var(--seer-white);
+  box-shadow: 0 4px 12px rgba(30, 31, 46, 0.3);
 }
 
 .guru-btn--primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 8px 20px rgba(30, 31, 46, 0.4);
 }
 
 .guru-btn--primary:active:not(:disabled) {
@@ -202,24 +279,24 @@ body {
 }
 
 .guru-btn--secondary {
-  background: var(--guru-white);
-  color: var(--guru-gray-700);
-  border-color: var(--guru-gray-300);
+  background: var(--seer-white);
+  color: var(--seer-gray-700);
+  border-color: var(--seer-gray-300);
 }
 
 .guru-btn--secondary:hover:not(:disabled) {
-  background: var(--guru-gray-50);
-  border-color: var(--guru-gray-400);
+  background: var(--seer-gray-50);
+  border-color: var(--seer-gray-400);
 }
 
 .guru-btn--ghost {
   background: transparent;
-  color: var(--guru-gray-600);
+  color: var(--seer-gray-600);
 }
 
 .guru-btn--ghost:hover:not(:disabled) {
-  background: var(--guru-gray-100);
-  color: var(--guru-gray-900);
+  background: var(--seer-gray-100);
+  color: var(--seer-gray-900);
 }
 
 .guru-btn--danger {
@@ -263,26 +340,26 @@ body {
   padding: var(--space-3) var(--space-4);
   font-size: max(16px, var(--font-size-base)); /* Prevents iOS zoom on focus */
   font-family: inherit;
-  color: var(--guru-gray-900);
-  background: var(--guru-white);
-  border: 2px solid var(--guru-gray-200);
+  color: var(--seer-gray-900);
+  background: var(--seer-white);
+  border: 2px solid var(--seer-gray-200);
   border-radius: var(--radius-xl);
   transition: all var(--transition-fast);
   outline: none;
 }
 
 .guru-input::placeholder {
-  color: var(--guru-gray-400);
+  color: var(--seer-gray-400);
 }
 
 .guru-input:focus {
-  border-color: var(--guru-purple-500);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+  border-color: var(--seer-platinum-500);
+  box-shadow: 0 0 0 4px rgba(139, 141, 154, 0.15);
 }
 
 .guru-input:disabled {
-  background: var(--guru-gray-50);
-  color: var(--guru-gray-400);
+  background: var(--seer-gray-50);
+  color: var(--seer-gray-400);
   cursor: not-allowed;
 }
 
@@ -341,7 +418,7 @@ body {
 
 /* Focus styles for keyboard navigation */
 *:focus-visible {
-  outline: 2px solid var(--guru-purple-500);
+  outline: 2px solid var(--seer-accent-500);
   outline-offset: 2px;
 }
 
@@ -350,7 +427,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--guru-purple-500);
+  outline: 2px solid var(--seer-accent-500);
   outline-offset: 2px;
 }
 
@@ -375,9 +452,9 @@ textarea:focus-visible {
   --border-strong: var(--dark-border-strong);
 
   /* Brand colors adapted for dark */
-  --purple-primary: var(--dark-purple-500);
-  --purple-hover: var(--dark-purple-400);
-  --purple-active: var(--dark-purple-600);
+  --purple-primary: var(--dark-accent-500);
+  --purple-hover: var(--dark-accent-400);
+  --purple-active: var(--dark-accent-600);
 
   /* Status colors */
   --color-success: var(--dark-success);
@@ -388,13 +465,14 @@ textarea:focus-visible {
 
 /* Dark mode button variants */
 .dark .guru-btn--primary {
-  background: linear-gradient(135deg, var(--dark-purple-500), var(--dark-purple-600));
-  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+  background: linear-gradient(135deg, var(--seer-platinum-300), var(--seer-platinum-500));
+  color: var(--seer-black);
+  box-shadow: 0 4px 12px rgba(168, 170, 182, 0.2);
 }
 
 .dark .guru-btn--primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(168, 85, 247, 0.4);
+  box-shadow: 0 8px 20px rgba(168, 170, 182, 0.3);
 }
 
 .dark .guru-btn--secondary {
@@ -425,8 +503,8 @@ textarea:focus-visible {
 }
 
 .dark .guru-input:focus {
-  border-color: var(--dark-purple-500);
-  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15);
+  border-color: var(--dark-accent-500);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.15);
 }
 
 .dark .guru-input--error {
@@ -439,6 +517,6 @@ textarea:focus-visible {
 
 /* Dark mode focus states */
 .dark *:focus-visible {
-  outline: 2px solid var(--dark-purple-500);
+  outline: 2px solid var(--dark-accent-500);
   outline-offset: 2px;
 }

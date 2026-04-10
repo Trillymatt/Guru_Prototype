@@ -96,12 +96,12 @@ export default function LoginPage() {
             <div className="login-page">
                 <div className="login-card animate-scale-in">
                     <div className="login-card__logo">
-                        <div className="login-card__logo-icon">G</div>
+                        <div className="login-card__logo-icon">S</div>
                     </div>
 
                     {step === 1 ? (
                         <>
-                            <h1 className="login-card__title">Welcome to Guru</h1>
+                            <h1 className="login-card__title">Welcome to SEER</h1>
                             <p className="login-card__subtitle">
                                 Enter your email and we'll send you a verification code.
                             </p>

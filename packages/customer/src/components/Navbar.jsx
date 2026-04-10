@@ -34,40 +34,30 @@ export default function Navbar({ darkHero = false }) {
     const isLoggedIn = !loading && user;
 
     return (
-        <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${darkHero && !scrolled ? 'navbar--on-dark' : ''}`}>
+        <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${darkHero && !scrolled ? 'navbar--on-dark' : ''}`} aria-label="Main navigation">
             <div className="guru-container navbar__inner">
                 <Link to="/" className="navbar__logo" onClick={closeMenu}>
-                    <div className="navbar__logo-icon">G</div>
+                    <div className="navbar__logo-icon">S</div>
                     <div className="navbar__logo-text">
-                        <span className="navbar__logo-name">Guru</span>
-                        <span className="navbar__logo-tagline">Mobile Repairs</span>
+                        <span className="navbar__logo-name">SEER</span>
+                        <span className="navbar__logo-tagline">Wherever you are</span>
                     </div>
                 </Link>
 
                 <div className={`navbar__links ${menuOpen ? 'navbar__links--open' : ''}`}>
                     <Link to="/" className="navbar__link" onClick={closeMenu}>Home</Link>
-                    {isLoggedIn && (
-                        <Link to="/dashboard" className="navbar__link" onClick={closeMenu}>My Repairs</Link>
-                    )}
-                    {!isLoggedIn && (
-                        <>
-                            <a href="/#how-it-works" className="navbar__link" onClick={closeMenu}>How It Works</a>
-                            <a href="/#features" className="navbar__link" onClick={closeMenu}>Features</a>
-                        </>
-                    )}
+                    <Link to="/how-it-works" className="navbar__link" onClick={closeMenu}>How It Works</Link>
+                    <Link to="/about" className="navbar__link" onClick={closeMenu}>About</Link>
                     <Link to="/faq" className="navbar__link" onClick={closeMenu}>Support</Link>
-                    <Link to="/repair" className="navbar__link" onClick={closeMenu}>Start Repair</Link>
                     <div className="navbar__mobile-actions">
                         {isLoggedIn ? (
                             <>
-                                <Link to="/dashboard" className="guru-btn guru-btn--ghost guru-btn--full" onClick={closeMenu}>My Repairs</Link>
                                 <Link to="/profile" className="guru-btn guru-btn--ghost guru-btn--full" onClick={closeMenu}>Profile</Link>
                                 <button className="guru-btn guru-btn--primary guru-btn--full" onClick={handleSignOut}>Sign Out</button>
                             </>
                         ) : (
                             <>
                                 <Link to="/login" className="guru-btn guru-btn--ghost guru-btn--full" onClick={closeMenu}>Sign In</Link>
-                                <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--full" onClick={closeMenu}>Get Started</Link>
                             </>
                         )}
                     </div>
@@ -75,27 +65,49 @@ export default function Navbar({ darkHero = false }) {
 
                 <div className="navbar__actions">
                     {isLoggedIn ? (
-                        <>
-                            <Link to="/dashboard" className="guru-btn guru-btn--ghost guru-btn--sm">My Repairs</Link>
-                            <Link to="/profile" className="navbar__profile-btn" aria-label="Profile">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="navbar__profile-menu">
+                            <button
+                                type="button"
+                                className="navbar__profile-btn"
+                                aria-label="Account menu"
+                                aria-haspopup="true"
+                                id="nav-profile-trigger"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                                     <circle cx="12" cy="7" r="4" />
                                 </svg>
-                            </Link>
-                            <button className="guru-btn guru-btn--primary guru-btn--sm" onClick={handleSignOut}>Sign Out</button>
-                        </>
+                            </button>
+                            <div
+                                className="navbar__profile-dropdown"
+                                id="nav-profile-dropdown"
+                                role="menu"
+                                aria-labelledby="nav-profile-trigger"
+                            >
+                                <Link to="/profile" className="navbar__profile-dropdown-item" role="menuitem" onClick={closeMenu}>
+                                    Profile
+                                </Link>
+                                <button
+                                    type="button"
+                                    className="navbar__profile-dropdown-item navbar__profile-dropdown-item--signout"
+                                    role="menuitem"
+                                    onClick={handleSignOut}
+                                >
+                                    Sign out
+                                </button>
+                            </div>
+                        </div>
                     ) : (
                         <>
                             <Link to="/login" className="guru-btn guru-btn--ghost guru-btn--sm">Sign In</Link>
-                            <Link to="/repair" className="guru-btn guru-btn--primary guru-btn--sm">Get Started</Link>
                         </>
                     )}
                 </div>
 
                 <button
                     className={`navbar__mobile-toggle ${menuOpen ? 'navbar__mobile-toggle--active' : ''}`}
-                    aria-label="Menu"
+                    aria-label="Toggle menu"
+                    aria-expanded={menuOpen}
                     onClick={() => setMenuOpen(!menuOpen)}
                 >
                     <span></span>

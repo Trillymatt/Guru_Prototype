@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import VanLoader from '../components/VanLoader';
 import { useAuth } from '@shared/AuthProvider';
 import { supabase } from '@shared/supabase';
 import RepairChat from '@shared/RepairChat';
@@ -16,6 +17,7 @@ import {
     SERVICE_FEE,
     SAMPLE_PRICING,
     TAX_RATE,
+    SCHEDULING_LEAD_DAYS,
     getRepairStatusFlow,
 } from '@shared/constants';
 import GuruCalendar from '@shared/GuruCalendar';
@@ -36,6 +38,7 @@ export default function RepairDetailPage() {
     const { user } = useAuth();
     const [repair, setRepair] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState('');
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editDate, setEditDate] = useState('');
@@ -43,6 +46,9 @@ export default function RepairDetailPage() {
     const [editAddress, setEditAddress] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState('');
+    const [isSavingTimeSelection, setIsSavingTimeSelection] = useState(false);
+    const [timeSelectionError, setTimeSelectionError] = useState('');
+    const [selectedArrivalTime, setSelectedArrivalTime] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [customerLocation, setCustomerLocation] = useState(null);
 
@@ -57,19 +63,18 @@ export default function RepairDetailPage() {
     });
 
     // Geocode the repair address to get customer lat/lng for the map
+    const geocodeCancelledRef = useRef(false);
     useEffect(() => {
         if (!repair?.address) return;
-        let cancelled = false;
+        geocodeCancelledRef.current = false;
         geocodeAddress(repair.address)
             .then((coords) => {
-                if (!cancelled && coords) {
+                if (!geocodeCancelledRef.current && coords) {
                     setCustomerLocation(coords);
                 }
             })
-            .catch((err) => {
-                console.error('Geocoding failed for address:', err.message);
-            });
-        return () => { cancelled = true; };
+            .catch(() => {});
+        return () => { geocodeCancelledRef.current = true; };
     }, [repair?.address]);
 
     // Fetch the customer's display name for chat
@@ -89,12 +94,15 @@ export default function RepairDetailPage() {
         if (!user || !id) return;
 
         async function fetchRepair() {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('repairs')
                 .select('*')
                 .eq('id', id)
                 .eq('customer_id', user.id)
                 .single();
+            if (error) {
+                setFetchError('Failed to load repair details. Please try again.');
+            }
             setRepair(data);
             setLoading(false);
         }
@@ -131,7 +139,7 @@ export default function RepairDetailPage() {
         if (!isEditing) {
             // Entering edit mode - populate with current values
             setEditDate(repair.schedule_date || '');
-            setEditTime(repair.schedule_time || '');
+            setEditTime(TIME_SLOT_LABELS[repair.schedule_time] ? repair.schedule_time : '');
             setEditAddress(repair.address || '');
             setSaveError('');
         }
@@ -194,7 +202,7 @@ export default function RepairDetailPage() {
     ].includes(repair.status);
 
     const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 3);
+    minDate.setDate(minDate.getDate() + SCHEDULING_LEAD_DAYS);
     const minDateStr = minDate.toISOString().split('T')[0];
 
     const timeSlots = [
@@ -202,6 +210,48 @@ export default function RepairDetailPage() {
         { id: 'afternoon', label: 'Afternoon', range: '12:00 PM – 4:00 PM', icon: '☀️' },
         { id: 'evening', label: 'Evening', range: '4:00 PM – 7:00 PM', icon: '🌆' },
     ];
+
+    const hasScheduledTime = Boolean(TIME_SLOT_LABELS[repair?.schedule_time]);
+    const needsTimeSelection = repair?.status === REPAIR_STATUS.PARTS_RECEIVED && !hasScheduledTime;
+
+    useEffect(() => {
+        if (needsTimeSelection) {
+            setSelectedArrivalTime('');
+            setTimeSelectionError('');
+        }
+    }, [needsTimeSelection, repair?.id]);
+
+    const handleTimeSelectionSubmit = async () => {
+        if (!selectedArrivalTime) {
+            setTimeSelectionError('Please select a time window to continue.');
+            return;
+        }
+
+        setIsSavingTimeSelection(true);
+        setTimeSelectionError('');
+
+        const { error } = await supabase
+            .from('repairs')
+            .update({
+                schedule_time: selectedArrivalTime,
+                status: REPAIR_STATUS.SCHEDULED,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', id);
+
+        if (error) {
+            setTimeSelectionError('Unable to save your time right now. Please try again.');
+            setIsSavingTimeSelection(false);
+            return;
+        }
+
+        setRepair(prev => ({
+            ...prev,
+            schedule_time: selectedArrivalTime,
+            status: REPAIR_STATUS.SCHEDULED,
+        }));
+        setIsSavingTimeSelection(false);
+    };
 
     // Use conditional status flow based on whether parts were in stock
     const statusFlow = repair ? getRepairStatusFlow(repair.parts_in_stock) : REPAIR_STATUS_FLOW;
@@ -213,22 +263,22 @@ export default function RepairDetailPage() {
                 <Navbar />
                 <div className="repair-detail">
                     <div className="guru-container guru-container--narrow">
-                        <div className="rd-loading">Loading repair details...</div>
+                        <VanLoader text="Loading repair details..." compact={true} />
                     </div>
                 </div>
             </>
         );
     }
 
-    if (!repair) {
+    if (fetchError || !repair) {
         return (
             <>
                 <Navbar />
                 <div className="repair-detail">
                     <div className="guru-container guru-container--narrow">
                         <div className="rd-empty">
-                            <h2>Repair not found</h2>
-                            <p>This repair doesn't exist or you don't have access to it.</p>
+                            <h2>{fetchError ? 'Error loading repair' : 'Repair not found'}</h2>
+                            <p>{fetchError || "This repair doesn't exist or you don't have access to it."}</p>
                             <Link to="/dashboard" className="guru-btn guru-btn--primary" style={{ marginTop: 16 }}>
                                 Back to Dashboard
                             </Link>
@@ -269,9 +319,49 @@ export default function RepairDetailPage() {
                             <span>✓</span> All parts were in stock for this repair.
                         </div>
                     )}
-                    {repair.parts_in_stock === false && (
+                    {repair.parts_in_stock === false && repair.status === REPAIR_STATUS.PARTS_ORDERED && (
                         <div className="rd-inventory-banner rd-inventory-banner--order">
                             <span>📦</span> Parts are being ordered for this repair.
+                        </div>
+                    )}
+                    {repair.parts_in_stock === false && repair.status === REPAIR_STATUS.PARTS_RECEIVED && (
+                        <div className="rd-inventory-banner rd-inventory-banner--arrived">
+                            <span>🎉</span> Great news - your parts arrived.
+                        </div>
+                    )}
+
+                    {needsTimeSelection && (
+                        <div className="rd-time-prompt">
+                            <h3 className="rd-time-prompt__title">Choose your repair time</h3>
+                            <p className="rd-time-prompt__subtitle">
+                                Your parts are here. Pick a time window so we can lock in your appointment.
+                            </p>
+                            <div className="rd-time-prompt__slots">
+                                {timeSlots.map((slot) => (
+                                    <button
+                                        key={slot.id}
+                                        type="button"
+                                        className={`rd-time-option ${selectedArrivalTime === slot.id ? 'rd-time-option--selected' : ''}`}
+                                        onClick={() => setSelectedArrivalTime(slot.id)}
+                                        disabled={isSavingTimeSelection}
+                                    >
+                                        <span className="rd-time-option__icon">{slot.icon}</span>
+                                        <span className="rd-time-option__label">{slot.label}</span>
+                                        <span className="rd-time-option__range">{slot.range}</span>
+                                    </button>
+                                ))}
+                            </div>
+                            {timeSelectionError && (
+                                <p className="rd-time-prompt__error">{timeSelectionError}</p>
+                            )}
+                            <button
+                                type="button"
+                                className="guru-btn guru-btn--primary"
+                                onClick={handleTimeSelectionSubmit}
+                                disabled={isSavingTimeSelection}
+                            >
+                                {isSavingTimeSelection ? 'Saving...' : 'Confirm Time'}
+                            </button>
                         </div>
                     )}
 
@@ -466,12 +556,16 @@ export default function RepairDetailPage() {
                                 </div>
                                 <div className="rd-detail-row">
                                     <span className="rd-detail-label">Date</span>
-                                    <span className="rd-detail-value">{repair.schedule_date ? repair.schedule_date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '—'}</span>
+                                    <span className="rd-detail-value">{repair.schedule_date
+                                        ? new Date(repair.schedule_date + 'T00:00:00').toLocaleDateString('en-US', {
+                                            month: '2-digit', day: '2-digit', year: 'numeric'
+                                        })
+                                        : '—'}</span>
                                 </div>
                                 <div className="rd-detail-row">
                                     <span className="rd-detail-label">Time</span>
                                     <span className="rd-detail-value">
-                                        {TIME_SLOT_LABELS[repair.schedule_time]?.range || repair.schedule_time || '—'}
+                                        {TIME_SLOT_LABELS[repair.schedule_time]?.range || 'To be scheduled after parts arrive'}
                                     </span>
                                 </div>
                                 <div className="rd-detail-row">

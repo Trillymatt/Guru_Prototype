@@ -1,5 +1,5 @@
 -- ============================================================================
--- GURU MOBILE REPAIR SOLUTIONS — Email Notification System
+-- SEER MOBILE REPAIR SOLUTIONS — Email Notification System
 -- Run this in your Supabase SQL Editor AFTER the main schema.sql
 --
 -- This sets up:
@@ -121,7 +121,7 @@ BEGIN
     'address',          NEW.address,
     'total_estimate',   NEW.total_estimate,
     'service_fee',      NEW.service_fee,
-    'technician_name',  COALESCE(v_tech_name, 'Your Guru Technician'),
+    'technician_name',  COALESCE(v_tech_name, 'Your SEER Technician'),
     'notes',            NEW.notes
   );
 

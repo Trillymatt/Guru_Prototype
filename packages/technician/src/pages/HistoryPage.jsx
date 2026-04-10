@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { REPAIR_STATUS, REPAIR_STATUS_LABELS } from '@shared/constants';
+import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_TYPES } from '@shared/constants';
 import { supabase } from '@shared/supabase';
 import TechNav from '../components/TechNav';
 
 export default function HistoryPage() {
     const [repairs, setRepairs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(null);
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -33,7 +34,12 @@ export default function HistoryPage() {
                 .eq('status', 'complete')
                 .order('updated_at', { ascending: false });
 
-            if (!error && data) {
+            if (error) {
+                setFetchError(error.message);
+                setLoading(false);
+                return;
+            }
+            if (data) {
                 setRepairs(data);
             }
             setLoading(false);
@@ -63,6 +69,11 @@ export default function HistoryPage() {
                                 <div style={{ fontSize: '2rem', marginBottom: 12 }}>⏳</div>
                                 Loading history...
                             </div>
+                        ) : fetchError ? (
+                            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-secondary)' }}>
+                                <div style={{ fontSize: '2rem', marginBottom: 12 }}>⚠️</div>
+                                Failed to load history: {fetchError}
+                            </div>
                         ) : repairs.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-secondary)' }}>
                                 <div style={{ fontSize: '2rem', marginBottom: 12 }}>📋</div>
@@ -91,7 +102,10 @@ export default function HistoryPage() {
                                     <div className="repair-card__priority" style={{ background: 'var(--guru-success)' }}></div>
                                     <div className="repair-card__info">
                                         <div className="repair-card__device">{repair.device}</div>
-                                        <div className="repair-card__issues">{issues.join(' · ')}</div>
+                                        <div className="repair-card__issues">{issues.map(id => {
+                                            const type = REPAIR_TYPES.find(t => t.id === id);
+                                            return type ? `${type.icon} ${type.name}` : id;
+                                        }).join(' · ')}</div>
                                         <div className="repair-card__meta">
                                             <span>👤 {customerName}</span>
                                             <span>✅ Completed {completedDate}</span>

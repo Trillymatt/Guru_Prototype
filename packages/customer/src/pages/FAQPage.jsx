@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+
 import Navbar from '../components/Navbar';
+import SiteFooter from '../components/SiteFooter';
 import '../styles/faq.css';
 
 const FAQ_CATEGORIES = [
     {
         id: 'about',
-        label: 'About Guru',
+        label: 'About SEER',
         icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
@@ -14,24 +15,12 @@ const FAQ_CATEGORIES = [
         ),
         faqs: [
             {
-                q: 'What is Guru Mobile Repair?',
-                a: 'Guru is a mobile iPhone repair service serving the Dallas–Fort Worth area. Our Apple Certified technicians — many of whom are former Apple employees — come directly to you. Whether you\'re at home, the office, or a coffee shop, we repair your device on-site so you never have to visit a store.'
+                q: 'What is SEER Mobile Repair?',
+                a: 'SEER is a mobile iPhone repair service in the Dallas-Fort Worth area. We come to your home, office, or another convenient location - no store visit needed.'
             },
             {
-                q: 'Are your technicians Apple Certified?',
-                a: 'Yes. Every Guru technician is Apple Certified and has hands-on experience working directly at Apple. Our team brings the same expertise you\'d find inside an Apple Store directly to your door — without the Genius Bar wait.'
-            },
-            {
-                q: 'Is Guru a Christian company?',
-                a: 'Yes. Guru was founded on Christian values — honesty, integrity, and excellence in everything we do. We strive to serve every customer the way we\'d want to be served, treating your device (and your time) with the care and respect it deserves.'
-            },
-            {
-                q: 'What areas do you currently serve?',
-                a: 'We currently serve the greater Dallas–Fort Worth metroplex. Enter your address during booking to confirm we cover your area. We\'re expanding — new cities are coming soon.'
-            },
-            {
-                q: 'Do you repair Android or other devices?',
-                a: 'At this time we specialize exclusively in iPhone repairs (iPhone 11 through iPhone 17). Our deep focus on Apple devices means we do one thing and do it exceptionally well.'
+                q: 'What areas do you serve?',
+                a: 'We serve a limited area in the Dallas-Fort Worth metroplex with plans to expand. Enter your address during booking to confirm availability.'
             },
         ],
     },
@@ -46,27 +35,19 @@ const FAQ_CATEGORIES = [
         faqs: [
             {
                 q: 'What types of repairs do you perform?',
-                a: 'We repair: Cracked screens, battery replacement, back glass, and cameras (front and rear). All repairs are completed on-site at your location.'
+                a: 'Display, battery, camera, back glass replacement.'
             },
             {
                 q: 'How long does a repair take?',
-                a: 'Most repairs are completed in under an hour. Screen replacements typically take 30–45 minutes. Complex repairs like water damage may take slightly longer. Your technician will give you an honest estimate when they arrive.'
+                a: 'Repair times vary; typically taking 1 hour or more, with most repairs completed under one hour.'
             },
             {
-                q: 'Why must I book at least 3 days in advance?',
-                a: 'We order parts specifically for your repair to ensure quality and availability. The 3-day window allows us to source and receive the exact parts needed for your device model and chosen quality tier — so your technician arrives fully prepared.'
+                q: 'Why must I book 3 days in advance?',
+                a: 'Booking 3 days in advance, allows SEER to confirm the necessary parts for the repair, and allows convenience to fit your scheduling needs.'
             },
             {
-                q: 'Do I need to be present during the repair?',
-                a: 'Yes. A responsible adult (18+) must be present for the repair, review the work, and sign off on completion. We take your device security seriously — we will never perform a repair without your direct oversight.'
-            },
-            {
-                q: 'Can I cancel or reschedule my appointment?',
-                a: 'Yes. You can cancel or reschedule through your dashboard or by contacting us directly. Please do so at least 24 hours before your appointment. Late cancellations may forfeit the $29 service fee, as parts will have already been ordered.'
-            },
-            {
-                q: 'What if the repair can\'t be completed on-site?',
-                a: 'In rare cases where a repair requires additional parts or a more complex fix, your technician will discuss next steps with you before proceeding. We are always transparent — no surprises.'
+                q: 'Can I cancel or reschedule?',
+                a: 'Yes. Cancel or reschedule with at least 24 hours\' notice before your scheduled appointment. Contact us if you need help updating your booking.'
             },
         ],
     },
@@ -80,16 +61,12 @@ const FAQ_CATEGORIES = [
         ),
         faqs: [
             {
-                q: 'What is the difference between Economy, Premium, and Genuine Apple parts?',
-                a: 'Economy parts are quality aftermarket components — a solid budget option. Premium parts are high-quality aftermarket components that meet or exceed OEM specifications — our most popular tier. Genuine Apple (OEM) parts are original Apple components, offering maximum compatibility and the experience closest to factory specification. You choose the tier that fits your priorities and budget.'
+                q: 'What are the parts quality tiers?',
+                a: 'Economy (budget aftermarket), Premium (high-grade aftermarket), and Genuine Apple (OEM). Choose the tier that fits your budget.'
             },
             {
                 q: 'Do you offer a warranty on repairs?',
-                a: 'No. All repairs are provided as-is and do not include any warranty on parts or labor. Once a repair is completed and signed off, no further claims can be made. Please review our full Warranty Policy on the legal page for details.'
-            },
-            {
-                q: 'Will the repair void my Apple warranty?',
-                a: 'Third-party repairs can affect Apple\'s limited hardware warranty. We use Genuine Apple (OEM) parts for customers who want to stay closest to Apple\'s standards. We recommend checking your current warranty status with Apple before proceeding if this is a concern.'
+                a: 'No, repairs are provided as-is. Please review the Warranty Policy on our legal page before booking.'
             },
         ],
     },
@@ -104,19 +81,19 @@ const FAQ_CATEGORIES = [
         faqs: [
             {
                 q: 'What is the service fee?',
-                a: 'There is a flat $29 service fee that covers the technician\'s travel and on-site time. This fee is charged in addition to the cost of parts and applies to every repair appointment. The service fee is shown transparently during checkout.'
+                a: 'There is a flat $29 service fee for technician travel and on-site service. It is added to parts cost and shown clearly during booking.'
             },
             {
                 q: 'How is pricing calculated?',
-                a: 'Your total is: parts cost (based on your chosen quality tier) + $29 service fee + 8.25% Texas sales tax. All pricing is shown upfront during the repair quiz — no hidden fees, ever.'
+                a: 'Your total includes parts cost (based on your selected quality tier), a $29 service fee, and 8.25% Texas sales tax. We show full pricing upfront during the repair quiz.'
             },
             {
                 q: 'When am I charged?',
-                a: 'Payment is collected after the repair is completed and you have reviewed and signed off on the work. We believe you should only pay for a job well done.'
+                a: 'You are charged after the repair is complete and you approve the work. We only collect payment once the job is finished.'
             },
             {
                 q: 'What payment methods do you accept?',
-                a: 'We accept all major credit and debit cards. Additional payment options are being added. Payment processing information is covered in our Terms of Service.'
+                a: 'We do not accept credit or debit cards yet. We currently accept cash, Zelle, Cash App, and Venmo. Payment is collected after your repair is complete. Details are in our Terms of Service.'
             },
         ],
     },
@@ -155,14 +132,11 @@ export default function FAQPage() {
                 <div className="guru-container">
                     <div className="faq-hero__content">
                         <div className="faq-hero__badge">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
-                            </svg>
                             Help Center
                         </div>
                         <h1 className="faq-hero__title">How can we help you?</h1>
                         <p className="faq-hero__subtitle">
-                            Find answers to common questions about Guru repairs, scheduling, parts, and more.
+                            Find answers to common questions about SEER repairs, scheduling, parts, and more.
                             Can't find what you need? Our team is here for you.
                         </p>
                     </div>
@@ -191,12 +165,12 @@ export default function FAQPage() {
                             <div className="faq-sidebar__divider" />
 
                             <div className="faq-sidebar__contact">
-                                <p className="faq-sidebar__contact-label">Still need help?</p>
-                                <a href="mailto:support@gururepair.com" className="faq-sidebar__contact-btn">
+                                <p className="faq-sidebar__contact-label">24/7 Support</p>
+                                <a href="tel:+14697654432" className="faq-sidebar__contact-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
                                     </svg>
-                                    Email Support
+                                    (469) 765-4432
                                 </a>
                             </div>
                         </aside>
@@ -223,8 +197,7 @@ export default function FAQPage() {
                     <div className="support-header">
                         <h2 className="support-title">Contact Support</h2>
                         <p className="support-subtitle">
-                            Our team is available Monday–Saturday, 8 AM – 7 PM CST.
-                            We typically respond within a few hours.
+                            Our team is available 24/7. Call, text, or email — we're here whenever you need us.
                         </p>
                     </div>
 
@@ -232,92 +205,38 @@ export default function FAQPage() {
                         <div className="support-card">
                             <div className="support-card__icon support-card__icon--email">
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
                                 </svg>
                             </div>
-                            <h3 className="support-card__title">Email Us</h3>
+                            <h3 className="support-card__title">Call or Text</h3>
                             <p className="support-card__desc">
-                                Best for questions about existing repairs, billing, or policies.
+                                Available 24/7 for questions, scheduling, or urgent support.
                             </p>
-                            <a href="mailto:support@gururepair.com" className="support-card__link">
-                                support@gururepair.com
+                            <a href="tel:+14697654432" className="support-card__link">
+                                (469) 765-4432
                             </a>
                         </div>
 
                         <div className="support-card support-card--featured">
                             <div className="support-card__icon support-card__icon--repair">
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                                 </svg>
                             </div>
-                            <h3 className="support-card__title">Book a Repair</h3>
+                            <h3 className="support-card__title">Email Us</h3>
                             <p className="support-card__desc">
-                                Ready to fix your device? Start your repair in under 2 minutes.
+                                Best for billing, policies, or detailed questions.
                             </p>
-                            <Link to="/repair" className="guru-btn guru-btn--primary">
-                                Start a Repair →
-                            </Link>
+                            <a href="mailto:support@seermrt.com" className="support-card__link">
+                                support@seermrt.com
+                            </a>
                         </div>
 
-                        <div className="support-card">
-                            <div className="support-card__icon support-card__icon--dashboard">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                                </svg>
-                            </div>
-                            <h3 className="support-card__title">Track Your Repair</h3>
-                            <p className="support-card__desc">
-                                Check status updates, chat with your technician, and view history.
-                            </p>
-                            <Link to="/dashboard" className="support-card__link">
-                                Go to Dashboard →
-                            </Link>
-                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* ─── Footer ───────────────────────────────────────── */}
-            <footer className="footer">
-                <div className="guru-container">
-                    <div className="footer__grid">
-                        <div>
-                            <div className="footer__brand-name">Guru</div>
-                            <p className="footer__brand-desc">
-                                Premium mobile repair delivered to your door.
-                                Fast, transparent, and guaranteed.
-                            </p>
-                        </div>
-                        <div>
-                            <h4 className="footer__col-title">Company</h4>
-                            <ul className="footer__links">
-                                <li><Link to="/">About Us</Link></li>
-                                <li><a href="http://localhost:5174" target="_blank" rel="noopener noreferrer">Technician Portal →</a></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="footer__col-title">Support</h4>
-                            <ul className="footer__links">
-                                <li><Link to="/faq">FAQ</Link></li>
-                                <li><a href="mailto:support@gururepair.com">Contact</a></li>
-                                <li><Link to="/legal?section=warranty">Warranty</Link></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="footer__col-title">Legal</h4>
-                            <ul className="footer__links">
-                                <li><Link to="/legal">Terms of Service</Link></li>
-                                <li><Link to="/legal?section=privacy">Privacy Policy</Link></li>
-                                <li><Link to="/legal?section=repair">Repair Agreement</Link></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="footer__bottom">
-                        <span>© 2026 Guru Mobile Repair Solutions. All rights reserved.</span>
-                        <span>Built with faith, purpose, and care.</span>
-                    </div>
-                </div>
-            </footer>
+            <SiteFooter />
         </>
     );
 }

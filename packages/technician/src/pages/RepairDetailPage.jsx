@@ -4,20 +4,22 @@ import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_FLOW, REPAIR_TYPES, 
 import { supabase } from '@shared/supabase';
 import { useLocationBroadcast } from '@shared/useLocationBroadcast';
 import RepairChat from '@shared/RepairChat';
+import usePaymentFlow from '../hooks/usePaymentFlow';
+import useRepairPhotos from '../hooks/useRepairPhotos';
 import TechNav from '../components/TechNav';
 import '@shared/repair-chat.css';
 import '@shared/live-tracking.css';
 import '../styles/tech-repair-detail.css';
 
-const AGREEMENT_TEXT = `GURU MOBILE REPAIR AGREEMENT
+const AGREEMENT_TEXT = `SEER MOBILE REPAIR AGREEMENT
 
-By signing below, I authorize Guru Mobile Repair Solutions ("Guru") to perform the repair service(s) described in this work order on my device.
+By signing below, I authorize SEER Mobile Repair Solutions ("SEER") to perform the repair service(s) described in this work order on my device.
 
 I acknowledge that:
 1. I am the rightful owner of the device submitted for repair.
 2. I understand the estimated cost and repair details as presented.
-3. Guru is not responsible for pre-existing conditions or damage unrelated to the requested repair.
-4. Data backup is my responsibility. Guru is not liable for any data loss during repair.
+3. SEER is not responsible for pre-existing conditions or damage unrelated to the requested repair.
+4. Data backup is my responsibility. SEER is not liable for any data loss during repair.
 5. The selected parts tier and associated quality level have been explained to me.
 6. Repair times are estimates and may vary based on device condition.
 
@@ -43,30 +45,33 @@ export default function RepairDetailPage() {
     const [confirmModal, setConfirmModal] = useState(null); // { nextStatus, nextLabel, isClaim }
     const [showCancelModal, setShowCancelModal] = useState(false);
 
-    // Photo state
-    const [photos, setPhotos] = useState([]);
-    const [photosLoading, setPhotosLoading] = useState(true);
-    const [uploading, setUploading] = useState(false);
+    // Photo state (delegated to useRepairPhotos hook)
+    const {
+        photos, beforePhotos, afterPhotos,
+        photosLoading, uploading, photoError,
+        uploadPhoto, deletePhoto,
+    } = useRepairPhotos(id, supabase);
     const [photoType, setPhotoType] = useState('before');
-    const [photoError, setPhotoError] = useState('');
     const [expandedPhoto, setExpandedPhoto] = useState(null);
     const fileInputRef = useRef(null);
 
-    // Payment state
-    const [tipAmount, setTipAmount] = useState(0);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [paymentModalStep, setPaymentModalStep] = useState('tip'); // 'tip' | 'payment' | 'signature'
-    const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'square-qr' | 'square-tap'
-    const [paymentProcessing, setPaymentProcessing] = useState(false);
-    const [paymentError, setPaymentError] = useState('');
-
-    // Cash change calculator state
-    const [cashReceived, setCashReceived] = useState('');
-
-    // Square payment state
-    const [squarePaymentUrl, setSquarePaymentUrl] = useState(null);
-    const [squarePhase, setSquarePhase] = useState('idle'); // 'idle' | 'loading' | 'ready' | 'waiting'
-    const [splitCashAmount, setSplitCashAmount] = useState(0); // cash collected in a split payment
+    // Payment state (delegated to usePaymentFlow reducer)
+    const {
+        payment,
+        showModal: openPaymentModal,
+        hideModal: closePaymentModal,
+        setTip,
+        setMethod,
+        setStep: setPaymentStep,
+        startProcessing,
+        stopProcessing,
+        setError: setPaymentError,
+        setPeerConfirmed,
+        setCashReceived,
+        setSplitCash,
+        backToTip,
+        backToMethod,
+    } = usePaymentFlow();
 
     // Location sharing state
     const [locationModal, setLocationModal] = useState(false);
@@ -117,7 +122,6 @@ export default function RepairDetailPage() {
                 .single();
 
             if (error || !data) {
-                console.error('Repair not found:', error);
                 setLoading(false);
                 return;
             }
@@ -150,7 +154,7 @@ export default function RepairDetailPage() {
 
     // Initialize signature pad — shared canvas for intake and completion signatures
     useEffect(() => {
-        const needsSig = showIntakeSignature || (showPaymentModal && paymentModalStep === 'signature');
+        const needsSig = showIntakeSignature || (payment.showModal && payment.step === 'signature');
         if (!needsSig) {
             sigPadRef.current = null;
             return;
@@ -169,122 +173,20 @@ export default function RepairDetailPage() {
                 canvas.getContext('2d').scale(ratio, ratio);
             });
         }
-    }, [showIntakeSignature, showPaymentModal, paymentModalStep]);
+    }, [showIntakeSignature, payment.showModal, payment.step]);
 
-    // Fetch repair photos
-    useEffect(() => {
-        const fetchPhotos = async () => {
-            setPhotosLoading(true);
-            const { data, error } = await supabase
-                .from('repair_photos')
-                .select('*')
-                .eq('repair_id', id)
-                .order('created_at', { ascending: true });
 
-            if (!error && data) {
-                const photosWithUrls = await Promise.all(
-                    data.map(async (photo) => {
-                        const { data: urlData } = await supabase.storage
-                            .from('repair-photos')
-                            .createSignedUrl(photo.file_path, 3600);
-                        return { ...photo, signedUrl: urlData?.signedUrl || null };
-                    })
-                );
-                setPhotos(photosWithUrls);
-            }
-            setPhotosLoading(false);
-        };
-
-        fetchPhotos();
-    }, [id]);
-
-    // Upload photo handler
     const handlePhotoUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        const validTypes = ['image/jpeg', 'image/heic', 'image/heif'];
-        const validExtensions = ['.jpg', '.jpeg', '.heic', '.heif'];
-        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-        if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
-            setPhotoError('Only JPEG and HEIC files are accepted.');
-            return;
-        }
-
-        if (file.size > 20 * 1024 * 1024) {
-            setPhotoError('File size must be under 20MB.');
-            return;
-        }
-
-        setUploading(true);
-        setPhotoError('');
-
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Not authenticated');
-
-            const timestamp = Date.now();
-            const fileExt = ext || '.jpg';
-            const filePath = `repairs/${id}/${photoType}_${timestamp}${fileExt}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('repair-photos')
-                .upload(filePath, file, { contentType: file.type || 'image/jpeg' });
-
-            if (uploadError) throw uploadError;
-
-            const { data: photoRecord, error: insertError } = await supabase
-                .from('repair_photos')
-                .insert({
-                    repair_id: id,
-                    technician_id: user.id,
-                    photo_type: photoType,
-                    file_path: filePath,
-                    file_name: file.name,
-                    content_type: file.type || 'image/jpeg',
-                })
-                .select()
-                .single();
-
-            if (insertError) throw insertError;
-
-            const { data: urlData } = await supabase.storage
-                .from('repair-photos')
-                .createSignedUrl(filePath, 3600);
-
-            setPhotos(prev => [...prev, { ...photoRecord, signedUrl: urlData?.signedUrl || null }]);
-        } catch (err) {
-            console.error('Photo upload failed:', err);
-            setPhotoError(err.message || 'Upload failed. Please try again.');
-        }
-
-        setUploading(false);
+        await uploadPhoto(file, photoType);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // Delete photo handler
     const handlePhotoDelete = async (photo) => {
-        if (!window.confirm('Delete this photo? This cannot be undone.')) return;
-        try {
-            await supabase.storage
-                .from('repair-photos')
-                .remove([photo.file_path]);
-
-            await supabase
-                .from('repair_photos')
-                .delete()
-                .eq('id', photo.id);
-
-            setPhotos(prev => prev.filter(p => p.id !== photo.id));
-            if (expandedPhoto?.id === photo.id) setExpandedPhoto(null);
-        } catch (err) {
-            console.error('Photo delete failed:', err);
-            setPhotoError('Failed to delete photo. Please try again.');
-        }
+        const deletedId = await deletePhoto(photo);
+        if (deletedId && expandedPhoto?.id === deletedId) setExpandedPhoto(null);
     };
-
-    const beforePhotos = photos.filter(p => p.photo_type === 'before');
-    const afterPhotos = photos.filter(p => p.photo_type === 'after');
 
     const clearSignature = () => {
         if (sigPadRef.current) {
@@ -309,7 +211,7 @@ export default function RepairDetailPage() {
                 setRepair(prev => ({ ...prev, signature_path: fileName }));
             }
         } catch (err) {
-            console.log('Intake signature storage skipped:', err.message);
+            // signature storage is non-critical
         }
         setIntakeSigned(true);
         setShowIntakeSignature(false);
@@ -332,21 +234,10 @@ export default function RepairDetailPage() {
                 setRepair(prev => ({ ...prev, completion_signature_path: fileName }));
             }
         } catch (err) {
-            console.log('Completion signature storage skipped:', err.message);
+            // signature storage is non-critical
         }
         setCompletionSigned(true);
         await finalizeRepair();
-    };
-
-    const closePaymentModal = () => {
-        setShowPaymentModal(false);
-        setPaymentModalStep('tip');
-        setPaymentMethod(null);
-        setSquarePaymentUrl(null);
-        setSquarePhase('idle');
-        setPaymentError('');
-        setCashReceived('');
-        setSplitCashAmount(0);
     };
 
     // Called after payment + completion signature — marks the repair as complete
@@ -368,11 +259,11 @@ export default function RepairDetailPage() {
                         device: repair.device,
                         issues: repair.issues,
                         total_estimate: repair.total_estimate,
-                        tip_amount: repair.tip_amount || tipAmount,
+                        tip_amount: repair.tip_amount || payment.tipAmount,
                         payment_method: repair.payment_method,
                         paid_at: repair.paid_at || new Date().toISOString(),
                     },
-                }).catch((err) => console.error('Invoice email error:', err));
+                }).catch(() => {});
             }
         }
         setUpdating(false);
@@ -393,12 +284,7 @@ export default function RepairDetailPage() {
 
         // Completing a repair → trigger payment + signature flow instead of a simple confirm
         if (nextStatus === REPAIR_STATUS.COMPLETE) {
-            setPaymentModalStep('tip');
-            setPaymentMethod(null);
-            setPaymentError('');
-            setSquarePaymentUrl(null);
-            setSquarePhase('idle');
-            setShowPaymentModal(true);
+            openPaymentModal();
             return;
         }
 
@@ -481,15 +367,14 @@ export default function RepairDetailPage() {
 
 
     const handleCashPayment = async () => {
-        setPaymentProcessing(true);
-        setPaymentError('');
+        startProcessing();
         try {
             const { error } = await supabase
                 .from('repairs')
                 .update({
                     payment_method: 'cash',
                     payment_status: 'completed',
-                    tip_amount: tipAmount,
+                    tip_amount: payment.tipAmount,
                     paid_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 })
@@ -500,214 +385,46 @@ export default function RepairDetailPage() {
                 ...prev,
                 payment_method: 'cash',
                 payment_status: 'completed',
-                tip_amount: tipAmount,
+                tip_amount: payment.tipAmount,
                 paid_at: new Date().toISOString(),
             }));
-            // Advance to completion signature step
-            setPaymentModalStep('signature');
+            setPaymentStep('signature');
         } catch (err) {
-            console.error('Cash payment error:', err);
             setPaymentError(err.message || 'Failed to record cash payment.');
         }
-        setPaymentProcessing(false);
+        stopProcessing();
     };
 
-    // Square QR: create a hosted Square payment link → show as QR for customer to scan
-    // cashPortion: amount already collected in cash (split payment), 0 for full card payment
-    const handleSquareQRPayment = async (cashPortion = 0) => {
-        setPaymentProcessing(true);
-        setPaymentError('');
-        setSquarePhase('loading');
+    // Peer-to-peer payment (Zelle, CashApp, Venmo): tech confirms payment received
+    const handlePeerPayment = async () => {
+        startProcessing();
         try {
-            const { grandTotal } = computeTotal();
-            const totalDue = grandTotal + tipAmount;
-            const chargeAmount = cashPortion > 0 ? totalDue - cashPortion : grandTotal;
-            const chargeTip = cashPortion > 0 ? 0 : tipAmount;
-            if (cashPortion > 0) {
-                sessionStorage.setItem(`split_cash_${repair.id}`, cashPortion.toString());
-            }
-            const issueNames = issues.map(iid => REPAIR_TYPES.find(t => t.id === iid)?.name || iid).join(', ');
-            const description = `${repair.device} — ${issueNames}`;
-            const redirectUrl = `${window.location.origin}/repair/${repair.id}?square_qr_success=1`;
-
-            const { data: fnData, error: fnError } = await supabase.functions.invoke('create-square-payment-link', {
-                body: {
-                    repair_id: repair.id,
-                    amount: chargeAmount,
-                    tip_amount: chargeTip,
-                    redirect_url: redirectUrl,
-                    description,
-                },
-            });
-            if (fnError) {
-                let errorMessage = fnError.message || 'Payment service error';
-                try {
-                    const body = await fnError.context?.json();
-                    if (body?.details) errorMessage = body.details;
-                    else if (body?.error) errorMessage = body.error;
-                } catch {}
-                throw new Error(errorMessage);
-            }
-            if (!fnData?.url) throw new Error('No payment URL returned.');
-
-            setSquarePaymentUrl(fnData.url);
-            setSquarePhase('ready');
-        } catch (err) {
-            console.error('Square QR error:', err);
-            setPaymentError(err.message || 'Failed to create payment link.');
-            setSquarePhase('idle');
-        }
-        setPaymentProcessing(false);
-    };
-
-    // Square Tap to Pay: deep-link into the Square POS app with the correct amount
-    // cashPortion: amount already collected in cash (split payment), 0 for full card payment
-    const handleSquareTapPay = (cashPortion = 0) => {
-        setPaymentError('');
-        const { grandTotal } = computeTotal();
-        const totalDue = grandTotal + tipAmount;
-        const chargeAmount = cashPortion > 0 ? totalDue - cashPortion : totalDue;
-        const totalCents = Math.round(chargeAmount * 100);
-        const issueNames = issues.map(iid => REPAIR_TYPES.find(t => t.id === iid)?.name || iid).join(', ');
-        const callbackUrl = `${window.location.origin}/repair/${repair.id}?square_return=1`;
-
-        const squareAppId = import.meta.env.VITE_SQUARE_APP_ID;
-        if (!squareAppId) {
-            setPaymentError('Square App ID not configured. Add VITE_SQUARE_APP_ID to your .env file.');
-            return;
-        }
-
-        if (cashPortion > 0) {
-            sessionStorage.setItem(`split_cash_${repair.id}`, cashPortion.toString());
-        }
-
-        const payload = {
-            amount_money: { amount: totalCents, currency_code: 'USD' },
-            callback_url: callbackUrl,
-            client_id: squareAppId,
-            version: '1.3',
-            notes: `${repair.device} — ${issueNames}`,
-            options: { supported_tender_types: ['CREDIT_CARD', 'CASH', 'OTHER'] },
-        };
-
-        const encodedPayload = btoa(JSON.stringify(payload));
-        window.location.href = `square-commerce-v1://payment/create?data=${encodedPayload}`;
-        setSquarePhase('waiting');
-    };
-
-    // Handle Square return callbacks on page load
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-
-        // Square POS deep-link return (Tap to Pay)
-        const squareReturn = urlParams.get('square_return');
-        const squareStatus = urlParams.get('status');
-        if (squareReturn === '1') {
-            window.history.replaceState({}, '', window.location.pathname);
-            if (squareStatus === 'ok') {
-                const splitCash = parseFloat(sessionStorage.getItem(`split_cash_${id}`) || '0');
-                sessionStorage.removeItem(`split_cash_${id}`);
-                const paidAt = new Date().toISOString();
-                supabase
-                    .from('repairs')
-                    .update({
-                        payment_status: 'completed',
-                        payment_method: splitCash > 0 ? 'split' : 'square',
-                        status: REPAIR_STATUS.COMPLETE,
-                        paid_at: paidAt,
-                        updated_at: paidAt,
-                    })
-                    .eq('id', id)
-                    .then(async ({ error }) => {
-                        if (!error) {
-                            // Fetch customer email and send invoice
-                            const { data: repairData } = await supabase
-                                .from('repairs')
-                                .select('*, customers(full_name, email)')
-                                .eq('id', id)
-                                .single();
-                            if (repairData?.customers?.email) {
-                                supabase.functions.invoke('send-repair-email', {
-                                    body: {
-                                        email_type: 'invoice_ready',
-                                        customer_email: repairData.customers.email,
-                                        repair_id: id,
-                                        customer_name: repairData.customers.full_name || 'Customer',
-                                        device: repairData.device,
-                                        issues: repairData.issues,
-                                        total_estimate: repairData.total_estimate,
-                                        tip_amount: repairData.tip_amount || 0,
-                                        payment_method: 'square',
-                                        paid_at: paidAt,
-                                    },
-                                }).catch((err) => console.error('Invoice email error:', err));
-                            }
-                            navigate('/queue');
-                        }
-                    });
-            }
-            // If status !== 'ok', the modal is gone (page reloaded) — user can try again
-        }
-
-        // Square QR code payment link success redirect
-        const squareQrSuccess = urlParams.get('square_qr_success');
-        if (squareQrSuccess === '1') {
-            window.history.replaceState({}, '', window.location.pathname);
-            const splitCash = parseFloat(sessionStorage.getItem(`split_cash_${id}`) || '0');
-            sessionStorage.removeItem(`split_cash_${id}`);
-            const paidAt = new Date().toISOString();
-            supabase
+            const { error } = await supabase
                 .from('repairs')
                 .update({
+                    payment_method: payment.method,
                     payment_status: 'completed',
-                    payment_method: splitCash > 0 ? 'split' : 'square',
-                    status: REPAIR_STATUS.COMPLETE,
-                    paid_at: paidAt,
-                    updated_at: paidAt,
+                    tip_amount: payment.tipAmount,
+                    paid_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
                 })
-                .eq('id', id)
-                .then(async ({ error }) => {
-                    if (!error) {
-                        // Fetch customer email and send invoice
-                        const { data: repairData } = await supabase
-                            .from('repairs')
-                            .select('*, customers(full_name, email)')
-                            .eq('id', id)
-                            .single();
-                        if (repairData?.customers?.email) {
-                            supabase.functions.invoke('send-repair-email', {
-                                body: {
-                                    email_type: 'invoice_ready',
-                                    customer_email: repairData.customers.email,
-                                    repair_id: id,
-                                    customer_name: repairData.customers.full_name || 'Customer',
-                                    device: repairData.device,
-                                    issues: repairData.issues,
-                                    total_estimate: repairData.total_estimate,
-                                    tip_amount: repairData.tip_amount || 0,
-                                    payment_method: 'square',
-                                    paid_at: paidAt,
-                                },
-                            }).catch((err) => console.error('Invoice email error:', err));
-                        }
-                        navigate('/queue');
-                    }
-                });
-        }
-    }, [id]);
+                .eq('id', repair.id);
 
-    // When QR payment completes (Realtime fires on the waiting tab),
-    // auto-advance to the completion signature step
-    useEffect(() => {
-        if (
-            repair?.payment_status === 'completed' &&
-            showPaymentModal &&
-            paymentMethod === 'square-qr' &&
-            paymentModalStep === 'payment'
-        ) {
-            setPaymentModalStep('signature');
+            if (error) throw error;
+            setRepair(prev => ({
+                ...prev,
+                payment_method: payment.method,
+                payment_status: 'completed',
+                tip_amount: payment.tipAmount,
+                paid_at: new Date().toISOString(),
+            }));
+            setPaymentStep('signature');
+        } catch (err) {
+            setPaymentError(err.message || 'Failed to record payment.');
         }
-    }, [repair?.payment_status]);
+        stopProcessing();
+    };
+
 
     if (loading) {
         return (
@@ -1130,7 +847,7 @@ export default function RepairDetailPage() {
                         {/* Payment status badge */}
                         {repair.payment_status === 'completed' && (
                             <div className="payment-status-badge payment-status-badge--paid">
-                                <span>✓</span> Paid {repair.payment_method === 'cash' ? 'in Cash' : repair.payment_method === 'split' ? 'via Cash + Card' : repair.payment_method === 'square' ? 'via Square' : 'via Card'}
+                                <span>✓</span> Paid {repair.payment_method === 'cash' ? 'in Cash' : repair.payment_method === 'zelle' ? 'via Zelle' : repair.payment_method === 'cashapp' ? 'via CashApp' : repair.payment_method === 'venmo' ? 'via Venmo' : repair.payment_method === 'split' ? 'via Split Payment' : 'via ' + (repair.payment_method || 'Card')}
                                 {repair.paid_at && (
                                     <span className="payment-status-badge__date">
                                         {' '}— {new Date(repair.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(repair.paid_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
@@ -1213,16 +930,7 @@ export default function RepairDetailPage() {
                             <button
                                 className="payment-actions__btn payment-actions__btn--card"
                                 style={{ width: '100%', marginTop: 24 }}
-                                onClick={() => {
-                                    setTipAmount(0);
-                                    setPaymentModalStep('tip');
-                                    setPaymentMethod(null);
-                                    setPaymentError('');
-                                    setSquarePaymentUrl(null);
-                                    setSquarePhase('idle');
-                                    setCashReceived('');
-                                    setShowPaymentModal(true);
-                                }}
+                                onClick={openPaymentModal}
                             >
                                 <span className="payment-actions__icon">💳</span>
                                 <span>Collect Payment</span>
@@ -1231,24 +939,20 @@ export default function RepairDetailPage() {
                     </div>
 
                     {/* ── Payment Wizard Modal (tip → method → signature) ── */}
-                    {showPaymentModal && (
+                    {payment.showModal && (
                         <div
                             className="confirm-modal-overlay"
                             onClick={() => {
-                                // Cannot dismiss during processing or on the final signature step
-                                if (paymentProcessing || squarePhase === 'loading' || paymentModalStep === 'signature') return;
+                                if (payment.processing || payment.step === 'signature') return;
                                 closePaymentModal();
                             }}
                         >
                             <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
 
                                 {/* ── Step 1: Tip selection (auto-advances on selection) ── */}
-                                {paymentModalStep === 'tip' && (() => {
+                                {payment.step === 'tip' && (() => {
                                     const { grandTotal } = computeTotal();
-                                    const advance = (amount) => {
-                                        setTipAmount(amount);
-                                        setPaymentModalStep('payment');
-                                    };
+                                    const advance = (amount) => setTip(amount);
                                     return (
                                         <>
                                             <div className="confirm-modal__icon">💰</div>
@@ -1284,9 +988,9 @@ export default function RepairDetailPage() {
                                 })()}
 
                                 {/* ── Step 2a: Method selection ── */}
-                                {paymentModalStep === 'payment' && paymentMethod === null && (() => {
+                                {payment.step === 'payment' && payment.method === null && (() => {
                                     const { grandTotal } = computeTotal();
-                                    const amountDue = Math.round((grandTotal + tipAmount) * 100) / 100;
+                                    const amountDue = Math.round((grandTotal + payment.tipAmount) * 100) / 100;
                                     return (
                                         <>
                                             <div className="confirm-modal__icon">💳</div>
@@ -1296,10 +1000,10 @@ export default function RepairDetailPage() {
                                                     <span>Repair Total</span>
                                                     <span>${grandTotal.toFixed(2)}</span>
                                                 </div>
-                                                {tipAmount > 0 && (
+                                                {payment.tipAmount > 0 && (
                                                     <div className="payment-modal__row">
                                                         <span>Tip</span>
-                                                        <span>${tipAmount.toFixed(2)}</span>
+                                                        <span>${payment.tipAmount.toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 <div className="payment-modal__row payment-modal__row--total">
@@ -1308,38 +1012,35 @@ export default function RepairDetailPage() {
                                                 </div>
                                             </div>
                                             <div className="payment-actions" style={{ flexDirection: 'column' }}>
-                                                <button className="payment-actions__btn payment-actions__btn--cash" onClick={() => setPaymentMethod('cash')}>
+                                                <button className="payment-actions__btn payment-actions__btn--cash" onClick={() => setMethod('cash')}>
                                                     <span className="payment-actions__icon">💵</span>
                                                     <span>Cash</span>
                                                 </button>
-                                                <button className="payment-actions__btn payment-actions__btn--card" onClick={() => {
-                                                    setPaymentMethod('square-qr');
-                                                    handleSquareQRPayment();
-                                                }}>
-                                                    <span className="payment-actions__icon">📱</span>
-                                                    <span>QR Code — Customer Scans</span>
+                                                <button className="payment-actions__btn payment-actions__btn--zelle" onClick={() => setMethod('zelle')}>
+                                                    <span className="payment-actions__icon">🏦</span>
+                                                    <span>Zelle</span>
                                                 </button>
-                                                <button className="payment-actions__btn payment-actions__btn--card" onClick={() => {
-                                                    setPaymentMethod('square-tap');
-                                                    handleSquareTapPay();
-                                                }}>
-                                                    <span className="payment-actions__icon">📲</span>
-                                                    <span>Tap to Pay — In-Person NFC</span>
+                                                <button className="payment-actions__btn payment-actions__btn--cashapp" onClick={() => setMethod('cashapp')}>
+                                                    <span className="payment-actions__icon">💲</span>
+                                                    <span>CashApp</span>
+                                                </button>
+                                                <button className="payment-actions__btn payment-actions__btn--venmo" onClick={() => setMethod('venmo')}>
+                                                    <span className="payment-actions__icon">💜</span>
+                                                    <span>Venmo</span>
                                                 </button>
                                             </div>
                                             <div className="confirm-modal__actions" style={{ marginTop: 8 }}>
-                                                <button className="guru-btn guru-btn--ghost" onClick={() => setPaymentModalStep('tip')}>← Back</button>
+                                                <button className="guru-btn guru-btn--ghost" onClick={backToTip}>← Back</button>
                                             </div>
                                         </>
                                     );
                                 })()}
 
                                 {/* ── Step 2b: Cash — enter received amount + show change ── */}
-                                {paymentModalStep === 'payment' && paymentMethod === 'cash' && (() => {
+                                {payment.step === 'payment' && payment.method === 'cash' && (() => {
                                     const { grandTotal } = computeTotal();
-                                    // Round to cents so the displayed total matches the comparison
-                                    const amountDue = Math.round((grandTotal + tipAmount) * 100) / 100;
-                                    const cashNum = Math.round((parseFloat(cashReceived) || 0) * 100) / 100;
+                                    const amountDue = Math.round((grandTotal + payment.tipAmount) * 100) / 100;
+                                    const cashNum = Math.round((parseFloat(payment.cashReceived) || 0) * 100) / 100;
                                     const changeDue = cashNum - amountDue;
                                     const hasEnough = cashNum >= amountDue;
                                     return (
@@ -1347,10 +1048,10 @@ export default function RepairDetailPage() {
                                             <div className="confirm-modal__icon">💵</div>
                                             <h3 className="confirm-modal__title">Cash Payment</h3>
                                             <div className="payment-modal__summary">
-                                                {tipAmount > 0 && (
+                                                {payment.tipAmount > 0 && (
                                                     <div className="payment-modal__row">
                                                         <span>Tip</span>
-                                                        <span>${tipAmount.toFixed(2)}</span>
+                                                        <span>${payment.tipAmount.toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 <div className="payment-modal__row payment-modal__row--total">
@@ -1366,13 +1067,9 @@ export default function RepairDetailPage() {
                                                         type="text"
                                                         inputMode="decimal"
                                                         placeholder="0.00"
-                                                        value={cashReceived}
+                                                        value={payment.cashReceived}
                                                         autoFocus
-                                                        onChange={(e) => {
-                                                            const val = e.target.value.replace(/[^0-9.]/g, '');
-                                                            const parts = val.split('.');
-                                                            setCashReceived(parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : val);
-                                                        }}
+                                                        onChange={(e) => setCashReceived(e.target.value)}
                                                         className="cash-change__input"
                                                     />
                                                 </div>
@@ -1389,183 +1086,133 @@ export default function RepairDetailPage() {
                                                     </div>
                                                 )}
                                             </div>
-                                            {paymentError && <div className="payment-modal__error">{paymentError}</div>}
+                                            {payment.error && <div className="payment-modal__error">{payment.error}</div>}
 
                                             {/* Split payment — show when partial cash entered */}
                                             {cashNum > 0 && !hasEnough && (
                                                 <div style={{ margin: 'var(--space-3) 0', textAlign: 'left' }}>
                                                     <p style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--dark-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--space-2)' }}>
-                                                        Charge remaining ${(amountDue - cashNum).toFixed(2)} to card
+                                                        Pay remaining ${(amountDue - cashNum).toFixed(2)} via
                                                     </p>
-                                                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                                    <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                                                         <button
-                                                            className="payment-actions__btn payment-actions__btn--card"
-                                                            style={{ flex: 1, padding: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}
+                                                            className="payment-actions__btn payment-actions__btn--zelle"
+                                                            style={{ flex: 1, padding: 'var(--space-3)', fontSize: 'var(--font-size-sm)', minWidth: 80 }}
                                                             onClick={() => {
-                                                                const cashPortion = cashNum;
-                                                                setSplitCashAmount(cashPortion);
-                                                                setPaymentMethod('square-qr');
-                                                                handleSquareQRPayment(cashPortion);
+                                                                setSplitCash(cashNum);
+                                                                setMethod('zelle');
                                                             }}
-                                                            disabled={paymentProcessing}
+                                                            disabled={payment.processing}
                                                         >
-                                                            📱 QR Code
+                                                            🏦 Zelle
                                                         </button>
                                                         <button
-                                                            className="payment-actions__btn payment-actions__btn--card"
-                                                            style={{ flex: 1, padding: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}
+                                                            className="payment-actions__btn payment-actions__btn--cashapp"
+                                                            style={{ flex: 1, padding: 'var(--space-3)', fontSize: 'var(--font-size-sm)', minWidth: 80 }}
                                                             onClick={() => {
-                                                                const cashPortion = cashNum;
-                                                                setSplitCashAmount(cashPortion);
-                                                                setPaymentMethod('square-tap');
-                                                                handleSquareTapPay(cashPortion);
+                                                                setSplitCash(cashNum);
+                                                                setMethod('cashapp');
                                                             }}
-                                                            disabled={paymentProcessing}
+                                                            disabled={payment.processing}
                                                         >
-                                                            📲 Tap to Pay
+                                                            💲 CashApp
+                                                        </button>
+                                                        <button
+                                                            className="payment-actions__btn payment-actions__btn--venmo"
+                                                            style={{ flex: 1, padding: 'var(--space-3)', fontSize: 'var(--font-size-sm)', minWidth: 80 }}
+                                                            onClick={() => {
+                                                                setSplitCash(cashNum);
+                                                                setMethod('venmo');
+                                                            }}
+                                                            disabled={payment.processing}
+                                                        >
+                                                            💜 Venmo
                                                         </button>
                                                     </div>
                                                 </div>
                                             )}
 
                                             <div className="confirm-modal__actions">
-                                                <button className="guru-btn guru-btn--ghost" onClick={() => { setPaymentMethod(null); setCashReceived(''); }} disabled={paymentProcessing}>← Back</button>
-                                                <button className="guru-btn guru-btn--primary" onClick={handleCashPayment} disabled={paymentProcessing || !hasEnough || cashNum === 0}>
-                                                    {paymentProcessing ? 'Processing...' : 'Confirm Cash Received'}
+                                                <button className="guru-btn guru-btn--ghost" onClick={backToMethod} disabled={payment.processing}>← Back</button>
+                                                <button className="guru-btn guru-btn--primary" onClick={handleCashPayment} disabled={payment.processing || !hasEnough || cashNum === 0}>
+                                                    {payment.processing ? 'Processing...' : 'Confirm Cash Received'}
                                                 </button>
                                             </div>
                                         </>
                                     );
                                 })()}
 
-                                {/* ── Step 2c: Square QR Code — customer scans on their phone ── */}
-                                {paymentModalStep === 'payment' && paymentMethod === 'square-qr' && (() => {
+                                {/* ── Step 2c: Peer-to-peer payment (Zelle / CashApp / Venmo) ── */}
+                                {payment.step === 'payment' && ['zelle', 'cashapp', 'venmo'].includes(payment.method) && (() => {
                                     const { grandTotal } = computeTotal();
+                                    const amountDue = Math.round((grandTotal + payment.tipAmount) * 100) / 100;
+                                    const methodLabels = { zelle: 'Zelle', cashapp: 'CashApp', venmo: 'Venmo' };
+                                    const methodIcons = { zelle: '🏦', cashapp: '💲', venmo: '💜' };
+                                    const label = methodLabels[payment.method];
+                                    const icon = methodIcons[payment.method];
                                     return (
                                         <>
-                                            <div className="confirm-modal__icon">
-                                                {squarePhase === 'waiting' ? '⏳' : '📱'}
-                                            </div>
-                                            <h3 className="confirm-modal__title">
-                                                {squarePhase === 'loading' && 'Creating Payment Link...'}
-                                                {squarePhase === 'ready' && 'Customer Scans to Pay'}
-                                                {squarePhase === 'waiting' && 'Waiting for Payment...'}
-                                            </h3>
-
-                                            {squarePhase === 'loading' && (
-                                                <div className="stripe-loading" style={{ margin: '24px 0' }}>
-                                                    Setting up secure payment...
-                                                </div>
-                                            )}
-
-                                            {squarePhase === 'ready' && squarePaymentUrl && (
-                                                <>
-                                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 4, textAlign: 'center' }}>
-                                                        {splitCashAmount > 0 ? (
-                                                            <>
-                                                                Charging: <strong style={{ color: 'var(--text-primary)' }}>${(grandTotal + tipAmount - splitCashAmount).toFixed(2)}</strong>
-                                                                <span style={{ display: 'block', fontSize: '0.8rem', marginTop: 2 }}>${splitCashAmount.toFixed(2)} collected in cash</span>
-                                                            </>
-                                                        ) : (
-                                                            <>Total: <strong style={{ color: 'var(--text-primary)' }}>${(grandTotal + tipAmount).toFixed(2)}</strong></>
-                                                        )}
-                                                    </p>
-                                                    <div style={{ textAlign: 'center', margin: '16px 0 8px' }}>
-                                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
-                                                            Have the customer scan with their phone camera
-                                                        </p>
-                                                        <div style={{ display: 'inline-block', background: '#fff', padding: 10, borderRadius: 12 }}>
-                                                            <img
-                                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(squarePaymentUrl)}&bgcolor=ffffff&color=000000`}
-                                                                alt="Scan to pay"
-                                                                width={200}
-                                                                height={200}
-                                                                style={{ display: 'block', borderRadius: 6 }}
-                                                            />
+                                            <div className="confirm-modal__icon">{icon}</div>
+                                            <h3 className="confirm-modal__title">{label} Payment</h3>
+                                            <div className="payment-modal__summary">
+                                                {payment.splitCashAmount > 0 ? (
+                                                    <>
+                                                        <div className="payment-modal__row">
+                                                            <span>Cash Collected</span>
+                                                            <span>${payment.splitCashAmount.toFixed(2)}</span>
                                                         </div>
-                                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 8 }}>
-                                                            Apple Pay · Google Pay · Card
-                                                        </p>
+                                                        <div className="payment-modal__row payment-modal__row--total">
+                                                            <span>{label} Amount</span>
+                                                            <span>${(amountDue - payment.splitCashAmount).toFixed(2)}</span>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="payment-modal__row payment-modal__row--total">
+                                                        <span>Amount Due</span>
+                                                        <span>${amountDue.toFixed(2)}</span>
                                                     </div>
-                                                    <button
-                                                        className="guru-btn guru-btn--primary guru-btn--full"
-                                                        style={{ marginTop: 4 }}
-                                                        onClick={() => {
-                                                            window.open(squarePaymentUrl, '_blank');
-                                                            setSquarePhase('waiting');
-                                                        }}
-                                                    >
-                                                        Or Open Link on This Device
-                                                    </button>
-                                                </>
-                                            )}
+                                                )}
+                                            </div>
 
-                                            {squarePhase === 'waiting' && (
-                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '20px 0', lineHeight: 1.6 }}>
-                                                    Waiting for the customer to complete payment.<br />
-                                                    This screen will update automatically once paid.
+                                            <div style={{ background: 'var(--dark-bg-elevated, #1e1e2e)', borderRadius: 12, padding: 'var(--space-4)', margin: 'var(--space-3) 0', textAlign: 'center' }}>
+                                                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--space-3)' }}>
+                                                    Have the customer send <strong style={{ color: 'var(--text-primary)' }}>${payment.splitCashAmount > 0 ? (amountDue - payment.splitCashAmount).toFixed(2) : amountDue.toFixed(2)}</strong> via {label}.
                                                 </p>
-                                            )}
+                                                <p style={{ fontSize: '0.8rem', color: 'var(--dark-text-tertiary)', lineHeight: 1.5 }}>
+                                                    Verify the payment has been received in your {label} account before confirming below.
+                                                </p>
+                                            </div>
 
-                                            {paymentError && <div className="payment-modal__error">{paymentError}</div>}
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', margin: 'var(--space-4) 0', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={payment.peerConfirmed}
+                                                    onChange={(e) => setPeerConfirmed(e.target.checked)}
+                                                    style={{ width: 20, height: 20, accentColor: 'var(--dark-accent-400, #7C3AED)' }}
+                                                />
+                                                I confirm payment was received via {label}
+                                            </label>
+
+                                            {payment.error && <div className="payment-modal__error">{payment.error}</div>}
 
                                             <div className="confirm-modal__actions">
-                                                <button
-                                                    className="guru-btn guru-btn--ghost"
-                                                    onClick={() => { setPaymentMethod(null); setSquarePaymentUrl(null); setSquarePhase('idle'); }}
-                                                    disabled={squarePhase === 'loading'}
-                                                >
+                                                <button className="guru-btn guru-btn--ghost" onClick={backToMethod}>
                                                     ← Back
+                                                </button>
+                                                <button
+                                                    className="guru-btn guru-btn--primary"
+                                                    onClick={handlePeerPayment}
+                                                    disabled={!payment.peerConfirmed || payment.processing}
+                                                >
+                                                    {payment.processing ? 'Processing...' : `Confirm ${label} Payment`}
                                                 </button>
                                             </div>
                                         </>
                                     );
                                 })()}
 
-                                {/* ── Step 2d: Square Tap to Pay — opens Square POS app via deep link ── */}
-                                {paymentModalStep === 'payment' && paymentMethod === 'square-tap' && (
-                                    <>
-                                        <div className="confirm-modal__icon">
-                                            {squarePhase === 'waiting' ? '📲' : '📲'}
-                                        </div>
-                                        <h3 className="confirm-modal__title">
-                                            {squarePhase === 'waiting' ? 'Square POS Opening...' : 'Tap to Pay'}
-                                        </h3>
-
-                                        {squarePhase === 'waiting' ? (
-                                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '16px 0', lineHeight: 1.6 }}>
-                                                Complete the payment in the Square POS app.<br />
-                                                You'll be returned here automatically when done.<br /><br />
-                                                <span style={{ fontSize: '0.8rem' }}>If Square POS didn't open, make sure the app is installed and tap the button below.</span>
-                                            </p>
-                                        ) : (
-                                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '16px 0', lineHeight: 1.6 }}>
-                                                Tap the button below to open Square POS.<br />
-                                                Have the customer tap their card or phone to yours.
-                                            </p>
-                                        )}
-
-                                        {paymentError && <div className="payment-modal__error">{paymentError}</div>}
-
-                                        <div className="confirm-modal__actions">
-                                            <button
-                                                className="guru-btn guru-btn--ghost"
-                                                onClick={() => { setPaymentMethod(null); setSquarePhase('idle'); }}
-                                            >
-                                                ← Back
-                                            </button>
-                                            <button
-                                                className="guru-btn guru-btn--primary"
-                                                onClick={handleSquareTapPay}
-                                            >
-                                                {squarePhase === 'waiting' ? 'Try Again' : 'Open Square POS'}
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-
                                 {/* ── Step 3: Completion signature ── */}
-                                {paymentModalStep === 'signature' && (
+                                {payment.step === 'signature' && (
                                     <>
                                         <div className="confirm-modal__icon">✅</div>
                                         <h3 className="confirm-modal__title">Repair Complete!</h3>

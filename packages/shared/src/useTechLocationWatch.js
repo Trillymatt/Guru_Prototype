@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from './supabase.js';
 
 /**
@@ -42,30 +42,32 @@ function estimateETA(distanceMiles) {
  */
 export function useTechLocationWatch({ repairId, isActive, customerLocation }) {
     const [techLocation, setTechLocation] = useState(null);
-    const [distance, setDistance] = useState(null);
-    const [eta, setEta] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
     const channelRef = useRef(null);
 
-    // Compute distance and ETA whenever tech or customer location changes
-    useEffect(() => {
-        if (techLocation && customerLocation) {
-            const dist = haversineDistance(
-                techLocation.lat,
-                techLocation.lng,
-                customerLocation.lat,
-                customerLocation.lng
-            );
-            setDistance(Math.round(dist * 10) / 10); // 1 decimal place
-            setEta(estimateETA(dist));
+    const { distance, eta } = useMemo(() => {
+        if (
+            !techLocation || !customerLocation ||
+            techLocation.lat == null || techLocation.lng == null ||
+            customerLocation.lat == null || customerLocation.lng == null
+        ) {
+            return { distance: null, eta: null };
         }
+        const dist = haversineDistance(
+            techLocation.lat,
+            techLocation.lng,
+            customerLocation.lat,
+            customerLocation.lng
+        );
+        return {
+            distance: Math.round(dist * 10) / 10,
+            eta: estimateETA(dist),
+        };
     }, [techLocation, customerLocation]);
 
     useEffect(() => {
         if (!repairId || !isActive) {
             setTechLocation(null);
-            setDistance(null);
-            setEta(null);
             setLastUpdated(null);
             return;
         }

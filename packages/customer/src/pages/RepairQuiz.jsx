@@ -3,16 +3,15 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { supabase } from '@shared/supabase';
 import { useAuth } from '@shared/AuthProvider';
+import { analytics } from '@shared/analytics';
 import { formatPhoneE164 } from '@shared/validation';
 import {
     DEVICE_GENERATIONS,
-    getDevicesByGeneration,
     REPAIR_TYPES,
-    PARTS_TIERS,
     SAMPLE_PRICING,
-    DEVICE_REPAIR_PRICING,
     getAvailableTiersForRepair,
     getDeviceRepairPrice,
+    getDevicesByGeneration,
     SERVICE_FEE,
     LABOR_FEE,
     TIME_SLOTS,
@@ -20,13 +19,28 @@ import {
     SCHEDULING_WINDOW_DAYS,
     toLocalDateKey,
     formatDisplayDate,
-    BACK_GLASS_COLORS,
 } from '@shared/constants';
-import GuruCalendar from '@shared/GuruCalendar';
-import '@shared/guru-calendar.css';
+import DeviceStep from '../components/quiz/DeviceStep';
+import PhoneIdentifyModal from '../components/quiz/PhoneIdentifyModal';
+import IssuesStep from '../components/quiz/IssuesStep';
+import ScheduleStep from '../components/quiz/ScheduleStep';
+import ReviewStep from '../components/quiz/ReviewStep';
+import AuthStep from '../components/quiz/AuthStep';
 import '../styles/repair-quiz.css';
 
-const STEPS = ['What needs fixing?', 'When & where?', 'Confirm & book'];
+const STEP_CONTACT = 0;
+const STEP_PHONE = 1;
+const STEP_DEVICE = 2;
+const STEP_ISSUES = 3;
+const STEP_QUALITY = 4;
+const STEP_ADDRESS = 5;
+const STEP_DATE = 6;
+const STEP_REVIEW = 7;
+const STEP_VERIFY = 8;
+const SCHEDULE_TIME_PENDING = 'to_be_scheduled';
+const REFERRAL_STORAGE_KEY = 'guru_referral_code';
+const REFERRAL_DISCOUNT_AMOUNT = 5;
+const REFERRAL_CODE_REGEX = /^[A-Z0-9]{8}$/;
 
 const REPAIR_TYPES_ALWAYS_AVAILABLE = new Set(['screen', 'battery', 'camera-rear', 'camera-front']);
 const BACK_GLASS_SUPPORTED_DEVICE_IDS = new Set([
@@ -47,120 +61,20 @@ const BACK_GLASS_SUPPORTED_DEVICE_IDS = new Set([
     'iphone-17-pro-max',
 ]);
 
-const SUPPORTED_TEXAS_CITIES = new Set([
-    'denton',
-    'lewisville',
-    'corinth',
-    'lake dallas',
-    'plano',
-    'frisco',
-    'grapevine',
-    'southlake',
-    'trophy club',
-    'justin',
-    'northlake',
-    'north lake',
-    'argyle',
-    'lantana',
-    'the colony',
-]);
+const normalizeReferralCode = (value) => (value || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 8);
 
-function normalizeLocationValue(value) {
-    return (value || '').toLowerCase().trim();
-}
-
-function isCitySupported(city, state) {
-    const normalizedState = normalizeLocationValue(state);
-    const normalizedCity = normalizeLocationValue(city);
-    const isTexas = normalizedState === 'tx' || normalizedState === 'texas';
-    return isTexas && SUPPORTED_TEXAS_CITIES.has(normalizedCity);
-}
-
-// Address Search Component using OpenStreetMap Nominatim
-const AddressSearch = ({ value, onChange, onServiceError }) => {
-    const [query, setQuery] = useState(value);
-    const [results, setResults] = useState([]);
-    const [isSearching, setIsSearching] = useState(false);
-
-    React.useEffect(() => {
-        if (query === value) return;
-        const timer = setTimeout(() => {
-            if (query.length > 2) {
-                setIsSearching(true);
-                fetch(
-                    `https://nominatim.openstreetmap.org/search?` +
-                    `format=json&q=${encodeURIComponent(query)}&countrycodes=us` +
-                    `&addressdetails=1&limit=6&viewbox=-97.5,-96.5,33.4,32.5&bounded=0`
-                )
-                    .then(res => res.json())
-                    .then(data => {
-                        const formatted = data
-                            .filter(r => r.address && (r.type === 'house' || r.type === 'residential' || r.class === 'place' || r.class === 'building' || r.class === 'highway' || r.address.road))
-                            .map(r => ({
-                                display: r.display_name,
-                                city: r.address.city || r.address.town || r.address.village || r.address.hamlet || r.address.county || '',
-                                state: r.address.state || '',
-                            }));
-                        setResults(formatted.length > 0 ? formatted : data.slice(0, 5).map(r => ({
-                            display: r.display_name,
-                            city: r.address?.city || r.address?.town || r.address?.village || r.address?.hamlet || r.address?.county || '',
-                            state: r.address?.state || '',
-                        })));
-                        setIsSearching(false);
-                    })
-                    .catch(() => {
-                        setResults([]);
-                        setIsSearching(false);
-                    });
-            } else {
-                setResults([]);
-            }
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [query, value]);
-
-    const handleSelect = (result) => {
-        const shortDisplay = result.display.split(',').slice(0, 4).join(',');
-        setQuery(shortDisplay);
-
-        if (!isCitySupported(result.city, result.state)) {
-            onChange('');
-            if (onServiceError) onServiceError(result.city || 'this city');
-        } else {
-            onChange(shortDisplay);
-            if (onServiceError) onServiceError(null);
-        }
-        setResults([]);
-    };
-
-    return (
-        <div className="address-search-container">
-            <input
-                type="text"
-                className="guru-input"
-                placeholder="Start typing your address..."
-                value={query}
-                onChange={(e) => {
-                    setQuery(e.target.value);
-                    if (e.target.value === '') {
-                        onChange('');
-                        if (onServiceError) onServiceError(null);
-                    }
-                }}
-            />
-            {isSearching && <div className="address-searching">Searching addresses...</div>}
-            {results.length > 0 && (
-                <div className="address-results">
-                    {results.map((r, i) => (
-                        <button key={i} className="address-result-item" onClick={() => handleSelect(r)}>
-                            📍 {r.display.split(',').slice(0, 3).join(',')}
-                        </button>
-                    ))}
-                    <div className="address-api-note">Powered by OpenStreetMap</div>
-                </div>
-            )}
-        </div>
-    );
+const getReferralValidationError = (referralCode, ownReferralCode) => {
+    if (!referralCode) return '';
+    if (!REFERRAL_CODE_REGEX.test(referralCode)) {
+        return 'Referral code must be 8 letters or numbers.';
+    }
+    if (ownReferralCode && referralCode === ownReferralCode) {
+        return 'You cannot use your own referral code.';
+    }
+    return '';
 };
 
 export default function RepairQuiz() {
@@ -168,31 +82,116 @@ export default function RepairQuiz() {
     const [step, setStep] = useState(0);
     const [selectedDevice, setSelectedDevice] = useState(null);
     const [selectedIssues, setSelectedIssues] = useState([]);
-    const [issueTiers, setIssueTiers] = useState({}); // { issueId: 'economy' | 'premium' | 'genuine' }
+    const [issueTiers, setIssueTiers] = useState({});
     const [activeGen, setActiveGen] = useState('17');
+    const [phoneIdentifyOpen, setPhoneIdentifyOpen] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
     const [scheduleAddress, setScheduleAddress] = useState('');
     const [serviceAreaError, setServiceAreaError] = useState(null);
     const [repairNotes, setRepairNotes] = useState('');
-    // Quality must be explicitly chosen by customer
+    const [referralCode, setReferralCode] = useState('');
+    const [referralCodeError, setReferralCodeError] = useState('');
+    const [ownReferralCode, setOwnReferralCode] = useState('');
+    const [bookedTotalEstimate, setBookedTotalEstimate] = useState(null);
 
     // Auth / Contact State
-    const [contact, setContact] = useState({ name: '', email: '', phone: '' });
-    // OTP is email-only for now
+    const [contact, setContact] = useState({ name: '', email: '', phone: '', backupPhone: '' });
     const [otpSent, setOtpSent] = useState(false);
     const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
     const [isVerifying, setIsVerifying] = useState(false);
     const [authError, setAuthError] = useState('');
+    const [existingAccount, setExistingAccount] = useState(false);
     const otpRefs = useRef([]);
 
     const [backGlassColor, setBackGlassColor] = useState('');
     const [confirmed, setConfirmed] = useState(false);
-    const [availableDates, setAvailableDates] = useState(null); // Set<string> of ISO dates
-    const [availableSlotsByDate, setAvailableSlotsByDate] = useState({}); // { 'YYYY-MM-DD': ['morning','afternoon',...] }
-    const [inventoryData, setInventoryData] = useState([]); // parts_inventory rows for selected device
-    const [inventoryLoading, setInventoryLoading] = useState(false);
+    const [availableDates, setAvailableDates] = useState(null);
+    const [inventoryData, setInventoryData] = useState([]);
     const isLoggedIn = Boolean(user);
+
+    // Saved devices & addresses
+    const [savedDevices, setSavedDevices] = useState([]);
+    const [savedAddresses, setSavedAddresses] = useState([]);
+    const [savedDataLoaded, setSavedDataLoaded] = useState(false);
+    const [pricePulseKey, setPricePulseKey] = useState(0);
+    const [scheduleWindowOffsetWeeks, setScheduleWindowOffsetWeeks] = useState(0);
+    const [clickCount, setClickCount] = useState(0);
+    const autoAdvanceTimeoutRef = useRef(null);
+    const justWentBackRef = useRef(false);
+    const canContinueFromContactRef = useRef(false);
+    const canContinueFromPhoneRef = useRef(false);
+    const canContinueFromDeviceRef = useRef(false);
+    const canContinueFromQualityRef = useRef(false);
+    const canContinueFromAddressRef = useRef(false);
+    const canContinueFromDateRef = useRef(false);
+
+    // Track quiz start
+    useEffect(() => { analytics.quizStart(); }, []);
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const codeFromLink = normalizeReferralCode(urlParams.get('ref') || '');
+        const storedCode = normalizeReferralCode(window.localStorage.getItem(REFERRAL_STORAGE_KEY) || '');
+        const initialCode = codeFromLink || storedCode;
+
+        if (!initialCode) return;
+        setReferralCode(initialCode);
+
+        if (REFERRAL_CODE_REGEX.test(initialCode)) {
+            window.localStorage.setItem(REFERRAL_STORAGE_KEY, initialCode);
+        }
+    }, []);
+
+    // Fetch saved devices and addresses for logged-in users
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchSavedData = async () => {
+            const [devicesRes, addressesRes] = await Promise.all([
+                supabase
+                    .from('customer_devices')
+                    .select('*')
+                    .eq('customer_id', user.id)
+                    .order('is_default', { ascending: false }),
+                supabase
+                    .from('customer_addresses')
+                    .select('*')
+                    .eq('customer_id', user.id)
+                    .order('is_default', { ascending: false }),
+            ]);
+
+            if (devicesRes.data) setSavedDevices(devicesRes.data);
+            if (addressesRes.data) setSavedAddresses(addressesRes.data);
+            setSavedDataLoaded(true);
+
+            // Auto-select default device if none is selected yet
+            if (devicesRes.data && devicesRes.data.length > 0 && !selectedDevice) {
+                const defaultDevice = devicesRes.data.find(d => d.is_default) || devicesRes.data[0];
+                const matchingDevice = DEVICE_GENERATIONS.reduce((found, gen) => {
+                    if (found) return found;
+                    const devices = getDevicesByGeneration(gen);
+                    return devices.find(d => d.id === defaultDevice.device_id);
+                }, null);
+
+                if (matchingDevice) {
+                    setSelectedDevice(matchingDevice);
+                    setActiveGen(matchingDevice.generation);
+                    if (defaultDevice.device_color) {
+                        setBackGlassColor(defaultDevice.device_color);
+                    }
+                }
+            }
+
+            // Auto-fill default address
+            if (addressesRes.data && addressesRes.data.length > 0 && !scheduleAddress) {
+                const defaultAddr = addressesRes.data.find(a => a.is_default) || addressesRes.data[0];
+                setScheduleAddress(defaultAddr.address);
+            }
+        };
+
+        fetchSavedData();
+    }, [user]);
 
     // Fetch tech availability from Supabase
     useEffect(() => {
@@ -213,33 +212,25 @@ export default function RepairQuiz() {
                 .lte('schedule_date', endStr)
                 .eq('is_available', true);
 
-            if (!error && data && data.length > 0) {
-                const dates = new Set();
-                const slotsByDate = {};
-                data.forEach((row) => {
-                    dates.add(row.schedule_date);
-                    // Merge slots across techs for each date
-                    const slots = Array.isArray(row.time_slots) ? row.time_slots : [];
-                    if (!slotsByDate[row.schedule_date]) {
-                        slotsByDate[row.schedule_date] = new Set();
-                    }
-                    slots.forEach((s) => slotsByDate[row.schedule_date].add(s));
-                });
-                // Convert sets to arrays
-                const slotsObj = {};
-                Object.entries(slotsByDate).forEach(([date, slotSet]) => {
-                    slotsObj[date] = [...slotSet];
-                });
-                setAvailableDates(dates);
-                setAvailableSlotsByDate(slotsObj);
+            if (error) {
+                setAvailableDates(new Set());
+                return;
             }
-            // If no data (no tech_schedules table yet or empty), leave null to allow all dates
+
+            const dates = new Set();
+            (data || []).forEach((row) => {
+                const slots = Array.isArray(row.time_slots) ? row.time_slots.filter(Boolean) : [];
+                if (slots.length === 0) return; // only dates with at least one valid slot are bookable
+                dates.add(row.schedule_date);
+            });
+
+            setAvailableDates(dates);
         };
 
         fetchAvailability();
     }, []);
 
-    // Fetch inventory data when device changes (real-time inventory check)
+    // Fetch inventory data when device changes
     useEffect(() => {
         if (!selectedDevice) {
             setInventoryData([]);
@@ -247,7 +238,6 @@ export default function RepairQuiz() {
         }
 
         const fetchInventory = async () => {
-            setInventoryLoading(true);
             const { data, error } = await supabase
                 .from('parts_inventory')
                 .select('repair_type, parts_tier, quantity')
@@ -256,12 +246,10 @@ export default function RepairQuiz() {
             if (!error && data) {
                 setInventoryData(data);
             }
-            setInventoryLoading(false);
         };
 
         fetchInventory();
 
-        // Subscribe to real-time inventory changes for this device
         const channel = supabase
             .channel(`inventory-${selectedDevice.id}`)
             .on('postgres_changes', {
@@ -269,7 +257,6 @@ export default function RepairQuiz() {
                 schema: 'public',
                 table: 'parts_inventory',
             }, () => {
-                // Refetch on any change
                 fetchInventory();
             })
             .subscribe();
@@ -277,19 +264,17 @@ export default function RepairQuiz() {
         return () => { supabase.removeChannel(channel); };
     }, [selectedDevice]);
 
-    // Check if a specific part is in stock
     const isPartInStock = (issueId, tierId) => {
-        if (inventoryData.length === 0) return null; // No inventory data yet
+        if (inventoryData.length === 0) return null;
         const item = inventoryData.find(
             i => i.repair_type === issueId && i.parts_tier === tierId
         );
         return item ? item.quantity > 0 : false;
     };
 
-    // Check if ALL selected parts are in stock
     const allPartsInStock = useMemo(() => {
         if (selectedIssues.length === 0) return false;
-        if (inventoryData.length === 0) return null; // No inventory data
+        if (inventoryData.length === 0) return null;
         return selectedIssues.every(issueId => {
             const tier = issueTiers[issueId];
             if (!tier) return false;
@@ -297,19 +282,55 @@ export default function RepairQuiz() {
         });
     }, [selectedIssues, issueTiers, inventoryData]);
 
-    // Determine if we need parts ordering (any part not in stock)
-    const needsPartsOrder = useMemo(() => {
-        if (selectedIssues.length === 0) return false;
-        if (inventoryData.length === 0) return true; // Default to ordering if no inventory data
-        return selectedIssues.some(issueId => {
-            const tier = issueTiers[issueId];
-            if (!tier) return true;
-            return !isPartInStock(issueId, tier);
-        });
-    }, [selectedIssues, issueTiers, inventoryData]);
+    // Declared before effects that reference it (TDZ: const cannot be used before this line)
+    const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
+    const quizSteps = useMemo(() => (
+        isLoggedIn
+            ? ['Your name & email', 'Phone number', 'Choose device', 'Choose repairs', 'Choose quality', 'Add address', 'Pick date', 'Review & book']
+            : ['Your name & email', 'Phone number', 'Choose device', 'Choose repairs', 'Choose quality', 'Add address', 'Pick date', 'Review details', 'Verify code']
+    ), [isLoggedIn]);
+    const maxStepIndex = quizSteps.length - 1;
 
-    const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
-    const goBack = () => setStep((s) => Math.max(s - 1, 0));
+    const goBack = () => {
+        justWentBackRef.current = true;
+        if (autoAdvanceTimeoutRef.current) {
+            window.clearTimeout(autoAdvanceTimeoutRef.current);
+        }
+        setStep((s) => Math.max(s - 1, 0));
+    };
+    const queueAutoAdvance = (expectedStep, canAdvance) => {
+        if (autoAdvanceTimeoutRef.current) {
+            window.clearTimeout(autoAdvanceTimeoutRef.current);
+        }
+        autoAdvanceTimeoutRef.current = window.setTimeout(() => {
+            setStep((current) => {
+                if (current !== expectedStep || !canAdvance()) return current;
+                const next = Math.min(current + 1, maxStepIndex);
+                analytics.quizStep(quizSteps[next], { from: current, to: next, click_count: clickCount });
+                return next;
+            });
+        }, 170);
+    };
+
+    useEffect(() => {
+        setStep((current) => Math.min(current, maxStepIndex));
+    }, [maxStepIndex]);
+
+    useEffect(() => {
+        if (step !== STEP_DEVICE) setPhoneIdentifyOpen(false);
+    }, [step]);
+
+    useEffect(() => () => {
+        if (autoAdvanceTimeoutRef.current) {
+            window.clearTimeout(autoAdvanceTimeoutRef.current);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (selectedIssues.length > 0) {
+            setPricePulseKey((k) => k + 1);
+        }
+    }, [selectedDevice, selectedIssues, issueTiers]);
 
     const availableRepairTypes = useMemo(() => {
         if (!selectedDevice) return REPAIR_TYPES.filter(type => REPAIR_TYPES_ALWAYS_AVAILABLE.has(type.id));
@@ -336,7 +357,6 @@ export default function RepairQuiz() {
         });
     }, [availableRepairTypes]);
 
-    // Reset tier selections that are no longer available when device changes
     useEffect(() => {
         if (!selectedDevice) return;
         setIssueTiers((prev) => {
@@ -357,7 +377,7 @@ export default function RepairQuiz() {
 
             const { data: profile } = await supabase
                 .from('customers')
-                .select('full_name, email, phone')
+                .select('full_name, email, phone, referral_code')
                 .eq('id', user.id)
                 .maybeSingle();
 
@@ -365,7 +385,9 @@ export default function RepairQuiz() {
                 name: profile?.full_name || user.user_metadata?.full_name || '',
                 email: profile?.email || user.email || '',
                 phone: profile?.phone || '',
+                backupPhone: '',
             });
+            setOwnReferralCode(normalizeReferralCode(profile?.referral_code || ''));
         }
 
         hydrateLoggedInContact();
@@ -374,7 +396,6 @@ export default function RepairQuiz() {
     const toggleIssue = (id) => {
         setSelectedIssues((prev) => {
             const next = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
-            // Remove tier and color if deselecting
             if (prev.includes(id)) {
                 setIssueTiers((t) => {
                     const copy = { ...t };
@@ -391,6 +412,26 @@ export default function RepairQuiz() {
         setIssueTiers((prev) => ({ ...prev, [issueId]: tier }));
     };
 
+    const getBookingErrorMessage = (fallback, error) => {
+        if (!error) return fallback;
+        const message = error.message || '';
+        if (error.code === '42501') {
+            return 'Booking failed due to permissions. Please refresh and sign in again.';
+        }
+        if (error.code === '23503' && message.includes('customer_id')) {
+            return 'Your profile is still syncing. Please wait a few seconds and try again.';
+        }
+        return `${fallback} ${message ? `(${message})` : ''}`.trim();
+    };
+
+    const getReferralCodeForBooking = () => {
+        const normalized = normalizeReferralCode(referralCode);
+        const referralError = getReferralValidationError(normalized, ownReferralCode);
+        setReferralCodeError(referralError);
+        if (referralError) return { code: null, error: referralError };
+        return { code: normalized || null, error: '' };
+    };
+
     const getIssuePrice = (issueId) => {
         const tier = issueTiers[issueId] || 'premium';
         if (selectedDevice) {
@@ -400,22 +441,157 @@ export default function RepairQuiz() {
         return SAMPLE_PRICING[issueId]?.[tier] || 0;
     };
 
-    const calculateTotal = () => {
+    const calculateBaseTotal = () => {
         const partsTotal = selectedIssues.reduce((sum, id) => sum + getIssuePrice(id), 0);
         return partsTotal + SERVICE_FEE + LABOR_FEE;
     };
 
-    const isSoftwareOnly = selectedIssues.length === 1 && selectedIssues[0] === 'software';
+    const referralDiscountPreview = useMemo(() => {
+        const normalized = normalizeReferralCode(referralCode);
+        const error = getReferralValidationError(normalized, ownReferralCode);
+        if (error) return 0;
+        return normalized ? REFERRAL_DISCOUNT_AMOUNT : 0;
+    }, [referralCode, ownReferralCode]);
 
-    // Min date: If all parts in stock, allow tomorrow; otherwise 3 days out
+    const calculateTotal = () => Math.max(calculateBaseTotal() - referralDiscountPreview, 0);
+
+    const buildBookingNotes = () => {
+        const customNotes = repairNotes.trim();
+        const backupPhone = contact.backupPhone.trim();
+        if (!customNotes && !backupPhone) return null;
+
+        const segments = [];
+        if (customNotes) segments.push(customNotes);
+        if (backupPhone) segments.push(`Backup phone: ${backupPhone}`);
+        return segments.join('\n\n');
+    };
+
     const schedulingLeadDays = allPartsInStock === true ? 1 : SCHEDULING_LEAD_DAYS;
-    const minDate = new Date();
-    minDate.setDate(minDate.getDate() + schedulingLeadDays);
+    const today = useMemo(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, []);
+    const minDate = useMemo(() => {
+        const d = new Date(today);
+        d.setDate(d.getDate() + schedulingLeadDays);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, [schedulingLeadDays, today]);
     const minDateStr = toLocalDateKey(minDate);
+
+    const previewWindowStartDate = useMemo(() => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - d.getDay() + (scheduleWindowOffsetWeeks * 7));
+        return d;
+    }, [today, scheduleWindowOffsetWeeks]);
+
+    const previewWindowEndDate = useMemo(() => {
+        const d = new Date(previewWindowStartDate);
+        d.setDate(d.getDate() + 13);
+        return d;
+    }, [previewWindowStartDate]);
+
+    const previewWindowStartStr = toLocalDateKey(previewWindowStartDate);
+    const previewWindowEndStr = toLocalDateKey(previewWindowEndDate);
+    const maxWindowOffsetWeeks = Math.max(0, Math.floor((SCHEDULING_WINDOW_DAYS - 14) / 7));
+
+    const filteredAvailableDates = useMemo(() => {
+        if (!availableDates) return null;
+        const next = new Set();
+        availableDates.forEach((date) => {
+            if (date >= previewWindowStartStr && date <= previewWindowEndStr) {
+                next.add(date);
+            }
+        });
+        return next;
+    }, [availableDates, previewWindowStartStr, previewWindowEndStr]);
+
+    useEffect(() => {
+        if (!scheduleDate) return;
+        const inVisibleWindow = scheduleDate >= previewWindowStartStr && scheduleDate <= previewWindowEndStr;
+        const dateHasSlots = filteredAvailableDates ? filteredAvailableDates.has(scheduleDate) : true;
+        if (!inVisibleWindow || !dateHasSlots) {
+            setScheduleDate('');
+            setScheduleTime('');
+        }
+    }, [scheduleDate, previewWindowStartStr, previewWindowEndStr, filteredAvailableDates]);
 
     // ─── Auth Handlers ───
     const handleContactChange = (field, value) => {
         setContact(prev => ({ ...prev, [field]: value }));
+        if (field === 'email') setExistingAccount(false);
+    };
+
+    const handleContactContinue = async () => {
+        if (isLoggedIn) {
+            setStep(STEP_PHONE);
+            return;
+        }
+        const email = contact.email.trim().toLowerCase();
+        const { data: emailExists } = await supabase.rpc('check_email_exists', { p_email: email });
+        if (emailExists && !existingAccount) {
+            setExistingAccount(true);
+            return;
+        }
+        setStep(STEP_PHONE);
+    };
+
+    const handleExistingAccountOtp = async () => {
+        setIsVerifying(true);
+        setAuthError('');
+        try {
+            const { error } = await supabase.auth.signInWithOtp({ email: contact.email });
+            if (error) {
+                setAuthError(error.message);
+                setIsVerifying(false);
+                return;
+            }
+            setIsVerifying(false);
+            setOtpSent(true);
+        } catch {
+            setAuthError('Something went wrong. Please try again.');
+            setIsVerifying(false);
+        }
+    };
+
+    const handleExistingAccountVerify = async () => {
+        const fullCode = otpCode.join('');
+        if (fullCode.length < 6) return;
+        setIsVerifying(true);
+        setAuthError('');
+        try {
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+                email: contact.email, token: fullCode, type: 'email',
+            });
+            if (verifyError) {
+                setAuthError(verifyError.message);
+                setIsVerifying(false);
+                return;
+            }
+            setIsVerifying(false);
+            setOtpSent(false);
+            setOtpCode(['', '', '', '', '', '']);
+            setExistingAccount(false);
+        } catch {
+            setAuthError('Verification failed. Please try again.');
+            setIsVerifying(false);
+        }
+    };
+
+    const handleReferralCodeChange = (value) => {
+        const normalized = normalizeReferralCode(value);
+        setReferralCode(normalized);
+        setReferralCodeError(getReferralValidationError(normalized, ownReferralCode));
+
+        if (!normalized) {
+            window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
+            return;
+        }
+
+        if (REFERRAL_CODE_REGEX.test(normalized)) {
+            window.localStorage.setItem(REFERRAL_STORAGE_KEY, normalized);
+        }
     };
 
     const handleSendOtp = async (e) => {
@@ -424,9 +600,7 @@ export default function RepairQuiz() {
         setAuthError('');
 
         try {
-            const signInPayload = { email: contact.email };
-
-            const { error } = await supabase.auth.signInWithOtp(signInPayload);
+            const { error } = await supabase.auth.signInWithOtp({ email: contact.email });
 
             if (error) {
                 setAuthError(error.message);
@@ -435,6 +609,7 @@ export default function RepairQuiz() {
             }
             setIsVerifying(false);
             setOtpSent(true);
+            setStep(STEP_VERIFY);
         } catch (err) {
             setAuthError('Something went wrong. Please try again.');
             setIsVerifying(false);
@@ -468,14 +643,18 @@ export default function RepairQuiz() {
         e.preventDefault();
         const fullCode = otpCode.join('');
         if (fullCode.length < 6) return;
+        if (!scheduleDate || !scheduleAddress || !filteredAvailableDates?.has(scheduleDate)) {
+            setAuthError('Please select an available date and address before booking.');
+            return;
+        }
 
         setIsVerifying(true);
         setAuthError('');
 
         try {
-            const verifyPayload = { email: contact.email, token: fullCode, type: 'email' };
-
-            const { data: authData, error: verifyError } = await supabase.auth.verifyOtp(verifyPayload);
+            const { data: authData, error: verifyError } = await supabase.auth.verifyOtp({
+                email: contact.email, token: fullCode, type: 'email',
+            });
 
             if (verifyError) {
                 setAuthError(verifyError.message);
@@ -483,7 +662,6 @@ export default function RepairQuiz() {
                 return;
             }
 
-            // Create/update customer profile
             const userId = authData.user?.id;
             if (userId) {
                 const normalizedPhone = contact.phone ? (formatPhoneE164(contact.phone) || contact.phone) : null;
@@ -495,47 +673,96 @@ export default function RepairQuiz() {
                 }, { onConflict: 'id' });
 
                 if (profileError) {
-                    console.error('Customer profile error:', profileError);
-                    setAuthError('Failed to save your profile. Please try again.');
+                    setAuthError(getBookingErrorMessage('Failed to save your profile. Please try again.', profileError));
+                    console.error('Profile upsert failed during OTP booking:', profileError);
                     setIsVerifying(false);
                     return;
                 }
 
-                // Save the repair booking
-                const { error: repairError } = await supabase.from('repairs').insert({
-                    customer_id: userId,
-                    device: selectedDevice?.name || 'Unknown Device',
-                    issues: selectedIssues,
-                    parts_tier: issueTiers,
-                    service_fee: SERVICE_FEE,
-                    total_estimate: calculateTotal(),
-                    schedule_date: scheduleDate,
-                    schedule_time: scheduleTime,
-                    address: scheduleAddress,
-                    status: 'pending',
-                    parts_in_stock: allPartsInStock === true,
-                    device_color: backGlassColor || null,
-                    notes: repairNotes.trim() || null,
+                const { code: referralCodeForBooking, error: referralError } = getReferralCodeForBooking();
+                if (referralError) {
+                    setAuthError(referralError);
+                    setIsVerifying(false);
+                    return;
+                }
+
+                const { data: bookingData, error: repairError } = await supabase.rpc('book_repair_with_referral', {
+                    p_device: selectedDevice?.name || 'Unknown Device',
+                    p_issues: selectedIssues,
+                    p_parts_tier: issueTiers,
+                    p_service_fee: SERVICE_FEE,
+                    p_labor_fee: LABOR_FEE,
+                    p_total_estimate_base: calculateBaseTotal(),
+                    p_schedule_date: scheduleDate,
+                    p_schedule_time: SCHEDULE_TIME_PENDING,
+                    p_address: scheduleAddress,
+                    p_parts_in_stock: allPartsInStock === true,
+                    p_device_color: backGlassColor || null,
+                    p_notes: buildBookingNotes(),
+                    p_referral_code: referralCodeForBooking,
                 });
 
                 if (repairError) {
-                    console.error('Repair booking error:', repairError);
-                    setAuthError('Failed to book your repair. Please try again.');
+                    if ((repairError.message || '').toLowerCase().includes('referral')) {
+                        setReferralCodeError(repairError.message);
+                    }
+                    setAuthError(getBookingErrorMessage('Failed to book your repair. Please try again.', repairError));
+                    console.error('Repair insert failed during OTP booking:', repairError);
                     setIsVerifying(false);
                     return;
                 }
+
+                const bookingRow = Array.isArray(bookingData) ? bookingData[0] : bookingData;
+                setBookedTotalEstimate(Number(bookingRow?.total_estimate ?? calculateTotal()));
+            }
+
+            // Auto-save device and address for future repairs
+            if (userId) {
+                const savePromises = [];
+
+                if (selectedDevice) {
+                    savePromises.push(
+                        supabase.from('customer_devices').upsert({
+                            customer_id: userId,
+                            device_id: selectedDevice.id,
+                            device_name: selectedDevice.name,
+                            device_color: backGlassColor || null,
+                            is_default: true,
+                        }, { onConflict: 'customer_id,device_id' }).then(() => {})
+                    );
+                }
+
+                if (scheduleAddress) {
+                    savePromises.push(
+                        supabase.from('customer_addresses').insert({
+                            customer_id: userId,
+                            label: 'Other',
+                            address: scheduleAddress,
+                            is_default: true,
+                        }).then(() => {})
+                    );
+                }
+
+                await Promise.allSettled(savePromises);
             }
 
             setIsVerifying(false);
             setConfirmed(true);
+            window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
+            analytics.quizComplete({ device: selectedDevice?.name, issues: selectedIssues, click_count: clickCount });
         } catch (err) {
-            setAuthError('Verification failed. Please check your code and try again.');
+            setAuthError(`Verification failed. ${err?.message ? `(${err.message})` : 'Please check your code and try again.'}`);
+            console.error('OTP verification failed:', err);
             setIsVerifying(false);
         }
     };
 
     const handleBookLoggedIn = async () => {
         if (!user) return;
+        if (!scheduleDate || !scheduleAddress || !filteredAvailableDates?.has(scheduleDate)) {
+            setAuthError('Please select an available date and address before booking.');
+            return;
+        }
 
         setIsVerifying(true);
         setAuthError('');
@@ -555,638 +782,564 @@ export default function RepairQuiz() {
                 .upsert(profilePayload, { onConflict: 'id' });
 
             if (profileError) {
-                setAuthError('Failed to load your profile. Please try again.');
+                setAuthError(getBookingErrorMessage('Failed to load your profile. Please try again.', profileError));
+                console.error('Profile upsert failed for signed-in booking:', profileError);
                 setIsVerifying(false);
                 return;
             }
 
-            const { error: repairError } = await supabase.from('repairs').insert({
-                customer_id: user.id,
-                device: selectedDevice?.name || 'Unknown Device',
-                issues: selectedIssues,
-                parts_tier: issueTiers,
-                service_fee: SERVICE_FEE,
-                total_estimate: calculateTotal(),
-                schedule_date: scheduleDate,
-                schedule_time: scheduleTime,
-                address: scheduleAddress,
-                status: 'pending',
-                parts_in_stock: allPartsInStock === true,
-                device_color: backGlassColor || null,
-                notes: repairNotes.trim() || null,
+            const { code: referralCodeForBooking, error: referralError } = getReferralCodeForBooking();
+            if (referralError) {
+                setAuthError(referralError);
+                setIsVerifying(false);
+                return;
+            }
+
+            const { data: bookingData, error: repairError } = await supabase.rpc('book_repair_with_referral', {
+                p_device: selectedDevice?.name || 'Unknown Device',
+                p_issues: selectedIssues,
+                p_parts_tier: issueTiers,
+                p_service_fee: SERVICE_FEE,
+                p_labor_fee: LABOR_FEE,
+                p_total_estimate_base: calculateBaseTotal(),
+                p_schedule_date: scheduleDate,
+                p_schedule_time: SCHEDULE_TIME_PENDING,
+                p_address: scheduleAddress,
+                p_parts_in_stock: allPartsInStock === true,
+                p_device_color: backGlassColor || null,
+                p_notes: buildBookingNotes(),
+                p_referral_code: referralCodeForBooking,
             });
 
             if (repairError) {
-                setAuthError('Failed to book your repair. Please try again.');
+                if ((repairError.message || '').toLowerCase().includes('referral')) {
+                    setReferralCodeError(repairError.message);
+                }
+                setAuthError(getBookingErrorMessage('Failed to book your repair. Please try again.', repairError));
+                console.error('Repair insert failed for signed-in booking:', repairError);
                 setIsVerifying(false);
                 return;
             }
+
+            const bookingRow = Array.isArray(bookingData) ? bookingData[0] : bookingData;
+            setBookedTotalEstimate(Number(bookingRow?.total_estimate ?? calculateTotal()));
+
+            // Auto-save device and address for future repairs
+            const savePromises = [];
+
+            if (selectedDevice && savedDataLoaded) {
+                const deviceAlreadySaved = savedDevices.some(d => d.device_id === selectedDevice.id);
+                if (!deviceAlreadySaved) {
+                    savePromises.push(
+                        supabase.from('customer_devices').insert({
+                            customer_id: user.id,
+                            device_id: selectedDevice.id,
+                            device_name: selectedDevice.name,
+                            device_color: backGlassColor || null,
+                            is_default: savedDevices.length === 0,
+                        })
+                    );
+                }
+            }
+
+            if (scheduleAddress && savedDataLoaded) {
+                const addressAlreadySaved = savedAddresses.some(a => a.address === scheduleAddress);
+                if (!addressAlreadySaved) {
+                    savePromises.push(
+                        supabase.from('customer_addresses').insert({
+                            customer_id: user.id,
+                            label: 'Other',
+                            address: scheduleAddress,
+                            is_default: savedAddresses.length === 0,
+                        })
+                    );
+                }
+            }
+
+            await Promise.allSettled(savePromises);
 
             setContact((prev) => ({ ...prev, name: profilePayload.full_name, email: profilePayload.email }));
             setConfirmed(true);
             setIsVerifying(false);
+            window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
+            analytics.quizComplete({ device: selectedDevice?.name, issues: selectedIssues, click_count: clickCount });
         } catch (err) {
-            setAuthError('Failed to book your repair. Please try again.');
+            setAuthError(`Failed to book your repair. ${err?.message ? `(${err.message})` : 'Please try again.'}`);
+            console.error('Unexpected booking error for signed-in user:', err);
             setIsVerifying(false);
         }
     };
 
-    // Get reversed generations for display (newest first)
+    const handleDateChange = (date) => {
+        setScheduleDate(date);
+        setScheduleTime('');
+        queueAutoAdvance(STEP_DATE, () => Boolean(date) && (!filteredAvailableDates || filteredAvailableDates.has(date)));
+    };
+
+    const handleAddressChange = (address) => {
+        setScheduleAddress(address);
+        queueAutoAdvance(STEP_ADDRESS, () => canContinueFromAddressRef.current);
+    };
+
+    const handleScheduleWindowNext = () => {
+        setScheduleWindowOffsetWeeks((prev) => Math.min(prev + 1, maxWindowOffsetWeeks));
+    };
+
+    const handleScheduleWindowPrev = () => {
+        setScheduleWindowOffsetWeeks((prev) => Math.max(prev - 1, 0));
+    };
+
     const sortedGens = [...DEVICE_GENERATIONS].reverse();
+    const requiresBackGlassColor = selectedIssues.includes('back-glass');
+    const allTiersSelected = selectedIssues.length > 0 && selectedIssues.every((id) => issueTiers[id]);
+    const canContinueFromContact = Boolean(contact.name.trim()) && Boolean(contact.email.trim());
+    const canContinueFromPhone = true; // phone is optional, always can continue
+    const canContinueFromDevice = Boolean(selectedDevice);
+    const canContinueFromIssues = selectedIssues.length > 0 && !isSoftwareOnly;
+    const canContinueFromQuality = canContinueFromIssues && allTiersSelected && (!requiresBackGlassColor || Boolean(backGlassColor));
+    const canContinueFromAddress = Boolean(scheduleAddress) && !serviceAreaError;
+    const canContinueFromDate = Boolean(scheduleDate) && (!filteredAvailableDates || filteredAvailableDates.has(scheduleDate));
+    const progressPercent = ((Math.min(step, maxStepIndex) + 1) / quizSteps.length) * 100;
+
+    useEffect(() => {
+        canContinueFromContactRef.current = canContinueFromContact;
+        canContinueFromPhoneRef.current = canContinueFromPhone;
+        canContinueFromDeviceRef.current = canContinueFromDevice;
+        canContinueFromQualityRef.current = canContinueFromQuality;
+        canContinueFromAddressRef.current = canContinueFromAddress;
+        canContinueFromDateRef.current = canContinueFromDate;
+    }, [canContinueFromContact, canContinueFromPhone, canContinueFromDevice, canContinueFromQuality, canContinueFromAddress, canContinueFromDate]);
+
+    useEffect(() => {
+        if (justWentBackRef.current) {
+            justWentBackRef.current = false;
+            return;
+        }
+        if (step === STEP_DEVICE && canContinueFromDevice) {
+            queueAutoAdvance(STEP_DEVICE, () => canContinueFromDeviceRef.current);
+        }
+        if (step === STEP_QUALITY && canContinueFromQuality) {
+            queueAutoAdvance(STEP_QUALITY, () => canContinueFromQualityRef.current);
+        }
+        if (step === STEP_ADDRESS && canContinueFromAddress) {
+            queueAutoAdvance(STEP_ADDRESS, () => canContinueFromAddressRef.current);
+        }
+        if (step === STEP_DATE && canContinueFromDate) {
+            queueAutoAdvance(STEP_DATE, () => canContinueFromDateRef.current);
+        }
+    }, [
+        step,
+        canContinueFromDevice,
+        canContinueFromQuality,
+        canContinueFromAddress,
+        canContinueFromDate,
+    ]);
 
     return (
         <>
             <Navbar />
-            <div className="quiz">
+            <div
+                className="quiz"
+                onClickCapture={(event) => {
+                    if (!(event.target instanceof Element)) return;
+                    if (!event.target.closest('button')) return;
+                    setClickCount((count) => count + 1);
+                }}
+            >
                 <div className="guru-container guru-container--narrow">
                     {/* ─── Progress Bar ─────────── */}
                     <div className="quiz__progress">
-                        {STEPS.map((name, i) => (
-                            <div key={name} className={`quiz__step ${i <= step ? 'quiz__step--active' : ''} ${i < step ? 'quiz__step--done' : ''}`}>
-                                <div className="quiz__step-indicator">
-                                    {i < step ? '✓' : i + 1}
-                                </div>
-                                <span className="quiz__step-label">{name}</span>
-                            </div>
-                        ))}
+                        <div className="quiz__progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressPercent)}>
+                            <div className="quiz__progress-fill" style={{ width: `${progressPercent}%` }} />
+                        </div>
+                        <span className="quiz__progress-label">{quizSteps[Math.min(step, maxStepIndex)]}</span>
                     </div>
 
-                    {/* ─── Step 0: What needs fixing? (Device + Issues + Quality) ─────── */}
-                    {step === 0 && (
-                        <div className="quiz__panel animate-fade-in-up">
-                            <h2 className="quiz__title">What needs fixing?</h2>
-                            <p className="quiz__subtitle">Select your device and what's broken.</p>
-
-                            {/* Device Selection */}
-                            <div className="quiz__section">
-                                <h3 className="quiz__section-title">Your iPhone</h3>
-                                <div className="quiz__gen-tabs">
-                                    {sortedGens.map((gen) => (
-                                        <button
-                                            key={gen}
-                                            className={`quiz__gen-tab ${activeGen === gen ? 'quiz__gen-tab--active' : ''}`}
-                                            onClick={() => setActiveGen(gen)}
-                                        >
-                                            {gen === 'SE' ? 'SE' : gen}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="quiz__devices">
-                                    {getDevicesByGeneration(activeGen).map((device) => (
-                                        <button
-                                            key={device.id}
-                                            className={`quiz__device-card ${selectedDevice?.id === device.id ? 'quiz__device-card--selected' : ''}`}
-                                            onClick={() => setSelectedDevice(device)}
-                                        >
-                                            <div className="quiz__device-icon">📱</div>
-                                            <div className="quiz__device-name">{device.name}</div>
-                                            <div className="quiz__device-year">{device.year}</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Issue Selection */}
-                            {selectedDevice && (
-                                <div className="quiz__section">
-                                    <h3 className="quiz__section-title">What's wrong with your {selectedDevice.name}?</h3>
-                                    <div className="quiz__issues">
-                                        {availableRepairTypes.map((type) => (
-                                            <button
-                                                key={type.id}
-                                                className={`quiz__issue-card ${selectedIssues.includes(type.id) ? 'quiz__issue-card--selected' : ''}`}
-                                                onClick={() => toggleIssue(type.id)}
-                                            >
-                                                <div className="quiz__issue-icon">{type.icon}</div>
-                                                <div className="quiz__issue-info">
-                                                    <div className="quiz__issue-name">{type.name}</div>
-                                                    <div className="quiz__issue-desc">{type.description}</div>
-                                                </div>
-                                                <div className="quiz__issue-check">
-                                                    {selectedIssues.includes(type.id) ? '✓' : ''}
-                                                </div>
-                                            </button>
-                                        ))}
+                    {!confirmed && (
+                        <div key={`step-${step}`} className="quiz__step-stage">
+                            {step === STEP_CONTACT && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">What's your name and email?</h2>
+                                    <p className="quiz__subtitle">So we can send you booking confirmations and updates.</p>
+                                    <div className="guru-input-group" style={{ marginBottom: 12 }}>
+                                        <label className="sched-label">Full Name</label>
+                                        <input
+                                            className="guru-input"
+                                            type="text"
+                                            placeholder="Jane Doe"
+                                            value={contact.name}
+                                            onChange={(e) => handleContactChange('name', e.target.value)}
+                                            autoFocus
+                                        />
                                     </div>
-                                    {isSoftwareOnly && (
-                                        <div className="quiz__alert-box">
-                                            ⚠️ We do not offer on-site appointments for software-only issues. Please visit us in-store.
+                                    <div className="guru-input-group">
+                                        <label className="sched-label">Email Address</label>
+                                        <input
+                                            className="guru-input"
+                                            type="email"
+                                            placeholder="jane@example.com"
+                                            value={contact.email}
+                                            onChange={(e) => handleContactChange('email', e.target.value)}
+                                        />
+                                    </div>
+                                    {existingAccount && (
+                                        <div className="quiz__existing-account">
+                                            {!otpSent ? (
+                                                <>
+                                                    <p>Looks like you already have an account! Sign in to auto-fill your saved device, address, and contact info.</p>
+                                                    {authError && <p className="quiz__existing-account-error">{authError}</p>}
+                                                    <div className="quiz__existing-account-actions">
+                                                        <button
+                                                            className="guru-btn guru-btn--primary guru-btn--sm"
+                                                            onClick={handleExistingAccountOtp}
+                                                            disabled={isVerifying}
+                                                        >
+                                                            {isVerifying ? 'Sending...' : 'Sign In with Email Code'}
+                                                        </button>
+                                                        <button
+                                                            className="guru-btn guru-btn--ghost guru-btn--sm"
+                                                            onClick={() => { setExistingAccount(false); setStep(STEP_PHONE); }}
+                                                        >
+                                                            Continue without signing in
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p>We sent a 6-digit code to <strong>{contact.email}</strong></p>
+                                                    {authError && <p className="quiz__existing-account-error">{authError}</p>}
+                                                    <div className="quiz__existing-account-otp">
+                                                        {otpCode.map((digit, i) => (
+                                                            <input
+                                                                key={i}
+                                                                ref={(el) => (otpRefs.current[i] = el)}
+                                                                className="guru-input quiz__otp-input"
+                                                                type="text"
+                                                                inputMode="numeric"
+                                                                maxLength={1}
+                                                                value={digit}
+                                                                onChange={(e) => handleOtpChange(i, e.target.value)}
+                                                                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                                                                onPaste={i === 0 ? handleOtpPaste : undefined}
+                                                                autoFocus={i === 0}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                    <div className="quiz__existing-account-actions">
+                                                        <button
+                                                            className="guru-btn guru-btn--primary guru-btn--sm"
+                                                            onClick={handleExistingAccountVerify}
+                                                            disabled={isVerifying || otpCode.join('').length < 6}
+                                                        >
+                                                            {isVerifying ? 'Verifying...' : 'Verify'}
+                                                        </button>
+                                                        <button
+                                                            className="guru-btn guru-btn--ghost guru-btn--sm"
+                                                            onClick={() => { setOtpSent(false); setExistingAccount(false); setStep(STEP_PHONE); }}
+                                                        >
+                                                            Continue without signing in
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     )}
+                                    <div className="quiz__actions">
+                                        <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
+                                        <button
+                                            className="guru-btn guru-btn--primary guru-btn--lg"
+                                            disabled={!canContinueFromContact}
+                                            onClick={handleContactContinue}
+                                        >
+                                            Continue →
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
-                            {/* Back Glass Color Selection */}
-                            {selectedIssues.includes('back-glass') && selectedDevice && BACK_GLASS_COLORS[selectedDevice.id] && (
-                                <div className="quiz__section">
-                                    <h3 className="quiz__section-title">Back Glass Color</h3>
-                                    <p className="quiz__quality-subtitle">
-                                        Select the color of your {selectedDevice.name} so we order the correct part.
+                            {step === STEP_PHONE && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">What's your phone number?</h2>
+                                    <p className="quiz__subtitle">So your technician can reach you on repair day.</p>
+                                    <div className="guru-input-group" style={{ marginBottom: 12 }}>
+                                        <label className="sched-label">Primary Phone <span style={{ color: 'var(--guru-gray-400)', fontWeight: 400 }}>(optional)</span></label>
+                                        <input
+                                            className="guru-input"
+                                            type="tel"
+                                            placeholder="(555) 123-4567"
+                                            value={contact.phone}
+                                            onChange={(e) => handleContactChange('phone', e.target.value)}
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="guru-input-group">
+                                        <label className="sched-label">Backup Phone <span style={{ color: 'var(--guru-gray-400)', fontWeight: 400 }}>(if we can't reach your primary)</span></label>
+                                        <input
+                                            className="guru-input"
+                                            type="tel"
+                                            placeholder="(555) 987-6543"
+                                            value={contact.backupPhone}
+                                            onChange={(e) => handleContactChange('backupPhone', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="quiz__actions">
+                                        <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                        <button
+                                            className="guru-btn guru-btn--primary guru-btn--lg"
+                                            onClick={() => setStep(STEP_DEVICE)}
+                                        >
+                                            Continue →
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === STEP_DEVICE && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">Choose your iPhone</h2>
+                                    <div className="quiz__device-help quiz__device-help--under-title">
+                                        <button
+                                            type="button"
+                                            className="quiz__identify-btn"
+                                            onClick={() => setPhoneIdentifyOpen(true)}
+                                        >
+                                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                                                <circle cx="9" cy="9" r="7.5" stroke="currentColor" strokeWidth="1.5" />
+                                                <path d="M7 7a2 2 0 1 1 2.5 1.94c-.3.1-.5.36-.5.68V11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                                                <circle cx="9" cy="13" r="0.75" fill="currentColor" />
+                                            </svg>
+                                            Help me identify my phone
+                                        </button>
+                                        <a
+                                            className="quiz__apple-link"
+                                            href="https://support.apple.com/en-us/106343"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            Not sure which model you have?
+                                        </a>
+                                    </div>
+                                    <p className="quiz__subtitle quiz__subtitle--device-step">
+                                        Pick the <strong>exact model</strong>—we order parts for it, and the wrong one
+                                        usually means rescheduling and a longer wait. Not sure? Use the help above or the list below.
                                     </p>
-                                    <div className="quiz__color-grid">
-                                        {BACK_GLASS_COLORS[selectedDevice.id].map((color) => (
-                                            <button
-                                                key={color}
-                                                className={`quiz__color-chip ${backGlassColor === color ? 'quiz__color-chip--selected' : ''}`}
-                                                onClick={() => setBackGlassColor(color)}
-                                            >
-                                                {backGlassColor === color && <span className="quiz__color-chip-check">✓</span>}
-                                                {color}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* Quality Tier Selection (Required) */}
-                            {selectedIssues.length > 0 && !isSoftwareOnly && (
-                                <div className="quiz__section">
-                                    <h3 className="quiz__section-title">Choose Parts Quality</h3>
-                                    <p className="quiz__quality-subtitle">Select a quality tier for each repair. This affects pricing and part longevity.</p>
-                                    <div className="quiz__tier-legend">
-                                        {PARTS_TIERS.map((tier) => (
-                                            <div key={tier.id} className="quiz__tier-legend-item">
-                                                <span className="quiz__tier-legend-dot" style={{ background: tier.color }}></span>
-                                                <span className="quiz__tier-legend-name">{tier.name}</span>
-                                                <span className="quiz__tier-legend-desc">— {tier.description}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="quiz__per-issue-tiers">
-                                        {selectedIssues.map((issueId) => {
-                                            const type = availableRepairTypes.find((t) => t.id === issueId) || REPAIR_TYPES.find((t) => t.id === issueId);
-                                            const currentTier = issueTiers[issueId];
-                                            const stockStatus = currentTier ? isPartInStock(issueId, currentTier) : null;
-                                            // Get available tier IDs for this device+repair; null means fall back to all tiers
-                                            const availableTierIds = selectedDevice
-                                                ? getAvailableTiersForRepair(selectedDevice.name, issueId)
-                                                : null;
-                                            const tiersToShow = availableTierIds
-                                                ? PARTS_TIERS.filter(t => availableTierIds.includes(t.id))
-                                                : PARTS_TIERS;
-                                            return (
-                                                <div key={issueId} className="pit-row">
-                                                    <div className="pit-row__info">
-                                                        <span className="pit-row__icon">{type?.icon}</span>
-                                                        <span className="pit-row__name">{type?.name}</span>
-                                                        {currentTier && stockStatus !== null && (
-                                                            <span className={`pit-row__stock ${stockStatus ? 'pit-row__stock--in' : 'pit-row__stock--out'}`}>
-                                                                {stockStatus ? 'In Stock' : 'Needs Ordering'}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="pit-row__tiers">
-                                                        {tiersToShow.map((tier) => {
-                                                            const price = selectedDevice
-                                                                ? (getDeviceRepairPrice(selectedDevice.name, issueId, tier.id) ?? SAMPLE_PRICING[issueId]?.[tier.id] ?? 0)
-                                                                : (SAMPLE_PRICING[issueId]?.[tier.id] || 0);
-                                                            const tierStock = isPartInStock(issueId, tier.id);
-                                                            return (
-                                                                <button
-                                                                    key={tier.id}
-                                                                    className={`pit-tier ${currentTier === tier.id ? 'pit-tier--selected' : ''}`}
-                                                                    onClick={() => setTierForIssue(issueId, tier.id)}
-                                                                    style={currentTier === tier.id ? { borderColor: tier.color, background: `${tier.color}10` } : undefined}
-                                                                >
-                                                                    <span className="pit-tier__label">{tier.name}</span>
-                                                                    <span className="pit-tier__price">${price}</span>
-                                                                    {tierStock !== null && (
-                                                                        <span className={`pit-tier__stock ${tierStock ? 'pit-tier__stock--in' : 'pit-tier__stock--out'}`}>
-                                                                            {tierStock ? '✓' : '○'}
-                                                                        </span>
-                                                                    )}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
+                                    <PhoneIdentifyModal
+                                        open={phoneIdentifyOpen}
+                                        onClose={() => setPhoneIdentifyOpen(false)}
+                                        onSelectDevice={(device) => {
+                                            setSelectedDevice(device);
+                                            setActiveGen(device.generation);
+                                            setPhoneIdentifyOpen(false);
+                                            queueAutoAdvance(STEP_DEVICE, () => canContinueFromDeviceRef.current);
+                                        }}
+                                    />
 
-                            <div className="quiz__actions">
-                                <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
-                                <button
-                                    className="guru-btn guru-btn--primary"
-                                    disabled={
-                                        selectedIssues.length === 0 ||
-                                        isSoftwareOnly ||
-                                        selectedIssues.some(id => !issueTiers[id]) ||
-                                        (selectedIssues.includes('back-glass') && !backGlassColor)
-                                    }
-                                    onClick={goNext}
-                                >
-                                    Continue →
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ─── Step 1: When & where? (Schedule) ─────── */}
-                    {step === 1 && !confirmed && (
-                        <div className="quiz__panel animate-fade-in-up">
-                            <h2 className="quiz__title">When & where?</h2>
-
-                            {/* Inventory status banner */}
-                            {allPartsInStock === true ? (
-                                <div className="quiz__inventory-banner quiz__inventory-banner--in-stock">
-                                    <span className="quiz__inventory-banner-icon">✓</span>
-                                    <div>
-                                        <strong>All parts are in stock!</strong>
-                                        <p>We have everything needed for your repair. Schedule at the earliest available time.</p>
-                                    </div>
-                                </div>
-                            ) : needsPartsOrder ? (
-                                <div className="quiz__inventory-banner quiz__inventory-banner--order">
-                                    <span className="quiz__inventory-banner-icon">📦</span>
-                                    <div>
-                                        <strong>Some parts need to be ordered</strong>
-                                        <p>We need to order parts for your repair. Please schedule at least 3 days out so we can have everything ready.</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <p className="quiz__subtitle">
-                                    Pick a date and time for your repair.
-                                </p>
-                            )}
-
-                            <div className="sched-section">
-                                <label className="sched-label">Pick a Date</label>
-                                <GuruCalendar
-                                    value={scheduleDate}
-                                    onChange={(date) => {
-                                        setScheduleDate(date);
-                                        // Reset time if the newly selected date doesn't support the current slot
-                                        if (scheduleTime && availableDates) {
-                                            const dateSlots = availableSlotsByDate[date];
-                                            if (!dateSlots || !dateSlots.includes(scheduleTime)) {
-                                                setScheduleTime('');
+                                    <DeviceStep
+                                        activeGen={activeGen}
+                                        onGenChange={setActiveGen}
+                                        selectedDevice={selectedDevice}
+                                        onSelectDevice={setSelectedDevice}
+                                        sortedGens={sortedGens}
+                                        savedDevices={savedDevices}
+                                        onSelectSavedDevice={(saved) => {
+                                            const matchingDevice = DEVICE_GENERATIONS.reduce((found, gen) => {
+                                                if (found) return found;
+                                                return getDevicesByGeneration(gen).find(d => d.id === saved.device_id);
+                                            }, null);
+                                            if (matchingDevice) {
+                                                setSelectedDevice(matchingDevice);
+                                                setActiveGen(matchingDevice.generation);
+                                                if (saved.device_color) setBackGlassColor(saved.device_color);
                                             }
-                                        }
-                                    }}
-                                    minDate={minDateStr}
-                                    availableDates={availableDates}
-                                />
-                            </div>
+                                        }}
+                                        onAutoAdvance={() => queueAutoAdvance(STEP_DEVICE, () => canContinueFromDeviceRef.current)}
+                                    />
 
-                            <div className="sched-section">
-                                <label className="sched-label">Time Slot</label>
-                                <div className="sched-slots">
-                                    {TIME_SLOTS.map((slot) => {
-                                        // Disable slot if: we have availability data, a date is selected, and this slot isn't available
-                                        const hasAvailabilityData = availableDates !== null;
-                                        const dateSlots = availableSlotsByDate[scheduleDate];
-                                        const slotDisabled = hasAvailabilityData && scheduleDate
-                                            && (!dateSlots || !dateSlots.includes(slot.id));
-                                        return (
-                                            <button
-                                                key={slot.id}
-                                                className={`sched-slot ${scheduleTime === slot.id ? 'sched-slot--selected' : ''} ${slotDisabled ? 'sched-slot--disabled' : ''}`}
-                                                onClick={() => !slotDisabled && setScheduleTime(slot.id)}
-                                                disabled={slotDisabled}
-                                            >
-                                                <span className="sched-slot__icon">{slot.icon}</span>
-                                                <span className="sched-slot__label">{slot.label}</span>
-                                                <span className="sched-slot__range">{slot.range}</span>
-                                            </button>
-                                        );
-                                    })}
+                                    <div className="quiz__actions">
+                                        <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                    </div>
                                 </div>
-                                {!scheduleDate && (
-                                    <p className="sched-hint">Select a date above to see available time slots.</p>
-                                )}
-                                {scheduleDate && availableDates && !availableSlotsByDate[scheduleDate] && (
-                                    <p className="sched-hint sched-hint--warn">
-                                        No time slots available on this date. Please select a different date.
-                                    </p>
-                                )}
-                            </div>
+                            )}
 
-                            <div className="sched-section">
-                                <label className="sched-label">Your Location</label>
-                                <AddressSearch
-                                    value={scheduleAddress}
-                                    onChange={setScheduleAddress}
-                                    onServiceError={setServiceAreaError}
-                                />
-                                {serviceAreaError ? (
-                                    <div className="sched-service-error">
-                                        <span className="sched-service-error__icon">⚠️</span>
-                                        <div>
-                                            <strong>Not available in {serviceAreaError}</strong>
-                                            <p>We currently serve select cities in Texas. We are coming to other cities soon.</p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className="sched-hint">We come to your home, office, or wherever you are. Currently serving select cities in Texas.</p>
-                                )}
-                            </div>
-
-                            <div className="quiz__actions">
-                                <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
-                                <button
-                                    className="guru-btn guru-btn--primary guru-btn--lg"
-                                    disabled={!scheduleDate || !scheduleTime || !scheduleAddress}
-                                    onClick={goNext}
-                                >
-                                    Review & Book →
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ─── Step 2: Confirm & book (Quote Review + Contact + Auth) ─────── */}
-                    {step === 2 && !confirmed && (
-                        <div className="quiz__panel animate-fade-in-up">
-                            {isLoggedIn ? (
-                                <>
-                                    <h2 className="quiz__title">Confirm & book</h2>
-                                    <p className="quiz__subtitle">Review your repair and confirm your appointment.</p>
-
-                                    {/* Quote Review */}
-                                    <div className="quiz__quote">
-                                        <div className="quiz__quote-section">
-                                            <div className="quiz__quote-label">Device</div>
-                                            <div className="quiz__quote-value">{selectedDevice?.name}</div>
-                                            {backGlassColor && (
-                                                <div className="quiz__quote-line">
-                                                    <span>🎨 Back Glass Color</span>
-                                                    <span className="quiz__quote-value" style={{ fontSize: 'var(--font-size-base)' }}>{backGlassColor}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="quiz__quote-section">
-                                            <div className="quiz__quote-label">Repairs</div>
-                                            {selectedIssues.map((issueId) => {
-                                                const type = REPAIR_TYPES.find((t) => t.id === issueId);
-                                                const tier = PARTS_TIERS.find((t) => t.id === issueTiers[issueId]);
-                                                const price = getIssuePrice(issueId);
-                                                return (
-                                                    <div key={issueId} className="quiz__quote-line">
-                                                        <span>{type?.icon} {type?.name}</span>
-                                                        <span className="quiz__quote-line-right">
-                                                            <span className="quiz__quote-tier-tag">{tier?.name}</span>
-                                                            <span>${price}</span>
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                            <div className="quiz__quote-line">
-                                                <span>🔧 Labor</span>
-                                                <span className="quiz__quote-value">${LABOR_FEE}</span>
-                                            </div>
-                                            <div className="quiz__quote-line">
-                                                <span>🚗 On-site Service Fee</span>
-                                                <span className="quiz__quote-value">${SERVICE_FEE}</span>
-                                            </div>
-                                        </div>
-                                        <div className="quiz__quote-section">
-                                            <div className="quiz__quote-label">Appointment</div>
-                                            <div className="quiz__quote-line">
-                                                <span>📅 {scheduleDate ? formatDisplayDate(scheduleDate) : ''}</span>
-                                            </div>
-                                            <div className="quiz__quote-line">
-                                                <span>🕐 {TIME_SLOTS.find(s => s.id === scheduleTime)?.range}</span>
-                                            </div>
-                                            <div className="quiz__quote-line">
-                                                <span>📍 {scheduleAddress}</span>
-                                            </div>
-                                        </div>
-                                        <div className="quiz__quote-total">
-                                            <span>Estimated Total</span>
-                                            <span className="quiz__quote-total-price">${calculateTotal()}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="quiz__section">
-                                        <h3 className="quiz__section-title">Additional Notes</h3>
-                                        <p className="quiz__subtitle" style={{ marginBottom: 8 }}>
-                                            Anything else the technician should know? (Optional)
-                                        </p>
-                                        <textarea
-                                            className="guru-input"
-                                            style={{ width: '100%', minHeight: 80, resize: 'vertical', fontFamily: 'inherit', fontSize: 'var(--font-size-base)' }}
-                                            placeholder="e.g. The screen flickers when it gets warm. The power button sticks."
-                                            value={repairNotes}
-                                            onChange={(e) => setRepairNotes(e.target.value)}
-                                            maxLength={500}
-                                        />
-                                        {repairNotes.length > 400 && (
-                                            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>
-                                                {500 - repairNotes.length} characters remaining
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="quiz__section">
-                                        <h3 className="quiz__section-title">Signed in account</h3>
-                                        <p className="quiz__subtitle" style={{ marginBottom: 16 }}>
-                                            Booking as <strong>{contact.email || user.email}</strong>.
-                                        </p>
-                                        {authError && (
-                                            <p className="login-card__error">{authError}</p>
-                                        )}
-                                        <div className="quiz__warranty-notice" style={{ marginBottom: 16 }}>
-                                            <strong>Note:</strong> Repairs do not include a warranty on parts or service.
-                                            Prices are estimates. Final pricing confirmed after technician diagnosis.
-                                        </div>
-                                        <div className="quiz__actions">
-                                            <button type="button" className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
-                                            <button
-                                                type="button"
-                                                className="guru-btn guru-btn--primary guru-btn--lg"
-                                                disabled={isVerifying}
-                                                onClick={handleBookLoggedIn}
-                                            >
-                                                {isVerifying ? 'Booking...' : 'Confirm Appointment'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </>
-                            ) : !otpSent ? (
-                                <>
-                                    <h2 className="quiz__title">Confirm & book</h2>
-                                    <p className="quiz__subtitle">Review your repair and enter your details to book.</p>
-
-                                    {/* Quote Review */}
-                                    <div className="quiz__quote">
-                                        <div className="quiz__quote-section">
-                                            <div className="quiz__quote-label">Device</div>
-                                            <div className="quiz__quote-value">{selectedDevice?.name}</div>
-                                            {backGlassColor && (
-                                                <div className="quiz__quote-line">
-                                                    <span>🎨 Back Glass Color</span>
-                                                    <span className="quiz__quote-value" style={{ fontSize: 'var(--font-size-base)' }}>{backGlassColor}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="quiz__quote-section">
-                                            <div className="quiz__quote-label">Repairs</div>
-                                            {selectedIssues.map((issueId) => {
-                                                const type = REPAIR_TYPES.find((t) => t.id === issueId);
-                                                const tier = PARTS_TIERS.find((t) => t.id === issueTiers[issueId]);
-                                                const price = getIssuePrice(issueId);
-                                                return (
-                                                    <div key={issueId} className="quiz__quote-line">
-                                                        <span>{type?.icon} {type?.name}</span>
-                                                        <span className="quiz__quote-line-right">
-                                                            <span className="quiz__quote-tier-tag">{tier?.name}</span>
-                                                            <span>${price}</span>
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                            <div className="quiz__quote-line">
-                                                <span>🔧 Labor</span>
-                                                <span className="quiz__quote-value">${LABOR_FEE}</span>
-                                            </div>
-                                            <div className="quiz__quote-line">
-                                                <span>🚗 On-site Service Fee</span>
-                                                <span className="quiz__quote-value">${SERVICE_FEE}</span>
-                                            </div>
-                                        </div>
-                                        <div className="quiz__quote-section">
-                                            <div className="quiz__quote-label">Appointment</div>
-                                            <div className="quiz__quote-line">
-                                                <span>📅 {scheduleDate ? formatDisplayDate(scheduleDate) : ''}</span>
-                                            </div>
-                                            <div className="quiz__quote-line">
-                                                <span>🕐 {TIME_SLOTS.find(s => s.id === scheduleTime)?.range}</span>
-                                            </div>
-                                            <div className="quiz__quote-line">
-                                                <span>📍 {scheduleAddress}</span>
-                                            </div>
-                                        </div>
-                                        <div className="quiz__quote-total">
-                                            <span>Estimated Total</span>
-                                            <span className="quiz__quote-total-price">${calculateTotal()}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Contact Form */}
-                                    <div className="quiz__section">
-                                        <h3 className="quiz__section-title">Additional Notes</h3>
-                                        <p className="quiz__subtitle" style={{ marginBottom: 8 }}>
-                                            Anything else the technician should know? (Optional)
-                                        </p>
-                                        <textarea
-                                            className="guru-input"
-                                            style={{ width: '100%', minHeight: 80, resize: 'vertical', fontFamily: 'inherit', fontSize: 'var(--font-size-base)' }}
-                                            placeholder="e.g. The screen flickers when it gets warm. The power button sticks."
-                                            value={repairNotes}
-                                            onChange={(e) => setRepairNotes(e.target.value)}
-                                            maxLength={500}
-                                        />
-                                        {repairNotes.length > 400 && (
-                                            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>
-                                                {500 - repairNotes.length} characters remaining
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="quiz__section">
-                                        <h3 className="quiz__section-title">Your contact details</h3>
-                                        <form onSubmit={handleSendOtp}>
-                                            <div className="guru-input-group" style={{ marginBottom: 16 }}>
-                                                <label className="sched-label">Full Name</label>
-                                                <input
-                                                    className="guru-input"
-                                                    type="text"
-                                                    placeholder="Jane Doe"
-                                                    value={contact.name}
-                                                    onChange={(e) => handleContactChange('name', e.target.value)}
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="guru-input-group" style={{ marginBottom: 16 }}>
-                                                <label className="sched-label">Email Address</label>
-                                                <input
-                                                    className="guru-input"
-                                                    type="email"
-                                                    placeholder="jane@example.com"
-                                                    value={contact.email}
-                                                    onChange={(e) => handleContactChange('email', e.target.value)}
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="guru-input-group" style={{ marginBottom: 24 }}>
-                                                <label className="sched-label">Phone Number <span style={{ color: 'var(--guru-gray-400)', fontWeight: 400 }}>(optional)</span></label>
-                                                <input
-                                                    className="guru-input"
-                                                    type="tel"
-                                                    placeholder="(555) 123-4567"
-                                                    value={contact.phone}
-                                                    onChange={(e) => handleContactChange('phone', e.target.value)}
-                                                />
-                                            </div>
-                                            {authError && (
-                                                <p className="login-card__error">{authError}</p>
-                                            )}
-                                            <div className="quiz__warranty-notice" style={{ marginBottom: 16 }}>
-                                                <strong>Note:</strong> Repairs do not include a warranty on parts or service.
-                                                Prices are estimates. Final pricing confirmed after technician diagnosis.
-                                            </div>
-                                            <div className="quiz__actions">
-                                                <button type="button" className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
-                                                <button
-                                                    type="submit"
-                                                    className="guru-btn guru-btn--primary guru-btn--lg"
-                                                    disabled={!contact.name || !contact.email || isVerifying}
-                                                >
-                                                    {isVerifying ? 'Sending...' : 'Send Verification Code'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <h2 className="quiz__title">Enter verification code</h2>
+                            {step === STEP_ISSUES && selectedDevice && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">What needs fixing?</h2>
                                     <p className="quiz__subtitle">
-                                        We sent a 6-digit code to{' '}
-                                        <strong>{contact.email}</strong>.
+                                        Select every repair you need—tap again to deselect. Use Continue when you are done.
                                     </p>
+                                    <IssuesStep
+                                        selectedDevice={selectedDevice}
+                                        selectedIssues={selectedIssues}
+                                        issueTiers={issueTiers}
+                                        availableRepairTypes={availableRepairTypes}
+                                        backGlassColor={backGlassColor}
+                                        isSoftwareOnly={isSoftwareOnly}
+                                        onToggleIssue={toggleIssue}
+                                        onSetTier={setTierForIssue}
+                                        onSetBackGlassColor={setBackGlassColor}
+                                        isPartInStock={isPartInStock}
+                                        showIssueSelection={true}
+                                        showColorSelection={false}
+                                        showTierSelection={false}
+                                    />
+                                    <div className="quiz__actions">
+                                        <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                        <button
+                                            type="button"
+                                            className="guru-btn guru-btn--primary guru-btn--lg"
+                                            disabled={!canContinueFromIssues}
+                                            onClick={() => {
+                                                analytics.quizStep(quizSteps[STEP_QUALITY], {
+                                                    from: STEP_ISSUES,
+                                                    to: STEP_QUALITY,
+                                                    click_count: clickCount,
+                                                });
+                                                setStep(STEP_QUALITY);
+                                            }}
+                                        >
+                                            Continue →
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-                                    <form onSubmit={handleVerifyAndBook}>
-                                        <div className="otp-inputs" onPaste={handleOtpPaste}>
-                                            {otpCode.map((digit, i) => (
-                                                <input
-                                                    key={i}
-                                                    ref={(el) => otpRefs.current[i] = el}
-                                                    className="otp-input"
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    maxLength={1}
-                                                    value={digit}
-                                                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                                                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                                                    autoFocus={i === 0}
-                                                />
-                                            ))}
-                                        </div>
-                                        {authError && (
-                                            <p className="login-card__error">{authError}</p>
-                                        )}
-                                        <div className="quiz__actions">
-                                            <button
-                                                type="button"
-                                                className="guru-btn guru-btn--ghost"
-                                                onClick={() => { setOtpSent(false); setOtpCode(['', '', '', '', '', '']); }}
-                                            >
-                                                ← Edit Info
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="guru-btn guru-btn--primary guru-btn--lg"
-                                                disabled={otpCode.some(d => !d) || isVerifying}
-                                            >
-                                                {isVerifying ? 'Booking...' : 'Confirm Appointment'}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </>
+                            {step === STEP_QUALITY && selectedDevice && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <h2 className="quiz__title">Choose parts quality</h2>
+                                    <p className="quiz__subtitle">Pick quality tiers for each selected repair.</p>
+                                    <IssuesStep
+                                        selectedDevice={selectedDevice}
+                                        selectedIssues={selectedIssues}
+                                        issueTiers={issueTiers}
+                                        availableRepairTypes={availableRepairTypes}
+                                        backGlassColor={backGlassColor}
+                                        isSoftwareOnly={isSoftwareOnly}
+                                        onToggleIssue={toggleIssue}
+                                        onSetTier={setTierForIssue}
+                                        onSetBackGlassColor={setBackGlassColor}
+                                        isPartInStock={isPartInStock}
+                                        onAutoAdvance={() => queueAutoAdvance(STEP_QUALITY, () => canContinueFromQualityRef.current)}
+                                        showIssueSelection={false}
+                                        showColorSelection={true}
+                                        showTierSelection={true}
+                                    />
+                                    <div className="quiz__actions">
+                                        <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === STEP_ADDRESS && (
+                                <ScheduleStep
+                                    scheduleDate={scheduleDate}
+                                    scheduleAddress={scheduleAddress}
+                                    serviceAreaError={serviceAreaError}
+                                    minDateStr={minDateStr}
+                                    maxDateStr={previewWindowEndStr}
+                                    previewStartStr={previewWindowStartStr}
+                                    availableDates={filteredAvailableDates}
+                                    onDateChange={handleDateChange}
+                                    onAddressChange={handleAddressChange}
+                                    onServiceAreaError={setServiceAreaError}
+                                    onBack={goBack}
+                                    savedAddresses={savedAddresses}
+                                    canGoPrevWindow={scheduleWindowOffsetWeeks > 0}
+                                    canGoNextWindow={scheduleWindowOffsetWeeks < maxWindowOffsetWeeks}
+                                    onPrevWindow={handleScheduleWindowPrev}
+                                    onNextWindow={handleScheduleWindowNext}
+                                    showAddressSection={true}
+                                    showDateSection={false}
+                                    onAutoAdvance={() => queueAutoAdvance(STEP_ADDRESS, () => canContinueFromAddressRef.current)}
+                                    title="Where should we meet you?"
+                                    subtitle="Enter a service address in our current Texas coverage area."
+                                    showNextButton={false}
+                                />
+                            )}
+
+                            {step === STEP_DATE && (
+                                <ScheduleStep
+                                    scheduleDate={scheduleDate}
+                                    scheduleAddress={scheduleAddress}
+                                    serviceAreaError={serviceAreaError}
+                                    minDateStr={minDateStr}
+                                    maxDateStr={previewWindowEndStr}
+                                    previewStartStr={previewWindowStartStr}
+                                    availableDates={filteredAvailableDates}
+                                    onDateChange={handleDateChange}
+                                    onAddressChange={handleAddressChange}
+                                    onServiceAreaError={setServiceAreaError}
+                                    onBack={goBack}
+                                    savedAddresses={savedAddresses}
+                                    canGoPrevWindow={scheduleWindowOffsetWeeks > 0}
+                                    canGoNextWindow={scheduleWindowOffsetWeeks < maxWindowOffsetWeeks}
+                                    onPrevWindow={handleScheduleWindowPrev}
+                                    onNextWindow={handleScheduleWindowNext}
+                                    showAddressSection={false}
+                                    showDateSection={true}
+                                    onAutoAdvance={() => queueAutoAdvance(STEP_DATE, () => canContinueFromDateRef.current)}
+                                    title="Pick your preferred date"
+                                    subtitle="Choose an available day and we will confirm your exact arrival window."
+                                    showNextButton={false}
+                                    dateSectionRef={null}
+                                />
+                            )}
+
+                            {step === STEP_REVIEW && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <ReviewStep
+                                        isLoggedIn={isLoggedIn}
+                                        selectedDevice={selectedDevice}
+                                        selectedIssues={selectedIssues}
+                                        issueTiers={issueTiers}
+                                        backGlassColor={backGlassColor}
+                                        scheduleDate={scheduleDate}
+                                        scheduleTime={scheduleTime}
+                                        scheduleAddress={scheduleAddress}
+                                        repairNotes={repairNotes}
+                                        contact={contact}
+                                        userEmail={user?.email}
+                                        authError={authError}
+                                        isVerifying={isVerifying}
+                                        getIssuePrice={getIssuePrice}
+                                        calculateTotal={calculateTotal}
+                                        referralDiscountPreview={referralDiscountPreview}
+                                        referralCode={referralCode}
+                                        ownReferralCode={ownReferralCode}
+                                        referralCodeError={referralCodeError}
+                                        onRepairNotesChange={setRepairNotes}
+                                        onReferralCodeChange={handleReferralCodeChange}
+                                        onContactChange={setContact}
+                                        onDeviceChange={(device) => {
+                                            setSelectedDevice(device);
+                                            setActiveGen(device.generation);
+                                        }}
+                                        onBack={goBack}
+                                        onBook={handleBookLoggedIn}
+                                        onSendOtp={handleSendOtp}
+                                    />
+                                </div>
+                            )}
+
+                            {step === STEP_VERIFY && !isLoggedIn && otpSent && (
+                                <div className="quiz__panel quiz__panel--transition">
+                                    <AuthStep
+                                        contactEmail={contact.email}
+                                        otpCode={otpCode}
+                                        authError={authError}
+                                        isVerifying={isVerifying}
+                                        otpRefs={otpRefs}
+                                        onOtpChange={handleOtpChange}
+                                        onOtpKeyDown={handleOtpKeyDown}
+                                        onOtpPaste={handleOtpPaste}
+                                        onEditInfo={() => {
+                                            setOtpSent(false);
+                                            setOtpCode(['', '', '', '', '', '']);
+                                            setStep(STEP_REVIEW);
+                                        }}
+                                        onVerify={handleVerifyAndBook}
+                                    />
+                                </div>
                             )}
                         </div>
                     )}
@@ -1206,7 +1359,7 @@ export default function RepairQuiz() {
                                 </div>
                                 <div className="confirm__row">
                                     <span>🕐</span>
-                                    <span>{TIME_SLOTS.find(s => s.id === scheduleTime)?.range}</span>
+                                    <span>{TIME_SLOTS.find(s => s.id === scheduleTime)?.range || 'To be scheduled after parts arrive'}</span>
                                 </div>
                                 <div className="confirm__row">
                                     <span>📍</span>
@@ -1218,7 +1371,7 @@ export default function RepairQuiz() {
                                 </div>
                                 <div className="confirm__row">
                                     <span>💰</span>
-                                    <span>Estimated ${calculateTotal()}</span>
+                                    <span>Estimated ${bookedTotalEstimate ?? calculateTotal()}</span>
                                 </div>
                             </div>
                             <p className="quiz__disclaimer">
@@ -1226,6 +1379,10 @@ export default function RepairQuiz() {
                                     ? 'All parts are in stock! We\'ll confirm your appointment shortly. You\'ll receive updates via email or text.'
                                     : 'We\'ll confirm your appointment and begin ordering the needed parts. You\'ll receive updates via email or text.'}
                             </p>
+                            <div className="quiz__warranty-notice confirm__payment-notice">
+                                <strong>Payment reminder:</strong> We currently accept cash, Zelle, Cash App, and Venmo only.
+                                Card payments are coming soon. This applies when payment is collected after your repair is completed.
+                            </div>
                             <Link to="/dashboard" className="guru-btn guru-btn--primary guru-btn--lg" style={{ marginTop: 16 }}>
                                 View My Repairs
                             </Link>
@@ -1233,7 +1390,7 @@ export default function RepairQuiz() {
                     )}
 
                     {/* ─── Live Pricing Footer ─────── */}
-                    {selectedIssues.length > 0 && !confirmed && step < 2 && (
+                    {selectedIssues.length > 0 && !confirmed && step >= STEP_DEVICE && step <= STEP_DATE && (
                         <div className="quiz__price-footer">
                             <div className="quiz__price-footer-inner">
                                 <div className="quiz__price-footer-label">
@@ -1241,8 +1398,9 @@ export default function RepairQuiz() {
                                     <span className="quiz__price-footer-items">
                                         {selectedIssues.length} repair{selectedIssues.length > 1 ? 's' : ''} + labor + service fee
                                     </span>
+                                    <span className="quiz__price-footer-hype">One step at a time - review before booking.</span>
                                 </div>
-                                <div className="quiz__price-footer-amount">${calculateTotal()}</div>
+                                <div key={pricePulseKey} className="quiz__price-footer-amount quiz__price-footer-amount--pulse">${calculateTotal()}</div>
                             </div>
                         </div>
                     )}
