@@ -45,17 +45,17 @@ function TermsOfService() {
 
             <h3>4. Cancellations & Rescheduling</h3>
             <p>
-                You may cancel or reschedule an appointment with at least 24 hours' notice at no additional charge.
-                Cancellations within 24 hours of the scheduled appointment may result in forfeiture of
-                the $29 service fee, as parts will have already been ordered. SEER reserves the right to
-                reschedule appointments due to technician unavailability or circumstances beyond our control.
+                You may cancel or reschedule an appointment with at least 24 hours&apos; notice before the
+                scheduled appointment. SEER reserves the right to reschedule appointments due to technician
+                unavailability or circumstances beyond our control.
             </p>
 
             <h3>5. Pricing & Payment</h3>
             <p>
                 All pricing is disclosed before confirmation. Your total is calculated as: parts cost
                 (based on your selected quality tier) + $29 service fee + applicable Texas state sales tax
-                (8.25%). Payment is collected upon completion of the repair. We reserve the right to update
+                (8.25%). Payment is collected upon completion of the repair. We currently accept cash, Zelle,
+                Cash App, and Venmo. We do not accept credit or debit cards yet. We reserve the right to update
                 pricing with reasonable notice.
             </p>
 
@@ -109,7 +109,7 @@ function PrivacyPolicy() {
             <ul>
                 <li><strong>Account information:</strong> Name, email address, phone number.</li>
                 <li><strong>Service information:</strong> Device model, repair type, parts selection, service address, appointment time.</li>
-                <li><strong>Payment information:</strong> Processed securely through our payment provider. We do not store full card numbers.</li>
+                <li><strong>Payment information:</strong> We do not accept credit or debit cards at this time. Payments are made using cash or supported digital methods (e.g. Zelle, Cash App, Venmo) as described at booking. We do not store full card numbers.</li>
                 <li><strong>Usage data:</strong> Pages visited, features used, and app interactions for improving our service.</li>
                 <li><strong>Location data:</strong> Address you provide for the repair. We do not collect continuous background location.</li>
             </ul>
@@ -130,7 +130,7 @@ function PrivacyPolicy() {
             </p>
             <ul>
                 <li><strong>Assigned technicians:</strong> Only what is needed to perform your repair (name, address, device info).</li>
-                <li><strong>Payment processors:</strong> Secure third-party payment providers.</li>
+                <li><strong>Payment partners:</strong> If we add card or other electronic processing, those providers may receive only what is needed to complete the transaction.</li>
                 <li><strong>Service providers:</strong> Email and notification systems used to contact you about your repair.</li>
                 <li><strong>Legal requirements:</strong> When required by law or to protect the rights and safety of Guru and its customers.</li>
             </ul>

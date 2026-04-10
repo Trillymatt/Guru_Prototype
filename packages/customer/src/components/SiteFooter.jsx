@@ -26,6 +26,7 @@ export default function SiteFooter() {
                 <div className="footer__grid">
                     <div>
                         <div className="footer__brand-name">SEER Mobile Repair</div>
+                        <p className="footer__brand-tagline">Wherever you are</p>
                         <p className="footer__brand-desc">
                             On-site iPhone repair for Dallas-Fort Worth. Apple Certified technicians,
                             transparent pricing, and real-time repair updates.
@@ -44,7 +45,7 @@ export default function SiteFooter() {
                         <ul className="footer__links">
                             <li><Link to="/faq">FAQ</Link></li>
                             <li><a href="mailto:support@seermrt.com">support@seermrt.com</a></li>
-                            <li><span>Mon-Sat, 8:00 AM - 7:00 PM CST</span></li>
+                            <li><span>Support available 24/7</span></li>
                         </ul>
                     </div>
                     <div>

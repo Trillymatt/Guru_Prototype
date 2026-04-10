@@ -32,7 +32,7 @@ export default function VanTransition({ active, onComplete }) {
             <div className="van-transition__van-stage">
                 <div className="van-transition__overlay-copy">
                     <div className="van-transition__logo">SEER</div>
-                    <div className="van-transition__tagline">Mobile Repair - Coming to You</div>
+                    <div className="van-transition__tagline">Wherever you are</div>
                 </div>
                 <div className="van-transition__road">
                     <div className="van-transition__road-line" />

@@ -21,6 +21,7 @@ import {
     formatDisplayDate,
 } from '@shared/constants';
 import DeviceStep from '../components/quiz/DeviceStep';
+import PhoneIdentifyModal from '../components/quiz/PhoneIdentifyModal';
 import IssuesStep from '../components/quiz/IssuesStep';
 import ScheduleStep from '../components/quiz/ScheduleStep';
 import ReviewStep from '../components/quiz/ReviewStep';
@@ -83,6 +84,7 @@ export default function RepairQuiz() {
     const [selectedIssues, setSelectedIssues] = useState([]);
     const [issueTiers, setIssueTiers] = useState({});
     const [activeGen, setActiveGen] = useState('17');
+    const [phoneIdentifyOpen, setPhoneIdentifyOpen] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
     const [scheduleAddress, setScheduleAddress] = useState('');
@@ -99,6 +101,7 @@ export default function RepairQuiz() {
     const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
     const [isVerifying, setIsVerifying] = useState(false);
     const [authError, setAuthError] = useState('');
+    const [existingAccount, setExistingAccount] = useState(false);
     const otpRefs = useRef([]);
 
     const [backGlassColor, setBackGlassColor] = useState('');
@@ -119,7 +122,6 @@ export default function RepairQuiz() {
     const canContinueFromContactRef = useRef(false);
     const canContinueFromPhoneRef = useRef(false);
     const canContinueFromDeviceRef = useRef(false);
-    const canContinueFromIssuesRef = useRef(false);
     const canContinueFromQualityRef = useRef(false);
     const canContinueFromAddressRef = useRef(false);
     const canContinueFromDateRef = useRef(false);
@@ -313,6 +315,10 @@ export default function RepairQuiz() {
     useEffect(() => {
         setStep((current) => Math.min(current, maxStepIndex));
     }, [maxStepIndex]);
+
+    useEffect(() => {
+        if (step !== STEP_DEVICE) setPhoneIdentifyOpen(false);
+    }, [step]);
 
     useEffect(() => () => {
         if (autoAdvanceTimeoutRef.current) {
@@ -514,6 +520,63 @@ export default function RepairQuiz() {
     // ─── Auth Handlers ───
     const handleContactChange = (field, value) => {
         setContact(prev => ({ ...prev, [field]: value }));
+        if (field === 'email') setExistingAccount(false);
+    };
+
+    const handleContactContinue = async () => {
+        if (isLoggedIn) {
+            setStep(STEP_PHONE);
+            return;
+        }
+        const email = contact.email.trim().toLowerCase();
+        const { data: emailExists } = await supabase.rpc('check_email_exists', { p_email: email });
+        if (emailExists && !existingAccount) {
+            setExistingAccount(true);
+            return;
+        }
+        setStep(STEP_PHONE);
+    };
+
+    const handleExistingAccountOtp = async () => {
+        setIsVerifying(true);
+        setAuthError('');
+        try {
+            const { error } = await supabase.auth.signInWithOtp({ email: contact.email });
+            if (error) {
+                setAuthError(error.message);
+                setIsVerifying(false);
+                return;
+            }
+            setIsVerifying(false);
+            setOtpSent(true);
+        } catch {
+            setAuthError('Something went wrong. Please try again.');
+            setIsVerifying(false);
+        }
+    };
+
+    const handleExistingAccountVerify = async () => {
+        const fullCode = otpCode.join('');
+        if (fullCode.length < 6) return;
+        setIsVerifying(true);
+        setAuthError('');
+        try {
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+                email: contact.email, token: fullCode, type: 'email',
+            });
+            if (verifyError) {
+                setAuthError(verifyError.message);
+                setIsVerifying(false);
+                return;
+            }
+            setIsVerifying(false);
+            setOtpSent(false);
+            setOtpCode(['', '', '', '', '', '']);
+            setExistingAccount(false);
+        } catch {
+            setAuthError('Verification failed. Please try again.');
+            setIsVerifying(false);
+        }
     };
 
     const handleReferralCodeChange = (value) => {
@@ -653,6 +716,36 @@ export default function RepairQuiz() {
                 setBookedTotalEstimate(Number(bookingRow?.total_estimate ?? calculateTotal()));
             }
 
+            // Auto-save device and address for future repairs
+            if (userId) {
+                const savePromises = [];
+
+                if (selectedDevice) {
+                    savePromises.push(
+                        supabase.from('customer_devices').upsert({
+                            customer_id: userId,
+                            device_id: selectedDevice.id,
+                            device_name: selectedDevice.name,
+                            device_color: backGlassColor || null,
+                            is_default: true,
+                        }, { onConflict: 'customer_id,device_id' }).then(() => {})
+                    );
+                }
+
+                if (scheduleAddress) {
+                    savePromises.push(
+                        supabase.from('customer_addresses').insert({
+                            customer_id: userId,
+                            label: 'Other',
+                            address: scheduleAddress,
+                            is_default: true,
+                        }).then(() => {})
+                    );
+                }
+
+                await Promise.allSettled(savePromises);
+            }
+
             setIsVerifying(false);
             setConfirmed(true);
             window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
@@ -731,18 +824,39 @@ export default function RepairQuiz() {
             const bookingRow = Array.isArray(bookingData) ? bookingData[0] : bookingData;
             setBookedTotalEstimate(Number(bookingRow?.total_estimate ?? calculateTotal()));
 
-            // Auto-save address if it's new (not already in saved addresses)
+            // Auto-save device and address for future repairs
+            const savePromises = [];
+
+            if (selectedDevice && savedDataLoaded) {
+                const deviceAlreadySaved = savedDevices.some(d => d.device_id === selectedDevice.id);
+                if (!deviceAlreadySaved) {
+                    savePromises.push(
+                        supabase.from('customer_devices').insert({
+                            customer_id: user.id,
+                            device_id: selectedDevice.id,
+                            device_name: selectedDevice.name,
+                            device_color: backGlassColor || null,
+                            is_default: savedDevices.length === 0,
+                        })
+                    );
+                }
+            }
+
             if (scheduleAddress && savedDataLoaded) {
                 const addressAlreadySaved = savedAddresses.some(a => a.address === scheduleAddress);
                 if (!addressAlreadySaved) {
-                    await supabase.from('customer_addresses').insert({
-                        customer_id: user.id,
-                        label: 'Other',
-                        address: scheduleAddress,
-                        is_default: savedAddresses.length === 0,
-                    });
+                    savePromises.push(
+                        supabase.from('customer_addresses').insert({
+                            customer_id: user.id,
+                            label: 'Other',
+                            address: scheduleAddress,
+                            is_default: savedAddresses.length === 0,
+                        })
+                    );
                 }
             }
+
+            await Promise.allSettled(savePromises);
 
             setContact((prev) => ({ ...prev, name: profilePayload.full_name, email: profilePayload.email }));
             setConfirmed(true);
@@ -791,11 +905,10 @@ export default function RepairQuiz() {
         canContinueFromContactRef.current = canContinueFromContact;
         canContinueFromPhoneRef.current = canContinueFromPhone;
         canContinueFromDeviceRef.current = canContinueFromDevice;
-        canContinueFromIssuesRef.current = canContinueFromIssues;
         canContinueFromQualityRef.current = canContinueFromQuality;
         canContinueFromAddressRef.current = canContinueFromAddress;
         canContinueFromDateRef.current = canContinueFromDate;
-    }, [canContinueFromContact, canContinueFromPhone, canContinueFromDevice, canContinueFromIssues, canContinueFromQuality, canContinueFromAddress, canContinueFromDate]);
+    }, [canContinueFromContact, canContinueFromPhone, canContinueFromDevice, canContinueFromQuality, canContinueFromAddress, canContinueFromDate]);
 
     useEffect(() => {
         if (justWentBackRef.current) {
@@ -804,9 +917,6 @@ export default function RepairQuiz() {
         }
         if (step === STEP_DEVICE && canContinueFromDevice) {
             queueAutoAdvance(STEP_DEVICE, () => canContinueFromDeviceRef.current);
-        }
-        if (step === STEP_ISSUES && canContinueFromIssues) {
-            queueAutoAdvance(STEP_ISSUES, () => canContinueFromIssuesRef.current);
         }
         if (step === STEP_QUALITY && canContinueFromQuality) {
             queueAutoAdvance(STEP_QUALITY, () => canContinueFromQualityRef.current);
@@ -820,7 +930,6 @@ export default function RepairQuiz() {
     }, [
         step,
         canContinueFromDevice,
-        canContinueFromIssues,
         canContinueFromQuality,
         canContinueFromAddress,
         canContinueFromDate,
@@ -873,12 +982,74 @@ export default function RepairQuiz() {
                                             onChange={(e) => handleContactChange('email', e.target.value)}
                                         />
                                     </div>
+                                    {existingAccount && (
+                                        <div className="quiz__existing-account">
+                                            {!otpSent ? (
+                                                <>
+                                                    <p>Looks like you already have an account! Sign in to auto-fill your saved device, address, and contact info.</p>
+                                                    {authError && <p className="quiz__existing-account-error">{authError}</p>}
+                                                    <div className="quiz__existing-account-actions">
+                                                        <button
+                                                            className="guru-btn guru-btn--primary guru-btn--sm"
+                                                            onClick={handleExistingAccountOtp}
+                                                            disabled={isVerifying}
+                                                        >
+                                                            {isVerifying ? 'Sending...' : 'Sign In with Email Code'}
+                                                        </button>
+                                                        <button
+                                                            className="guru-btn guru-btn--ghost guru-btn--sm"
+                                                            onClick={() => { setExistingAccount(false); setStep(STEP_PHONE); }}
+                                                        >
+                                                            Continue without signing in
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p>We sent a 6-digit code to <strong>{contact.email}</strong></p>
+                                                    {authError && <p className="quiz__existing-account-error">{authError}</p>}
+                                                    <div className="quiz__existing-account-otp">
+                                                        {otpCode.map((digit, i) => (
+                                                            <input
+                                                                key={i}
+                                                                ref={(el) => (otpRefs.current[i] = el)}
+                                                                className="guru-input quiz__otp-input"
+                                                                type="text"
+                                                                inputMode="numeric"
+                                                                maxLength={1}
+                                                                value={digit}
+                                                                onChange={(e) => handleOtpChange(i, e.target.value)}
+                                                                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                                                                onPaste={i === 0 ? handleOtpPaste : undefined}
+                                                                autoFocus={i === 0}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                    <div className="quiz__existing-account-actions">
+                                                        <button
+                                                            className="guru-btn guru-btn--primary guru-btn--sm"
+                                                            onClick={handleExistingAccountVerify}
+                                                            disabled={isVerifying || otpCode.join('').length < 6}
+                                                        >
+                                                            {isVerifying ? 'Verifying...' : 'Verify'}
+                                                        </button>
+                                                        <button
+                                                            className="guru-btn guru-btn--ghost guru-btn--sm"
+                                                            onClick={() => { setOtpSent(false); setExistingAccount(false); setStep(STEP_PHONE); }}
+                                                        >
+                                                            Continue without signing in
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
                                     <div className="quiz__actions">
                                         <Link to="/" className="guru-btn guru-btn--ghost">← Back</Link>
                                         <button
                                             className="guru-btn guru-btn--primary guru-btn--lg"
                                             disabled={!canContinueFromContact}
-                                            onClick={() => setStep(STEP_PHONE)}
+                                            onClick={handleContactContinue}
                                         >
                                             Continue →
                                         </button>
@@ -926,7 +1097,43 @@ export default function RepairQuiz() {
                             {step === STEP_DEVICE && (
                                 <div className="quiz__panel quiz__panel--transition">
                                     <h2 className="quiz__title">Choose your iPhone</h2>
-                                    <p className="quiz__subtitle">Pick the device you need repaired.</p>
+                                    <div className="quiz__device-help quiz__device-help--under-title">
+                                        <button
+                                            type="button"
+                                            className="quiz__identify-btn"
+                                            onClick={() => setPhoneIdentifyOpen(true)}
+                                        >
+                                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                                                <circle cx="9" cy="9" r="7.5" stroke="currentColor" strokeWidth="1.5" />
+                                                <path d="M7 7a2 2 0 1 1 2.5 1.94c-.3.1-.5.36-.5.68V11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                                                <circle cx="9" cy="13" r="0.75" fill="currentColor" />
+                                            </svg>
+                                            Help me identify my phone
+                                        </button>
+                                        <a
+                                            className="quiz__apple-link"
+                                            href="https://support.apple.com/en-us/106343"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            Not sure which model you have?
+                                        </a>
+                                    </div>
+                                    <p className="quiz__subtitle quiz__subtitle--device-step">
+                                        Pick the <strong>exact model</strong>—we order parts for it, and the wrong one
+                                        usually means rescheduling and a longer wait. Not sure? Use the help above or the list below.
+                                    </p>
+
+                                    <PhoneIdentifyModal
+                                        open={phoneIdentifyOpen}
+                                        onClose={() => setPhoneIdentifyOpen(false)}
+                                        onSelectDevice={(device) => {
+                                            setSelectedDevice(device);
+                                            setActiveGen(device.generation);
+                                            setPhoneIdentifyOpen(false);
+                                            queueAutoAdvance(STEP_DEVICE, () => canContinueFromDeviceRef.current);
+                                        }}
+                                    />
 
                                     <DeviceStep
                                         activeGen={activeGen}
@@ -958,7 +1165,9 @@ export default function RepairQuiz() {
                             {step === STEP_ISSUES && selectedDevice && (
                                 <div className="quiz__panel quiz__panel--transition">
                                     <h2 className="quiz__title">What needs fixing?</h2>
-                                    <p className="quiz__subtitle">Select the repair types for your device.</p>
+                                    <p className="quiz__subtitle">
+                                        Select every repair you need—tap again to deselect. Use Continue when you are done.
+                                    </p>
                                     <IssuesStep
                                         selectedDevice={selectedDevice}
                                         selectedIssues={selectedIssues}
@@ -970,13 +1179,27 @@ export default function RepairQuiz() {
                                         onSetTier={setTierForIssue}
                                         onSetBackGlassColor={setBackGlassColor}
                                         isPartInStock={isPartInStock}
-                                        onAutoAdvance={() => queueAutoAdvance(STEP_ISSUES, () => canContinueFromIssuesRef.current)}
                                         showIssueSelection={true}
                                         showColorSelection={false}
                                         showTierSelection={false}
                                     />
                                     <div className="quiz__actions">
                                         <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
+                                        <button
+                                            type="button"
+                                            className="guru-btn guru-btn--primary guru-btn--lg"
+                                            disabled={!canContinueFromIssues}
+                                            onClick={() => {
+                                                analytics.quizStep(quizSteps[STEP_QUALITY], {
+                                                    from: STEP_ISSUES,
+                                                    to: STEP_QUALITY,
+                                                    click_count: clickCount,
+                                                });
+                                                setStep(STEP_QUALITY);
+                                            }}
+                                        >
+                                            Continue →
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -1086,6 +1309,11 @@ export default function RepairQuiz() {
                                         referralCodeError={referralCodeError}
                                         onRepairNotesChange={setRepairNotes}
                                         onReferralCodeChange={handleReferralCodeChange}
+                                        onContactChange={setContact}
+                                        onDeviceChange={(device) => {
+                                            setSelectedDevice(device);
+                                            setActiveGen(device.generation);
+                                        }}
                                         onBack={goBack}
                                         onBook={handleBookLoggedIn}
                                         onSendOtp={handleSendOtp}

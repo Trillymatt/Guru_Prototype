@@ -148,7 +148,7 @@ export default function InvoicePage() {
                         <div className="invoice-header">
                             <div className="invoice-brand">
                                 <div className="invoice-brand__name">GURU</div>
-                                <div className="invoice-brand__tagline">Mobile Repair Solutions</div>
+                                <div className="invoice-brand__tagline">Wherever you are</div>
                             </div>
                             <div className="invoice-meta">
                                 <div className="invoice-meta__title">Invoice</div>

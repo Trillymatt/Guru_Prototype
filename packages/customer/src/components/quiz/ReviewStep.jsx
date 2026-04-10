@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+    DEVICES,
     REPAIR_TYPES,
     PARTS_TIERS,
     SERVICE_FEE,
@@ -7,6 +8,30 @@ import {
     TIME_SLOTS,
     formatDisplayDate,
 } from '@shared/constants';
+
+function EditableField({ label, value, editing, onEdit, onSave, onCancel, children }) {
+    if (editing) {
+        return (
+            <div className="quiz__quote-line quiz__quote-line--editable">
+                <span>{label}</span>
+                <div className="quiz__inline-edit">
+                    {children}
+                    <button type="button" className="quiz__inline-edit-btn quiz__inline-edit-btn--save" onClick={onSave}>Save</button>
+                    <button type="button" className="quiz__inline-edit-btn quiz__inline-edit-btn--cancel" onClick={onCancel}>Cancel</button>
+                </div>
+            </div>
+        );
+    }
+    return (
+        <div className="quiz__quote-line quiz__quote-line--editable">
+            <span>{label}</span>
+            <span className="quiz__quote-line-right">
+                <span>{value || 'Not provided'}</span>
+                <button type="button" className="quiz__inline-edit-btn" onClick={onEdit}>Edit</button>
+            </span>
+        </div>
+    );
+}
 
 function QuoteSummary({
     selectedDevice,
@@ -19,12 +44,41 @@ function QuoteSummary({
     getIssuePrice,
     calculateTotal,
     referralDiscount,
+    onDeviceChange,
 }) {
+    const [editingDevice, setEditingDevice] = useState(false);
+    const [tempDeviceId, setTempDeviceId] = useState(selectedDevice?.id || '');
+
     return (
         <div className="quiz__quote">
             <div className="quiz__quote-section">
                 <div className="quiz__quote-label">Device</div>
-                <div className="quiz__quote-value">{selectedDevice?.name}</div>
+                {onDeviceChange ? (
+                    <EditableField
+                        label=""
+                        value={selectedDevice?.name}
+                        editing={editingDevice}
+                        onEdit={() => { setTempDeviceId(selectedDevice?.id || ''); setEditingDevice(true); }}
+                        onSave={() => {
+                            const device = DEVICES.find(d => d.id === tempDeviceId);
+                            if (device) onDeviceChange(device);
+                            setEditingDevice(false);
+                        }}
+                        onCancel={() => setEditingDevice(false)}
+                    >
+                        <select
+                            className="guru-input quiz__inline-select"
+                            value={tempDeviceId}
+                            onChange={(e) => setTempDeviceId(e.target.value)}
+                        >
+                            {DEVICES.map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                        </select>
+                    </EditableField>
+                ) : (
+                    <div className="quiz__quote-value">{selectedDevice?.name}</div>
+                )}
                 {backGlassColor && (
                     <div className="quiz__quote-line">
                         <span>🎨 Back Glass Color</span>
@@ -151,6 +205,56 @@ function PaymentNotice() {
     );
 }
 
+function EditableContactSection({ contact, onContactChange }) {
+    const [editing, setEditing] = useState(null); // 'email' | 'phone' | 'backupPhone' | null
+    const [tempValue, setTempValue] = useState('');
+
+    const startEdit = (field) => {
+        setTempValue(contact[field] || '');
+        setEditing(field);
+    };
+
+    const saveEdit = () => {
+        if (editing && onContactChange) {
+            onContactChange({ ...contact, [editing]: tempValue });
+        }
+        setEditing(null);
+    };
+
+    const cancelEdit = () => setEditing(null);
+
+    const fields = [
+        { key: 'name', label: 'Name', type: 'text' },
+        { key: 'email', label: 'Email', type: 'email' },
+        { key: 'phone', label: 'Primary Phone', type: 'tel' },
+        { key: 'backupPhone', label: 'Backup Phone', type: 'tel' },
+    ];
+
+    return (
+        <div className="quiz__quote" style={{ marginBottom: 16 }}>
+            {fields.map(({ key, label, type }) => (
+                <EditableField
+                    key={key}
+                    label={label}
+                    value={contact[key]}
+                    editing={editing === key}
+                    onEdit={() => startEdit(key)}
+                    onSave={saveEdit}
+                    onCancel={cancelEdit}
+                >
+                    <input
+                        className="guru-input quiz__inline-input"
+                        type={type}
+                        value={tempValue}
+                        onChange={(e) => setTempValue(e.target.value)}
+                        autoFocus
+                    />
+                </EditableField>
+            ))}
+        </div>
+    );
+}
+
 export default function ReviewStep({
     isLoggedIn,
     selectedDevice,
@@ -173,6 +277,8 @@ export default function ReviewStep({
     referralCodeError,
     onRepairNotesChange,
     onReferralCodeChange,
+    onContactChange,
+    onDeviceChange,
     onBack,
     onBook,
     onSendOtp,
@@ -188,6 +294,7 @@ export default function ReviewStep({
         getIssuePrice,
         calculateTotal,
         referralDiscount: referralDiscountPreview || 0,
+        onDeviceChange,
     };
 
     if (isLoggedIn) {
@@ -251,24 +358,7 @@ export default function ReviewStep({
             <div className="quiz__section">
                 <h3 className="quiz__section-title">Your contact details</h3>
                 <form onSubmit={onSendOtp}>
-                    <div className="quiz__quote" style={{ marginBottom: 16 }}>
-                        <div className="quiz__quote-line">
-                            <span>Name</span>
-                            <span>{contact.name || 'Not provided'}</span>
-                        </div>
-                        <div className="quiz__quote-line">
-                            <span>Email</span>
-                            <span>{contact.email || 'Not provided'}</span>
-                        </div>
-                        <div className="quiz__quote-line">
-                            <span>Primary Phone</span>
-                            <span>{contact.phone || 'Not provided'}</span>
-                        </div>
-                        <div className="quiz__quote-line">
-                            <span>Backup Phone</span>
-                            <span>{contact.backupPhone || 'Not provided'}</span>
-                        </div>
-                    </div>
+                    <EditableContactSection contact={contact} onContactChange={onContactChange} />
                     {authError && (
                         <p className="login-card__error">{authError}</p>
                     )}

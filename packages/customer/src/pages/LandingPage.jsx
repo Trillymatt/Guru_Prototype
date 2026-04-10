@@ -36,10 +36,10 @@ export default function LandingPage() {
                             <span className="hero__title-highlight">delivered to you.</span>
                         </h1>
                         <p className="hero__subtitle-compact">
-                            Premium repairs by Apple Certified technicians — scheduled at your location with honest, transparent pricing.
+                            Premium repairs by certified technicians, scheduled at your location with honest, transparent pricing.
                         </p>
                         <div className="hero__trust-row" aria-label="SEER service highlights">
-                            <span className="hero__trust-chip">Apple Certified</span>
+                            <span className="hero__trust-chip">Certified Technicians</span>
                             <span className="hero__trust-chip">We Come to You</span>
                             <span className="hero__trust-chip">Transparent Pricing</span>
                         </div>
@@ -74,9 +74,9 @@ export default function LandingPage() {
                                 {/* SEER logo on side */}
                                 <text x="120" y="120" fill="#c7c8d0" fontSize="26" fontWeight="800" fontFamily="system-ui" letterSpacing="2">SEER</text>
                                 {/* Tagline */}
-                                <text x="100" y="138" fill="#a8aab6" fontSize="8" fontFamily="system-ui" opacity="0.7">MOBILE REPAIR — COMING TO YOU</text>
+                                <text x="165" y="132" fill="#a8aab6" fontSize="8" fontFamily="system-ui" opacity="0.7" textAnchor="middle">WHEREVER YOU ARE</text>
                                 {/* Bottom panel */}
-                                <rect x="60" y="148" width="305" height="14" rx="3" fill="#111827" />
+                                <rect x="60" y="151" width="305" height="14" rx="3" fill="#111827" />
                                 {/* Front wheel */}
                                 <circle cx="320" cy="165" r="22" fill="#374151" />
                                 <circle cx="320" cy="165" r="14" fill="#1f2937" />
@@ -101,7 +101,7 @@ export default function LandingPage() {
                                 {/* Side mirror */}
                                 <rect x="356" y="88" width="12" height="8" rx="2" fill="#373848" />
                                 {/* Purple accent stripe */}
-                                <rect x="70" y="145" width="190" height="3" rx="1" fill="#7C3AED" opacity="0.6" />
+                                <rect x="70" y="148" width="190" height="3" rx="1" fill="#7C3AED" opacity="0.6" />
                             </svg>
                             <div className="hero__van-cta">
                                 On-demand is coming soon

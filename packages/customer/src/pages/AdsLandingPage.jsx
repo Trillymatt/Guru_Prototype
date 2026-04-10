@@ -36,8 +36,8 @@ export default function AdsLandingPage() {
                             <path d="M290 75 L310 75 L333 100 L313 100 Z" fill="#ffffff" opacity="0.12" />
                             <rect x="70" y="80" width="190" height="65" rx="5" fill="#252536" />
                             <text x="120" y="120" fill="#c7c8d0" fontSize="26" fontWeight="800" fontFamily="system-ui" letterSpacing="2">SEER</text>
-                            <text x="100" y="138" fill="#a8aab6" fontSize="8" fontFamily="system-ui" opacity="0.7">MOBILE REPAIR - COMING TO YOU</text>
-                            <rect x="60" y="148" width="305" height="14" rx="3" fill="#111827" />
+                            <text x="165" y="132" fill="#a8aab6" fontSize="8" fontFamily="system-ui" opacity="0.7" textAnchor="middle">WHEREVER YOU ARE</text>
+                            <rect x="60" y="151" width="305" height="14" rx="3" fill="#111827" />
                             <circle cx="320" cy="165" r="22" fill="#374151" />
                             <circle cx="320" cy="165" r="14" fill="#1f2937" />
                             <circle cx="320" cy="165" r="5" fill="#525462" />
@@ -53,7 +53,7 @@ export default function AdsLandingPage() {
                             <rect x="140" y="50" width="55" height="14" rx="3" fill="#252536" />
                             <rect x="155" y="47" width="25" height="6" rx="2" fill="#373848" />
                             <rect x="356" y="88" width="12" height="8" rx="2" fill="#373848" />
-                            <rect x="70" y="145" width="190" height="3" rx="1" fill="#7C3AED" opacity="0.6" />
+                            <rect x="70" y="148" width="190" height="3" rx="1" fill="#7C3AED" opacity="0.6" />
                         </svg>
                     </div>
                     <h1 className="ads-landing__title">A better repair experience starts here.</h1>

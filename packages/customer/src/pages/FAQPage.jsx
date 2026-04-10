@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+
 import Navbar from '../components/Navbar';
 import SiteFooter from '../components/SiteFooter';
 import '../styles/faq.css';
@@ -16,15 +16,11 @@ const FAQ_CATEGORIES = [
         faqs: [
             {
                 q: 'What is SEER Mobile Repair?',
-                a: 'SEER is a mobile iPhone repair service in the Dallas-Fort Worth area. We come to your home, office, or another convenient location — no store visit needed.'
-            },
-            {
-                q: 'Are your technicians Apple Certified?',
-                a: 'Yes, every SEER technician is Apple Certified and trained on iPhone repair standards.'
+                a: 'SEER is a mobile iPhone repair service in the Dallas-Fort Worth area. We come to your home, office, or another convenient location - no store visit needed.'
             },
             {
                 q: 'What areas do you serve?',
-                a: 'We currently serve the greater Dallas-Fort Worth metroplex. Enter your address during booking to confirm availability.'
+                a: 'We serve a limited area in the Dallas-Fort Worth metroplex with plans to expand. Enter your address during booking to confirm availability.'
             },
         ],
     },
@@ -39,19 +35,19 @@ const FAQ_CATEGORIES = [
         faqs: [
             {
                 q: 'What types of repairs do you perform?',
-                a: 'Cracked screens, battery replacement, back glass, cameras, and more. All repairs are completed on-site at your location.'
+                a: 'Display, battery, camera, back glass replacement.'
             },
             {
                 q: 'How long does a repair take?',
-                a: 'Most repairs take under an hour. Screen replacements usually take 30-45 minutes.'
+                a: 'Repair times vary; typically taking 1 hour or more, with most repairs completed under one hour.'
             },
             {
-                q: 'Why must I book at least 3 days in advance?',
-                a: 'We order parts specifically for your device and quality tier before your appointment. The 3-day window ensures everything arrives on time.'
+                q: 'Why must I book 3 days in advance?',
+                a: 'Booking 3 days in advance, allows SEER to confirm the necessary parts for the repair, and allows convenience to fit your scheduling needs.'
             },
             {
                 q: 'Can I cancel or reschedule?',
-                a: 'Yes — from your dashboard or by contacting support. Please make changes at least 24 hours in advance to avoid losing the $29 service fee.'
+                a: 'Yes. Cancel or reschedule with at least 24 hours\' notice before your scheduled appointment. Contact us if you need help updating your booking.'
             },
         ],
     },
@@ -85,7 +81,7 @@ const FAQ_CATEGORIES = [
         faqs: [
             {
                 q: 'What is the service fee?',
-                a: 'There is a flat $29 service fee for technician travel and on-site service. It is added to parts cost and shown clearly during checkout.'
+                a: 'There is a flat $29 service fee for technician travel and on-site service. It is added to parts cost and shown clearly during booking.'
             },
             {
                 q: 'How is pricing calculated?',
@@ -97,7 +93,7 @@ const FAQ_CATEGORIES = [
             },
             {
                 q: 'What payment methods do you accept?',
-                a: 'We accept all major credit and debit cards. Payment processing details are available in our Terms of Service.'
+                a: 'We do not accept credit or debit cards yet. We currently accept cash, Zelle, Cash App, and Venmo. Payment is collected after your repair is complete. Details are in our Terms of Service.'
             },
         ],
     },
@@ -136,9 +132,6 @@ export default function FAQPage() {
                 <div className="guru-container">
                     <div className="faq-hero__content">
                         <div className="faq-hero__badge">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
-                            </svg>
                             Help Center
                         </div>
                         <h1 className="faq-hero__title">How can we help you?</h1>
@@ -239,20 +232,6 @@ export default function FAQPage() {
                             </a>
                         </div>
 
-                        <div className="support-card">
-                            <div className="support-card__icon support-card__icon--dashboard">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                                </svg>
-                            </div>
-                            <h3 className="support-card__title">Book a Repair</h3>
-                            <p className="support-card__desc">
-                                Ready to fix your device? Start in under 2 minutes.
-                            </p>
-                            <Link to="/repair" className="guru-btn guru-btn--primary">
-                                Start a Repair →
-                            </Link>
-                        </div>
                     </div>
                 </div>
             </section>

@@ -28,11 +28,26 @@
     gap: var(--space-3);
     min-height: 190px;
     box-shadow: var(--shadow-sm);
+    transition:
+        transform 0.22s ease,
+        box-shadow 0.22s ease,
+        border-color 0.22s ease;
+}
+
+.about-page__features .marketing-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.1);
+    border-color: var(--seer-platinum-300);
 }
 
 .marketing-card--highlight {
     background: linear-gradient(135deg, var(--seer-platinum-700), var(--seer-platinum-800));
     border-color: transparent;
+}
+
+.about-page__features .marketing-card--highlight:hover {
+    border-color: transparent;
+    box-shadow: 0 16px 48px rgba(82, 84, 98, 0.35);
 }
 
 .marketing-card__number {
@@ -84,6 +99,19 @@
 
 .hiw-steps-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hiw-steps-grid .support-card,
+.hiw-tiers-grid .support-card {
+    border-radius: var(--radius-lg);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.hiw-steps-grid .support-card:hover,
+.hiw-tiers-grid .support-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    border-color: var(--tier-color, var(--seer-platinum-400));
 }
 
 .hiw-tier-support-card {

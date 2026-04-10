@@ -12,9 +12,7 @@ export default function DeviceStep({
     onAutoAdvance,
 }) {
     return (
-        <div className="quiz__section">
-            <h3 className="quiz__section-title">Your iPhone</h3>
-
+        <div className="quiz__section quiz__section--device-picker">
             {/* Saved Devices Quick-Select */}
             {savedDevices.length > 0 && (
                 <div className="quiz__saved-devices">
