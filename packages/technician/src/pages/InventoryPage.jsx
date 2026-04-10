@@ -7,6 +7,10 @@ import {
     getDevicesByGeneration,
     REPAIR_TYPES,
     PARTS_TIERS,
+    DEVICE_REPAIR_PRICING,
+    BACK_GLASS_COLORS,
+    getPartsUrl,
+    getAvailableTiersForRepair,
 } from '@shared/constants';
 import '../styles/tech-inventory.css';
 
@@ -29,6 +33,14 @@ export default function InventoryPage() {
     const [filterDevice, setFilterDevice] = useState('');
     const [filterRepairType, setFilterRepairType] = useState('');
     const [activeGen, setActiveGen] = useState('');
+
+    // Order Parts modal state
+    const [showOrderModal, setShowOrderModal] = useState(false);
+    const [orderGen, setOrderGen] = useState('');
+    const [orderDevice, setOrderDevice] = useState('');
+    const [orderRepairType, setOrderRepairType] = useState('');
+    const [orderTier, setOrderTier] = useState('');
+    const [orderColor, setOrderColor] = useState('');
 
     // Fetch inventory from Supabase
     useEffect(() => {
@@ -79,6 +91,41 @@ export default function InventoryPage() {
         setFormError('');
         setActiveGen('');
     };
+
+    const resetOrderModal = () => {
+        setShowOrderModal(false);
+        setOrderGen('');
+        setOrderDevice('');
+        setOrderRepairType('');
+        setOrderTier('');
+        setOrderColor('');
+    };
+
+    // Derived data for Order Parts modal
+    const orderDeviceOptions = orderGen
+        ? getDevicesByGeneration(orderGen)
+        : DEVICES;
+
+    const orderDeviceObj = DEVICES.find(d => d.name === orderDevice);
+
+    const orderAvailableTiers = useMemo(() => {
+        if (!orderDevice || !orderRepairType) return [];
+        const tierIds = getAvailableTiersForRepair(orderDevice, orderRepairType);
+        if (!tierIds) return [];
+        return PARTS_TIERS.filter(t => tierIds.includes(t.id));
+    }, [orderDevice, orderRepairType]);
+
+    const orderNeedsColor = orderRepairType === 'back-glass' && orderDeviceObj
+        && BACK_GLASS_COLORS[orderDeviceObj.id];
+
+    const orderColorOptions = orderNeedsColor
+        ? BACK_GLASS_COLORS[orderDeviceObj.id]
+        : [];
+
+    const orderPartsUrl = useMemo(() => {
+        if (!orderDevice || !orderRepairType || !orderTier) return null;
+        return getPartsUrl(orderDevice, orderRepairType, orderTier, orderColor || undefined);
+    }, [orderDevice, orderRepairType, orderTier, orderColor]);
 
     const openAddForm = () => {
         resetForm();
@@ -217,12 +264,20 @@ export default function InventoryPage() {
                                 Shared across all technicians · Changes are live
                             </p>
                         </div>
-                        <button
-                            className="guru-btn guru-btn--primary"
-                            onClick={openAddForm}
-                        >
-                            + Add Part
-                        </button>
+                        <div className="inventory-header__actions">
+                            <button
+                                className="guru-btn guru-btn--accent"
+                                onClick={() => setShowOrderModal(true)}
+                            >
+                                Order Parts
+                            </button>
+                            <button
+                                className="guru-btn guru-btn--primary"
+                                onClick={openAddForm}
+                            >
+                                + Add Part
+                            </button>
+                        </div>
                     </div>
 
                     {/* ── Stats ───────────────────────────────────── */}
@@ -420,6 +475,182 @@ export default function InventoryPage() {
                                         {saving ? 'Saving...' : editingId ? 'Update Quantity' : 'Add to Inventory'}
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Order Parts Modal ────────────────────────── */}
+                    {showOrderModal && (
+                        <div className="inventory-form-overlay" onClick={() => resetOrderModal()}>
+                            <div className="inventory-form order-parts-modal" onClick={(e) => e.stopPropagation()}>
+
+                                <div className="inventory-form__header">
+                                    <h3 className="inventory-form__title">
+                                        Order Parts
+                                    </h3>
+                                    <button
+                                        className="inventory-form__close"
+                                        onClick={resetOrderModal}
+                                        aria-label="Close"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <p className="order-parts__subtitle">
+                                    Select a device, repair type, and tier to get the supplier link.
+                                </p>
+
+                                {/* Generation tabs */}
+                                <div className="inventory-form__field">
+                                    <label className="inventory-form__label">Generation</label>
+                                    <div className="inventory-gen-tabs">
+                                        {sortedGens.map(gen => (
+                                            <button
+                                                key={gen}
+                                                className={`inventory-gen-tab ${orderGen === gen ? 'inventory-gen-tab--active' : ''}`}
+                                                onClick={() => {
+                                                    setOrderGen(gen);
+                                                    setOrderDevice('');
+                                                    setOrderRepairType('');
+                                                    setOrderTier('');
+                                                    setOrderColor('');
+                                                }}
+                                            >
+                                                {gen === 'SE' ? 'SE' : gen}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Device select */}
+                                <div className="inventory-form__field">
+                                    <label className="inventory-form__label">Device</label>
+                                    <select
+                                        className="inventory-filter-select inventory-filter-select--full"
+                                        value={orderDevice}
+                                        onChange={(e) => {
+                                            setOrderDevice(e.target.value);
+                                            setOrderRepairType('');
+                                            setOrderTier('');
+                                            setOrderColor('');
+                                        }}
+                                    >
+                                        <option value="">Select a device...</option>
+                                        {orderDeviceOptions.map(d => (
+                                            <option key={d.id} value={d.name}>{d.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Repair type grid */}
+                                {orderDevice && (
+                                    <div className="inventory-form__field">
+                                        <label className="inventory-form__label">Repair Type</label>
+                                        <div className="inventory-repair-type-grid">
+                                            {REPAIR_TYPES.filter(t => t.id !== 'software').map(t => {
+                                                const hasData = DEVICE_REPAIR_PRICING[orderDevice]?.[t.id];
+                                                return (
+                                                    <button
+                                                        key={t.id}
+                                                        className={`inventory-repair-type-btn ${orderRepairType === t.id ? 'inventory-repair-type-btn--active' : ''} ${!hasData ? 'inventory-repair-type-btn--disabled' : ''}`}
+                                                        onClick={() => {
+                                                            if (!hasData) return;
+                                                            setOrderRepairType(t.id);
+                                                            setOrderTier('');
+                                                            setOrderColor('');
+                                                        }}
+                                                        disabled={!hasData}
+                                                    >
+                                                        <span className="inventory-repair-type-btn__icon">{t.icon}</span>
+                                                        <span className="inventory-repair-type-btn__name">{t.name}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Tier selection */}
+                                {orderRepairType && orderAvailableTiers.length > 0 && (
+                                    <div className="inventory-form__field">
+                                        <label className="inventory-form__label">Parts Tier</label>
+                                        <div className="inventory-tier-options">
+                                            {orderAvailableTiers.map(tier => (
+                                                <button
+                                                    key={tier.id}
+                                                    className={`inventory-tier-btn ${orderTier === tier.id ? 'inventory-tier-btn--active' : ''}`}
+                                                    onClick={() => {
+                                                        setOrderTier(tier.id);
+                                                        setOrderColor('');
+                                                    }}
+                                                    style={orderTier === tier.id ? { borderColor: tier.color, background: `${tier.color}15` } : undefined}
+                                                >
+                                                    <span className="inventory-tier-btn__dot" style={{ background: tier.color }}></span>
+                                                    <span className="inventory-tier-btn__name">{tier.name}</span>
+                                                    <span className="inventory-tier-btn__price">{tier.priceLabel}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Color selection for back glass */}
+                                {orderTier && orderNeedsColor && orderColorOptions.length > 0 && (
+                                    <div className="inventory-form__field">
+                                        <label className="inventory-form__label">Color</label>
+                                        <div className="order-parts__color-options">
+                                            {orderColorOptions.map(color => (
+                                                <button
+                                                    key={color}
+                                                    className={`order-parts__color-btn ${orderColor === color ? 'order-parts__color-btn--active' : ''}`}
+                                                    onClick={() => setOrderColor(color)}
+                                                >
+                                                    {color}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Parts link result */}
+                                {orderTier && (
+                                    <div className="order-parts__result">
+                                        {orderNeedsColor && !orderColor ? (
+                                            <div className="order-parts__prompt">
+                                                Select a color to get the ordering link.
+                                            </div>
+                                        ) : orderPartsUrl ? (
+                                            <a
+                                                href={orderPartsUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="order-parts__link"
+                                            >
+                                                <div className="order-parts__link-info">
+                                                    <span className="order-parts__link-icon">
+                                                        {REPAIR_TYPES.find(t => t.id === orderRepairType)?.icon}
+                                                    </span>
+                                                    <div>
+                                                        <div className="order-parts__link-device">{orderDevice}</div>
+                                                        <div className="order-parts__link-meta">
+                                                            {REPAIR_TYPES.find(t => t.id === orderRepairType)?.name}
+                                                            {orderColor && ` · ${orderColor}`}
+                                                        </div>
+                                                        <div className="order-parts__link-tier" style={{ color: PARTS_TIERS.find(t => t.id === orderTier)?.color }}>
+                                                            {PARTS_TIERS.find(t => t.id === orderTier)?.name}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span className="order-parts__link-arrow">Order →</span>
+                                            </a>
+                                        ) : (
+                                            <div className="order-parts__no-link">
+                                                No supplier link available for this combination.
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
