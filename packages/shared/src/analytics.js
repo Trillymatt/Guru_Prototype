@@ -28,6 +28,37 @@ function getDeviceType() {
     return 'desktop';
 }
 
+// ─── UTM parameter capture ──────────────────────────────────────────────────
+
+let cachedUtmParams = null;
+
+function getUtmParams() {
+    if (cachedUtmParams) return cachedUtmParams;
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const utm = {};
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(key => {
+            const val = params.get(key);
+            if (val) utm[key] = val;
+        });
+        if (Object.keys(utm).length > 0) {
+            cachedUtmParams = utm;
+            // Persist for the session so later events still carry the original UTM
+            sessionStorage.setItem('guru_utm', JSON.stringify(utm));
+        } else {
+            const stored = sessionStorage.getItem('guru_utm');
+            if (stored) {
+                try { cachedUtmParams = JSON.parse(stored); } catch (_) { cachedUtmParams = {}; }
+            } else {
+                cachedUtmParams = {};
+            }
+        }
+    } catch (_) {
+        cachedUtmParams = {};
+    }
+    return cachedUtmParams;
+}
+
 // ─── Event queue & batching ─────────────────────────────────────────────────
 
 let eventQueue = [];
@@ -79,11 +110,16 @@ async function flushEvents() {
 function track(eventType, eventTarget, eventData = {}) {
     if (eventQueue.length >= MAX_QUEUE_SIZE) return;
 
+    const utm = getUtmParams();
+    const mergedData = Object.keys(utm).length > 0
+        ? { ...eventData, ...utm }
+        : eventData;
+
     const event = {
         session_id: getSessionId(),
         event_type: eventType,
         event_target: eventTarget || null,
-        event_data: eventData,
+        event_data: mergedData,
         page_path: window.location.pathname,
         referrer: document.referrer || null,
         user_agent: navigator.userAgent,
