@@ -7,11 +7,20 @@ frontend:
         - npm ci
     build:
       commands:
-        # Build from root using workspace command
-        - npm run build:customer
+        # Build the correct portal based on branch
+        - |
+          if [ "$AWS_BRANCH" = "admin" ]; then
+            npm run build:admin
+            cp -r packages/admin/dist ./build_output
+          elif [ "$AWS_BRANCH" = "tech" ]; then
+            npm run build:tech
+            cp -r packages/technician/dist ./build_output
+          else
+            npm run build:customer
+            cp -r packages/customer/dist ./build_output
+          fi
   artifacts:
-    # Output directory for customer build
-    baseDirectory: packages/customer/dist
+    baseDirectory: build_output
     files:
       - '**/*'
   cache:
