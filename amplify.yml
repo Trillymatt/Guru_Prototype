@@ -8,6 +8,7 @@ frontend:
     build:
       commands:
         # Build the correct portal based on branch
+        - echo "Building for branch $AWS_BRANCH"
         - |
           if [ "$AWS_BRANCH" = "admin" ]; then
             npm run build:admin
