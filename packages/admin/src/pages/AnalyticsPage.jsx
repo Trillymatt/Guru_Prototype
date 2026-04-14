@@ -96,6 +96,43 @@ export default function AnalyticsPage() {
         const quizCompletes = byType['quiz_complete'] || 0;
         const quizConversion = quizStarts > 0 ? ((quizCompletes / quizStarts) * 100).toFixed(1) : '0';
 
+        // Per-step funnel: count unique sessions that reached each step
+        const FUNNEL_STEPS = [
+            { key: 'quiz_start', label: 'Started Quiz' },
+            { key: 'Your name & email', label: 'Name & Email' },
+            { key: 'Phone number', label: 'Phone Number' },
+            { key: 'Choose device', label: 'Choose Device' },
+            { key: 'Choose repairs', label: 'Choose Repairs' },
+            { key: 'Choose quality', label: 'Choose Quality' },
+            { key: 'Add address', label: 'Add Address' },
+            { key: 'Pick date', label: 'Pick Date' },
+            { key: 'Review & book', label: 'Review & Book' },
+            { key: 'quiz_complete', label: 'Completed' },
+        ];
+
+        // Build set of sessions that reached each step
+        const sessionsByStep = {};
+        FUNNEL_STEPS.forEach(s => { sessionsByStep[s.key] = new Set(); });
+
+        events.forEach(e => {
+            if (e.event_type === 'quiz_start' && e.session_id) {
+                sessionsByStep['quiz_start'].add(e.session_id);
+            } else if (e.event_type === 'quiz_step' && e.event_target && e.session_id) {
+                if (sessionsByStep[e.event_target]) {
+                    sessionsByStep[e.event_target].add(e.session_id);
+                }
+            } else if (e.event_type === 'quiz_complete' && e.session_id) {
+                sessionsByStep['quiz_complete'].add(e.session_id);
+            }
+        });
+
+        const quizFunnel = FUNNEL_STEPS.map((s, i) => {
+            const count = sessionsByStep[s.key].size;
+            const prevCount = i === 0 ? count : sessionsByStep[FUNNEL_STEPS[i - 1].key].size;
+            const dropoff = prevCount > 0 ? (((prevCount - count) / prevCount) * 100).toFixed(0) : '0';
+            return { ...s, count, dropoff: i === 0 ? null : `${dropoff}%` };
+        });
+
         // Daily visitors (sessions per day)
         const dailyVisitors = {};
         events.filter(e => e.event_type === 'session_start').forEach(e => {
@@ -118,6 +155,7 @@ export default function AnalyticsPage() {
             quizStarts,
             quizCompletes,
             quizConversion,
+            quizFunnel,
             dailyTrend,
         };
     }, [events]);
@@ -195,6 +233,39 @@ export default function AnalyticsPage() {
                     <span className="admin-stat-card__label">Bookings Made</span>
                 </div>
             </div>
+
+            {/* Quiz Step Funnel */}
+            {stats.quizFunnel[0].count > 0 && (
+                <div className="admin-chart-card" style={{ marginBottom: 20 }}>
+                    <h3 className="admin-chart-card__title">Quiz Drop-off Funnel</h3>
+                    <p style={{ fontSize: 13, color: 'var(--admin-text-secondary)', marginTop: -12, marginBottom: 16 }}>
+                        Unique sessions reaching each step
+                    </p>
+                    <div className="admin-funnel">
+                        {stats.quizFunnel.map((step, i) => {
+                            const maxCount = stats.quizFunnel[0].count || 1;
+                            const widthPct = Math.max((step.count / maxCount) * 100, 8);
+                            const isLast = i === stats.quizFunnel.length - 1;
+                            return (
+                                <div key={step.key} className="admin-funnel__row">
+                                    <span className="admin-funnel__label">{step.label}</span>
+                                    <div className="admin-funnel__bar-wrap">
+                                        <div
+                                            className={`admin-funnel__bar ${isLast ? 'admin-funnel__bar--complete' : ''}`}
+                                            style={{ width: `${widthPct}%` }}
+                                        >
+                                            <span className="admin-funnel__count">{step.count}</span>
+                                        </div>
+                                    </div>
+                                    <span className={`admin-funnel__dropoff ${step.dropoff && step.dropoff !== '0%' ? 'admin-funnel__dropoff--loss' : ''}`}>
+                                        {step.dropoff ? `−${step.dropoff}` : ''}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <div className="admin-charts-grid">
                 {/* Daily Visitors Chart */}

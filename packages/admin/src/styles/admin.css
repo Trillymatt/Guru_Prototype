@@ -1114,6 +1114,71 @@ body {
     padding: 24px 0;
 }
 
+/* ─── Quiz Funnel ───────────────────────────────────────────────────────── */
+
+.admin-funnel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-funnel__row {
+    display: grid;
+    grid-template-columns: 130px 1fr 60px;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-funnel__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--admin-text);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.admin-funnel__bar-wrap {
+    width: 100%;
+    height: 28px;
+    display: flex;
+    align-items: center;
+}
+
+.admin-funnel__bar {
+    height: 100%;
+    background: var(--admin-primary);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 8px;
+    transition: width 0.4s ease;
+    min-width: 32px;
+}
+
+.admin-funnel__bar--complete {
+    background: #22C55E;
+}
+
+.admin-funnel__count {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.admin-funnel__dropoff {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--admin-text-muted);
+    text-align: left;
+}
+
+.admin-funnel__dropoff--loss {
+    color: #EF4444;
+    font-weight: 600;
+}
+
 /* ─── Device Breakdown ───────────────────────────────────────────────────── */
 
 .admin-device-breakdown {
