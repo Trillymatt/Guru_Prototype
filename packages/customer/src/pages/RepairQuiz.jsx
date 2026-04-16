@@ -42,6 +42,21 @@ const REFERRAL_STORAGE_KEY = 'guru_referral_code';
 const REFERRAL_DISCOUNT_AMOUNT = 5;
 const REFERRAL_CODE_REGEX = /^[A-Z0-9]{8}$/;
 
+// Stable labels used for funnel analytics. Keep aligned with FUNNEL_STEPS in
+// packages/admin/src/pages/AnalyticsPage.jsx so each step is countable for both
+// logged-in and guest flows.
+const ANALYTICS_STEP_LABELS = [
+    'Your name & email',
+    'Phone number',
+    'Choose device',
+    'Choose repairs',
+    'Choose quality',
+    'Add address',
+    'Pick date',
+    'Review & book',
+    'Verify code',
+];
+
 const REPAIR_TYPES_ALWAYS_AVAILABLE = new Set(['screen', 'battery', 'camera-rear', 'camera-front']);
 const BACK_GLASS_SUPPORTED_DEVICE_IDS = new Set([
     'iphone-14',
@@ -126,8 +141,12 @@ export default function RepairQuiz() {
     const canContinueFromAddressRef = useRef(false);
     const canContinueFromDateRef = useRef(false);
 
-    // Track quiz start
-    useEffect(() => { analytics.quizStart(); }, []);
+    // Track quiz start (also logs entry into the first step so the drop-off
+    // funnel has a count for "Your name & email").
+    useEffect(() => {
+        analytics.quizStart();
+        analytics.quizStep(ANALYTICS_STEP_LABELS[STEP_CONTACT], { from: null, to: STEP_CONTACT });
+    }, []);
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -306,7 +325,7 @@ export default function RepairQuiz() {
             setStep((current) => {
                 if (current !== expectedStep || !canAdvance()) return current;
                 const next = Math.min(current + 1, maxStepIndex);
-                analytics.quizStep(quizSteps[next], { from: current, to: next, click_count: clickCount });
+                analytics.quizStep(ANALYTICS_STEP_LABELS[next] || quizSteps[next], { from: current, to: next, click_count: clickCount });
                 return next;
             });
         }, 170);
@@ -523,9 +542,14 @@ export default function RepairQuiz() {
         if (field === 'email') setExistingAccount(false);
     };
 
+    const advanceToPhoneStep = (from = STEP_CONTACT) => {
+        analytics.quizStep(ANALYTICS_STEP_LABELS[STEP_PHONE], { from, to: STEP_PHONE, click_count: clickCount });
+        setStep(STEP_PHONE);
+    };
+
     const handleContactContinue = async () => {
         if (isLoggedIn) {
-            setStep(STEP_PHONE);
+            advanceToPhoneStep();
             return;
         }
         const email = contact.email.trim().toLowerCase();
@@ -534,7 +558,7 @@ export default function RepairQuiz() {
             setExistingAccount(true);
             return;
         }
-        setStep(STEP_PHONE);
+        advanceToPhoneStep();
     };
 
     const handleExistingAccountOtp = async () => {
@@ -998,7 +1022,7 @@ export default function RepairQuiz() {
                                                         </button>
                                                         <button
                                                             className="guru-btn guru-btn--ghost guru-btn--sm"
-                                                            onClick={() => { setExistingAccount(false); setStep(STEP_PHONE); }}
+                                                            onClick={() => { setExistingAccount(false); advanceToPhoneStep(); }}
                                                         >
                                                             Continue without signing in
                                                         </button>
@@ -1035,7 +1059,7 @@ export default function RepairQuiz() {
                                                         </button>
                                                         <button
                                                             className="guru-btn guru-btn--ghost guru-btn--sm"
-                                                            onClick={() => { setOtpSent(false); setExistingAccount(false); setStep(STEP_PHONE); }}
+                                                            onClick={() => { setOtpSent(false); setExistingAccount(false); advanceToPhoneStep(); }}
                                                         >
                                                             Continue without signing in
                                                         </button>
@@ -1086,7 +1110,10 @@ export default function RepairQuiz() {
                                         <button className="guru-btn guru-btn--ghost" onClick={goBack}>← Back</button>
                                         <button
                                             className="guru-btn guru-btn--primary guru-btn--lg"
-                                            onClick={() => setStep(STEP_DEVICE)}
+                                            onClick={() => {
+                                                analytics.quizStep(ANALYTICS_STEP_LABELS[STEP_DEVICE], { from: STEP_PHONE, to: STEP_DEVICE, click_count: clickCount });
+                                                setStep(STEP_DEVICE);
+                                            }}
                                         >
                                             Continue →
                                         </button>
@@ -1190,7 +1217,7 @@ export default function RepairQuiz() {
                                             className="guru-btn guru-btn--primary guru-btn--lg"
                                             disabled={!canContinueFromIssues}
                                             onClick={() => {
-                                                analytics.quizStep(quizSteps[STEP_QUALITY], {
+                                                analytics.quizStep(ANALYTICS_STEP_LABELS[STEP_QUALITY], {
                                                     from: STEP_ISSUES,
                                                     to: STEP_QUALITY,
                                                     click_count: clickCount,
